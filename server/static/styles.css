@@ -288,7 +288,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
   border-top: 1px solid var(--guide-rule);
 }
 .guide-section { padding-top: 18px; scroll-margin-top: 8px; }
-.guide-section h3 { margin: 0 0 8px 0; font-size: 15px; font-weight: 600; }
+.guide-section h3 { margin: 0 0 8px 0; font-size: 16px; font-weight: 500; }
 .guide-section p, .guide-section li { font-size: 14px; line-height: 1.65; margin: 0 0 8px 0; }
 .guide-section ul { margin: 0; padding-left: 18px; }
 .guide-section strong { font-weight: 600; color: var(--on-surface, inherit); }
@@ -778,3 +778,7 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: .38; cu
 /* Rows have no dividers: the hover and selected states give each one its
    own rounded shape instead. */
 #task-list .task-row { border-radius: 16px; }
+
+/* Body copy gets room to breathe; numbers in tables keep their columns. */
+body { line-height: 1.45; }
+.detail-body { font-size: 15px !important; line-height: 1.7 !important; }

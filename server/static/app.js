@@ -247,9 +247,9 @@
       c.surfaceContainer = tone(h, n, 94.5);
       c.surfaceContainerHigh = tone(h, n, 92);
       c.surfaceVariant = tone(h, nv, 92);
-      c.onSurface = tone(h, n, 16);
-      c.onSurfaceVariant = tone(h, nv, 38);
-      c.textMuted = tone(h, nv, 55);
+      c.onSurface = tone(h, n, 22);
+      c.onSurfaceVariant = tone(h, nv, 40);
+      c.textMuted = tone(h, nv, 50);
       c.outline = tone(h, nv, 72);
       c.outlineVariant = tone(h, nv, 88);
       c.error = tone(harmonize(27, h), 0.19, 52);
@@ -271,9 +271,9 @@
       c.surfaceContainer = tone(h, n, 21);
       c.surfaceContainerHigh = tone(h, n, 25);
       c.surfaceVariant = tone(h, nv, 28);
-      c.onSurface = tone(h, n, 92);
+      c.onSurface = tone(h, n, 91);
       c.onSurfaceVariant = tone(h, nv, 80);
-      c.textMuted = tone(h, nv, 62);
+      c.textMuted = tone(h, nv, 67);
       c.outline = tone(h, nv, 45);
       c.outlineVariant = tone(h, nv, 30);
       c.error = tone(harmonize(27, h), 0.14, 75);
@@ -1248,7 +1248,7 @@
       + '<div style="display:flex; flex-direction:column; gap:1px; padding-bottom:6px; border-bottom:1px solid ' + c.outlineVariant + ';">' + quick + '</div>'
       + '<div style="display:flex; align-items:center; justify-content:space-between; padding:2px 2px 0;">'
       +   nav(-1, ICON.chevronLeft, 'Previous month')
-      +   '<span style="font-size:14px; font-weight:600;">' + esc(new Date(y, mo, 1).toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</span>'
+      +   '<span style="font-size:14px; font-weight:500;">' + esc(new Date(y, mo, 1).toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</span>'
       +   nav(1, ICON.chevronRight, 'Next month')
       + '</div>'
       + '<div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:2px;">' + week + cells + '</div>'
@@ -2998,11 +2998,11 @@
     var out = '';
     if (t.checklistTotal) {
       var all = t.checklistDone === t.checklistTotal;
-      out += '<span title="' + T('{done} of {total} checklist items done', { done: t.checklistDone, total: t.checklistTotal }) + '" style="display:inline-flex; align-items:center; gap:3px; font-size:12px; font-weight:600; color:' + (all ? c.secondary : c.onSurfaceVariant) + ';">'
+      out += '<span title="' + T('{done} of {total} checklist items done', { done: t.checklistDone, total: t.checklistTotal }) + '" style="display:inline-flex; align-items:center; gap:3px; font-size:12px; font-weight:500; color:' + (all ? c.secondary : c.onSurfaceVariant) + ';">'
         + ICON.checklist + t.checklistDone + '/' + t.checklistTotal + '</span>';
     }
     if (t.attachmentCount) {
-      out += '<span title="' + T(t.attachmentCount === 1 ? '{n} attachment' : '{n} attachments', { n: t.attachmentCount }) + '" style="display:inline-flex; align-items:center; gap:3px; font-size:12px; font-weight:600; color:' + c.onSurfaceVariant + ';">'
+      out += '<span title="' + T(t.attachmentCount === 1 ? '{n} attachment' : '{n} attachments', { n: t.attachmentCount }) + '" style="display:inline-flex; align-items:center; gap:3px; font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">'
         + '<svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 9.5l-5.6 5.6a3.5 3.5 0 0 1-5-5L10.2 4a2.3 2.3 0 0 1 3.3 3.3L7.8 13a1.2 1.2 0 0 1-1.7-1.7l5.2-5.2"></path></svg>'
         + t.attachmentCount + '</span>';
     }
@@ -3014,7 +3014,7 @@
 
   function commentBadge(t, c) {
     if (!t.commentCount) return '';
-    return '<span title="' + T(t.commentCount === 1 ? '{n} comment' : '{n} comments', { n: t.commentCount }) + '" style="display:inline-flex; align-items:center; gap:3px; font-size:12px; font-weight:600; color:' + c.onSurfaceVariant + ';">'
+    return '<span title="' + T(t.commentCount === 1 ? '{n} comment' : '{n} comments', { n: t.commentCount }) + '" style="display:inline-flex; align-items:center; gap:3px; font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">'
       + '<svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5.5h12v8H8l-4 3v-11Z"></path></svg>'
       + t.commentCount + '</span>';
   }
@@ -3077,12 +3077,12 @@
       +   '<span class="status-ring">' + statusIconHtml(t.status, dot) + '</span><span style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0);">' + esc((STATUS_META[shown] || STATUS_META.todo).label) + '</span></div>'
       + '<div style="' + cell + ' gap:8px;">'
       +   taskIconHtml(t, 16)
-      +   '<span style="flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; font-weight:500; color:' + (done ? c.textMuted : c.onSurface) + ';">' + esc(t.title) + '</span>'
+      +   '<span style="flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:15px; font-weight:500; color:' + (done ? c.textMuted : c.onSurface) + ';">' + esc(t.title) + '</span>'
       +   '<span style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0; font-size:12px; color:' + c.textMuted + ';">' + taskBadges(t, c) + (t.calendarVisible ? '<span title="' + T('Shown in calendar') + '" style="display:inline-flex; color:' + c.textMuted + ';"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="14" height="13" rx="2"></rect><path d="M3 8h14M7 2v4M13 2v4"></path></svg></span>' : '') + '</span>'
       +   (t.match ? '<span style="flex:1; min-width:0;">' + searchMatchHtml(t, c) + '</span>' : '')
       + '</div>'
       + '<div style="' + cell + '">' + dept + '</div>'
-      + '<div style="' + cell + ' gap:8px;">' + (hasAssignee(t) ? assigneeAvatarHtml(t, v, 20) + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; color:' + c.onSurfaceVariant + ';">' + esc(t.assignee) + '</span>' : '<span style="font-size:13px; color:' + c.textMuted + ';">' + T('Unassigned') + '</span>') + '</div>'
+      + '<div style="' + cell + ' gap:8px;">' + (hasAssignee(t) ? assigneeAvatarHtml(t, v, 20) + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; color:' + c.onSurfaceVariant + ';">' + esc(t.assignee) + '</span>' : '<span style="font-size:13px; color:' + c.textMuted + ';">' + T('Unassigned') + '</span>') + '</div>'
       + '<div class="tnum" style="' + cell + ' font-size:13px; white-space:nowrap; color:' + (t.overdue ? c.error : (t.dueDate ? c.onSurfaceVariant : c.textMuted)) + '; font-weight:' + (t.overdue ? 500 : 400) + ';">' + esc(t.dueDate ? relativeDue(t.dueDate, t.overdue) : '—') + '</div>'
       + '<div title="' + esc(T(t.priority)) + '" style="' + cell + ' justify-content:center;">' + priorityIconHtml(t.priority, v.priorityColor, c.outlineVariant) + '</div>'
       + '</div>';
@@ -3110,7 +3110,7 @@
     }
     return '<div style="grid-column:1 / -1; display:flex; flex-direction:column; align-items:center; gap:8px; padding:64px 16px; text-align:center;">'
       + '<svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="' + c.textMuted + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + icon + '</svg>'
-      + '<div style="font-size:15px; font-weight:600; margin-top:4px;">' + esc(title) + '</div>'
+      + '<div style="font-size:16px; font-weight:500; margin-top:4px;">' + esc(title) + '</div>'
       + '<div style="font-size:13px; color:' + c.onSurfaceVariant + '; max-width:340px; line-height:1.5;">' + esc(text) + '</div>'
       + (action ? '<div style="margin-top:8px;">' + action + '</div>' : '')
       + '</div>';
@@ -3297,7 +3297,7 @@
       return mSelectFrom('<select id="' + id + '" aria-label="' + T(label) + '" style="' + chip + '"><option value="" selected>' + T(label) + '</option>' + opts + '</select>', c, 'pill');
     };
     return '<div class="bulk-bar" role="toolbar" aria-label="' + T('Selected tasks') + '" style="position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:70; display:flex; align-items:center; gap:8px; padding:8px 8px 8px 14px; border-radius:var(--r-md); background:' + c.surface + '; box-shadow:var(--e3);' + (state.bulkBusy ? ' opacity:.6; pointer-events:none;' : '') + '">'
-      + '<span class="tnum" style="font-size:13px; font-weight:600; margin-right:4px; white-space:nowrap;">' + T('{n} selected', { n: ids.length }) + '</span>'
+      + '<span class="tnum" style="font-size:13px; font-weight:500; margin-right:4px; white-space:nowrap;">' + T('{n} selected', { n: ids.length }) + '</span>'
       + sel('bulkStatusSelect', 'Status', EDITABLE_STATUSES.map(function (st) { return '<option value="' + st + '">' + statusIconHtml(st, maps.statusStyle[st].dot, 14) + '<span style="margin-left:8px;">' + TAB_LABELS[st] + '</span></option>'; }).join(''))
       + sel('bulkPrioritySelect', 'Priority', ['High', 'Medium', 'Low'].map(function (p) { return '<option value="' + p + '">' + priorityIconHtml(p, maps.priorityColor[p], c.outlineVariant) + '<span style="margin-left:8px;">' + T(p) + '</span></option>'; }).join(''))
       + sel('bulkAssigneeSelect', 'Assignee', '<option value="0">' + T('Unassigned') + '</option>' + state.members.map(function (m) { return '<option value="' + m.id + '">' + esc(m.displayName) + '</option>'; }).join(''))
@@ -3358,7 +3358,7 @@
     var nav = function (delta, label, inner) { return '<span class="interactive" data-action="shiftCalendar" data-id="' + delta + '" aria-label="' + T(label) + '" style="display:inline-flex; align-items:center; justify-content:center; height:30px; min-width:30px; padding:0 8px; border-radius:var(--r-sm); font-size:13px; color:' + c.onSurfaceVariant + ';">' + inner + '</span>'; };
     var undated = state.taskMeta.total >= 100 ? '<span style="font-size:12px; color:' + c.textMuted + ';">' + T('Showing the first 100 tasks due this month.') + '</span>' : '';
     return '<div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">'
-      +   '<span style="font-size:15px; font-weight:600; margin-right:6px;">' + esc(r.first.toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</span>'
+      +   '<span style="font-size:16px; font-weight:500; margin-right:6px;">' + esc(r.first.toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</span>'
       +   nav(-1, 'Previous month', ICON.chevronLeft) + nav(0, 'Today', T('Today')) + nav(1, 'Next month', ICON.chevronRight)
       +   '<span style="flex:1;"></span>' + undated
       + '</div>'
@@ -3375,7 +3375,7 @@
       var list = items.filter(function (t) { return t.status === st; });
       var dot = maps.statusStyle[st].dot;
       return '<section class="board-col" data-drop-status="' + st + '" aria-label="' + esc(TAB_LABELS[st]) + '" style="flex:1 1 0; min-width:240px; display:flex; flex-direction:column; gap:8px; padding:8px; border-radius:var(--r-md); background:' + c.surfaceContainerLow + ';">'
-        + '<div style="display:flex; align-items:center; gap:8px; padding:4px 4px 2px;">' + statusIconHtml(st, dot, 14) + '<span style="font-size:13px; font-weight:600;">' + TAB_LABELS[st] + '</span><span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + list.length + '</span></div>'
+        + '<div style="display:flex; align-items:center; gap:8px; padding:4px 4px 2px;">' + statusIconHtml(st, dot, 14) + '<span style="font-size:13px; font-weight:500;">' + TAB_LABELS[st] + '</span><span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + list.length + '</span></div>'
         + list.map(function (t) { return taskCard(t, maps, c); }).join('')
         + (list.length ? '' : '<div style="padding:16px 8px; text-align:center; font-size:12px; color:' + c.textMuted + ';">' + T('Drop a task here') + '</div>')
         + '</section>';
@@ -3388,7 +3388,7 @@
     var writable = canWriteDept(t.deptId);
     var cls = 'interactive board-card' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + '';
     return '<div class="' + cls + '"' + (writable ? ' draggable="true"' : '') + ' data-action="openTask" data-id="' + t.id + '" style="background:' + c.surface + '; border-radius:var(--r-md); padding:12px; min-width:0; display:flex; flex-direction:column; gap:8px;">'
-      + '<div style="display:flex; align-items:flex-start; gap:6px; font-size:14px; font-weight:500; line-height:1.4; color:' + (t.status === 'done' ? c.textMuted : c.onSurface) + ';">' + taskIconHtml(t, 16) + '<span style="min-width:0; overflow-wrap:anywhere;">' + esc(t.title) + '</span></div>'
+      + '<div style="display:flex; align-items:flex-start; gap:6px; font-size:15px; font-weight:500; line-height:1.4; color:' + (t.status === 'done' ? c.textMuted : c.onSurface) + ';">' + taskIconHtml(t, 16) + '<span style="min-width:0; overflow-wrap:anywhere;">' + esc(t.title) + '</span></div>'
       + '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px; color:' + c.textMuted + ';">' + (t.deptId ? '<span style="display:inline-flex; align-items:center; gap:5px; font-weight:500; padding:1px 6px; border-radius:var(--r-xs); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';">' + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span>' : '') + taskBadges(t, c) + '</div>'
       + searchMatchHtml(t, c)
       + '<div style="display:flex; align-items:center; gap:6px;">'
@@ -3438,8 +3438,8 @@
     var title = isRegister ? (state.setupRequired ? T('Set up your workspace') : T('Create an account')) : T('Log in');
     return '<div style="' + vars + 'min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px 16px; background:' + c.surfaceContainerLow + '; font-family:inherit;">'
       + '<div class="auth-card" style="width:360px; max-width:100%; display:flex; flex-direction:column; gap:16px;">'
-      +   '<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">' + brandIconHtml(c.primary, c.onPrimary, 32, false) + '<div style="font-size:15px; font-weight:600; color:' + c.onSurface + ';">' + esc(state.appName) + '</div></div>'
-      +   '<div><h1 class="page-title" style="margin:0 0 6px; font-size:24px; font-weight:600; color:' + c.onSurface + ';">' + esc(title) + '</h1>'
+      +   '<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">' + brandIconHtml(c.primary, c.onPrimary, 32, false) + '<div style="font-size:16px; font-weight:500; color:' + c.onSurface + ';">' + esc(state.appName) + '</div></div>'
+      +   '<div><h1 class="page-title" style="margin:0 0 6px; font-size:28px; line-height:36px; font-weight:500; color:' + c.onSurface + ';">' + esc(title) + '</h1>'
       +   '<div style="font-size:13px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + esc(authBlurb(isRegister)) + '</div></div>'
       +   (state.authNotice ? '<div style="font-size:13px; line-height:1.45; color:' + c.onPrimaryContainer + '; background:' + c.primaryContainer + '; padding:10px 12px; border-radius:var(--r-sm);">' + esc(state.authNotice) + '</div>' : '')
       +   (isRegister ? inputField('authDisplayName', 'authForm', 'displayName', f.displayName, 'Display name', 'text', c) : '')
@@ -3549,7 +3549,7 @@
     var bellTabBtn = function (id, label, count) {
       var on = state.bellTab === id;
       return '<span class="interactive" role="tab" aria-selected="' + (on ? 'true' : 'false') + '" data-action="setBellTab" data-id="' + id + '" style="display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 2px; margin-bottom:-1px; font-size:13px; font-weight:' + (on ? 600 : 400) + '; color:' + (on ? c.onSurface : c.onSurfaceVariant) + '; border-bottom:2px solid ' + (on ? c.primary : 'transparent') + ';">' + label
-        + (count > 0 ? '<span class="tnum" style="font-size:12px; font-weight:600; min-width:18px; padding:0 5px; border-radius:9px; text-align:center; background:' + c.error + '; color:#fff;">' + count + '</span>' : '') + '</span>';
+        + (count > 0 ? '<span class="tnum" style="font-size:12px; font-weight:500; min-width:18px; padding:0 5px; border-radius:9px; text-align:center; background:' + c.error + '; color:#fff;">' + count + '</span>' : '') + '</span>';
     };
     // Lists are grouped under Today, Yesterday and Earlier.
     var dayGroup = function (iso) {
@@ -3571,7 +3571,7 @@
     var unreadDot = function (on) { return '<span aria-hidden="true" style="width:6px; height:6px; margin-top:8px; border-radius:50%; flex-shrink:0; background:' + (on ? c.primary : 'transparent') + ';"></span>'; };
     var personAvatar = function (name, size) {
       var col = avatarColors(name, c.dark);
-      return '<span style="display:flex; align-items:center; justify-content:center; width:' + size + 'px; height:' + size + 'px; border-radius:50%; flex-shrink:0; background:' + col.bg + '; color:' + col.color + '; font-size:12px; font-weight:600;">' + esc(computeInitials(name)) + '</span>';
+      return '<span style="display:flex; align-items:center; justify-content:center; width:' + size + 'px; height:' + size + 'px; border-radius:50%; flex-shrink:0; background:' + col.bg + '; color:' + col.color + '; font-size:12px; font-weight:500;">' + esc(computeInitials(name)) + '</span>';
     };
     var notifKindIcon = function (kind) {
       if (kind === 'dueToday' || kind === 'dueTomorrow') return '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10.5" r="6.5"></circle><path d="M10 7v3.5l2.5 1.5"></path></svg>';
@@ -3629,12 +3629,12 @@
       ? '<div class="' + dropdownClass('account') + '" style="' + dropdownStyle('account') + 'position:absolute; top:46px; right:0; width:260px; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:60; display:flex; flex-direction:column; gap:2px;">'
         + '<div style="padding:8px 10px 6px 10px; display:flex; align-items:center; gap:10px;">'
           +   avatarHtml(avatarColors(state.user.displayName, c.dark).bg, avatarColors(state.user.displayName, c.dark).color, 44)
-          +   '<div style="min-width:0;"><div style="font-size:13px; font-weight:600;">' + esc(state.user.displayName) + '</div><div style="font-size:12px; color:' + c.onSurfaceVariant + ';">@' + esc(state.user.username) + ' · ' + esc(T(state.user.role)) + '</div></div>'
+          +   '<div style="min-width:0;"><div style="font-size:13px; font-weight:500;">' + esc(state.user.displayName) + '</div><div style="font-size:12px; color:' + c.onSurfaceVariant + ';">@' + esc(state.user.username) + ' · ' + esc(T(state.user.role)) + '</div></div>'
         + '</div>'
         + '<div style="padding:4px 10px 10px;">' + themeSegmented(c) + '</div>'
         + '<div style="height:1px; background:' + c.outlineVariant + '; margin:2px 0;"></div>'
         + '<div class="interactive" data-action="openSettings" style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + c.onSurface + ';"><span>' + T('Settings') + '</span>'
-        +   (isAdmin() && pendingUserCount() > 0 ? '<span class="tnum" style="font-size:12px; font-weight:600; min-width:18px; padding:0 5px; text-align:center; border-radius:9px; background:' + c.error + '; color:#fff;">' + pendingUserCount() + '</span>' : '')
+        +   (isAdmin() && pendingUserCount() > 0 ? '<span class="tnum" style="font-size:12px; font-weight:500; min-width:18px; padding:0 5px; text-align:center; border-radius:9px; background:' + c.error + '; color:#fff;">' + pendingUserCount() + '</span>' : '')
         + '</div>'
         + '<div class="interactive" data-action="openGuide" style="padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + c.onSurface + ';">' + T('Guide') + '</div>'
         + '<div class="interactive" data-action="logout" style="padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + c.error + ';">' + T('Log out') + '</div>'
@@ -3649,7 +3649,7 @@
             : brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 36, 'guide'))
       +   '<div class="app-name-text" style="font-size:18px; font-weight:500; white-space:nowrap;">' + esc(state.appName) + '</div>'
       + '</div>'
-      + '<div class="mobile-page-title" style="min-width:0; font-size:17px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + esc(currentPageTitle()) + '</div>'
+      + '<div class="mobile-page-title" style="min-width:0; font-size:20px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + esc(currentPageTitle()) + '</div>'
       + '<div class="topbar-center" style="flex:1; display:flex; justify-content:center;">'
       +   '<div class="desktop-search-bar" style="align-items:center; gap:10px; width:520px; max-width:100%; height:44px; padding:0 18px; border-radius:22px; background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">'
       +     ICON.search
@@ -3678,7 +3678,7 @@
       +     '<div class="interactive" data-action="toggleNotif" title="' + T('Notifications') + '" style="position:relative; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:' + c.onSurfaceVariant + ';">'
       +       '<svg width="21" height="21" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8a5 5 0 0 1 10 0c0 4 1.5 5 1.5 5h-13S5 12 5 8Z"></path><path d="M8.3 16a1.8 1.8 0 0 0 3.4 0"></path></svg>'
       +       (bellCount > 0
-                ? '<span aria-label="' + T('{n} unread', { n: bellCount }) + '" style="position:absolute; top:2px; right:1px; min-width:17px; height:17px; padding:0 4px; border-radius:9px; background:' + c.error + '; color:#fff; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; border:1.5px solid ' + c.surface + ';">' + (bellCount > 99 ? '99+' : bellCount) + '</span>'
+                ? '<span aria-label="' + T('{n} unread', { n: bellCount }) + '" style="position:absolute; top:2px; right:1px; min-width:17px; height:17px; padding:0 4px; border-radius:9px; background:' + c.error + '; color:#fff; font-size:12px; font-weight:500; display:flex; align-items:center; justify-content:center; border:1.5px solid ' + c.surface + ';">' + (bellCount > 99 ? '99+' : bellCount) + '</span>'
                 : (unread > 0 ? '<span style="position:absolute; top:6px; right:7px; width:7px; height:7px; border-radius:50%; background:' + c.outline + '; border:1.5px solid ' + c.surface + ';"></span>' : ''))
       +     '</div>'
       +     notifPanel
@@ -3719,7 +3719,7 @@
       var childrenHtml = d.children.map(function (child) {
         var childSelected = state.selectedNode === child.id;
         var childCount = state.summary.byDept[child.id] || 0;
-        return '<div class="interactive' + (childSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="' + esc(child.id) + '"' + (childSelected ? ' aria-current="true"' : '') + ' style="display:flex; align-items:center; padding:7px 10px; font-size:13px; font-weight:' + (childSelected ? 600 : 400) + '; border-radius:var(--r-sm); background:' + (childSelected ? c.secondaryContainer : 'transparent') + '; color:' + (childSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
+        return '<div class="interactive' + (childSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="' + esc(child.id) + '"' + (childSelected ? ' aria-current="true"' : '') + ' style="display:flex; align-items:center; padding:7px 10px; font-size:13px; font-weight:' + (childSelected ? 500 : 400) + '; border-radius:var(--r-sm); background:' + (childSelected ? c.secondaryContainer : 'transparent') + '; color:' + (childSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
           + (child.color ? '<span style="margin-right:8px; display:flex;">' + deptDot(child.id, 8) + '</span>' : '') + '<span style="flex:1;">' + esc(child.name) + '</span>'
           + '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + childCount + '</span>'
           + '</div>';
@@ -3728,7 +3728,7 @@
       return '<div class="dept-row' + (selected ? oneShotClass('node') : '') + '" style="display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:' + (selected ? c.secondaryContainer : 'transparent') + '; color:' + (selected ? c.onSecondaryContainer : 'inherit') + '; margin-top:2px;">'
         + '<svg class="interactive tree-chevron' + (expanded ? ' expanded' : '') + (anim ? ' ' + anim : '') + '" data-action="toggleExpand" data-id="' + esc(d.id) + '" role="button" aria-expanded="' + (expanded ? 'true' : 'false') + '" aria-controls="subtree-' + esc(d.id) + '" aria-label="' + (expanded ? 'Collapse ' : 'Expand ') + esc(d.name) + '" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 5l6 5-6 5"></path></svg>'
         + '<span class="interactive" data-action="selectNode" data-id="' + esc(d.id) + '" style="display:flex; align-items:center; gap:6px; flex:1; min-width:0; border-radius:var(--r-sm);">'
-        +   deptDot(d.id, 8) + '<span style="font-size:14px; font-weight:' + (selected ? 600 : 400) + ';">' + esc(d.name) + '</span>'
+        +   deptDot(d.id, 8) + '<span style="font-size:14px; font-weight:' + (selected ? 500 : 400) + ';">' + esc(d.name) + '</span>'
         + '</span>'
         + '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + deptCount + '</span>'
         + (isAdmin() ? '<span class="interactive dept-more" data-action="openMapping" data-id="' + esc(d.id) + '" title="' + T('Department settings') + '" style="display:flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:var(--r-sm); flex-shrink:0; color:' + c.onSurfaceVariant + ';">' + ICON.more + '</span>' : '')
@@ -3754,7 +3754,7 @@
       + '</div>'
       + '<div class="interactive' + (mineSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="mine" style="display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:999px; background:' + (mineSelected ? c.secondaryContainer : 'transparent') + '; color:' + (mineSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
       +   '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="3"></circle><path d="M4 16a6 6 0 0 1 12 0"></path></svg>'
-      +   '<span style="flex:1; font-size:14px; font-weight:' + (mineSelected ? 600 : 400) + ';">' + T('My Tasks') + '</span>'
+      +   '<span style="flex:1; font-size:14px; font-weight:' + (mineSelected ? 500 : 400) + ';">' + T('My Tasks') + '</span>'
       +   '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + state.summary.mine + '</span>'
       + '</div>'
       + deptsHtml
@@ -3791,7 +3791,7 @@
       var bg = 'transparent';
       var color = active ? c.primary : (id === 'overdue' && count ? c.error : c.onSurfaceVariant);
       var underline = active ? c.primary : 'transparent';
-      return '<div class="interactive' + (active ? oneShotClass('tab') : '') + '" data-action="setTab" data-id="' + id + '" role="tab" aria-selected="' + (active ? 'true' : 'false') + '" aria-label="' + TAB_LABELS[id] + ', ' + T(count === 1 ? '{n} task' : '{n} tasks', { n: count }) + '" style="display:flex; align-items:center; gap:6px; height:38px; padding:0 4px; margin-bottom:-1px; border-radius:0; background:' + bg + '; color:' + color + '; font-size:14px; font-weight:' + (active ? 600 : 400) + '; border-bottom:2px solid ' + underline + ';">'
+      return '<div class="interactive' + (active ? oneShotClass('tab') : '') + '" data-action="setTab" data-id="' + id + '" role="tab" aria-selected="' + (active ? 'true' : 'false') + '" aria-label="' + TAB_LABELS[id] + ', ' + T(count === 1 ? '{n} task' : '{n} tasks', { n: count }) + '" style="display:flex; align-items:center; gap:6px; height:38px; padding:0 4px; margin-bottom:-1px; border-radius:0; background:' + bg + '; color:' + color + '; font-size:14px; font-weight:500; border-bottom:3px solid ' + underline + ';">'
         + '<span>' + TAB_LABELS[id] + '</span><span style="font-size:12px; font-weight:500; color:' + (active ? c.onSurfaceVariant : c.textMuted) + ';">' + count + '</span></div>';
     }).join('');
 
@@ -3803,28 +3803,28 @@
     var filterField = 'height:36px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:13px; background:' + c.surface + '; color:' + c.onSurface + ';';
     var filterPanel = (state.filterOpen || state.dropdownClosing === 'filter')
       ? '<div class="' + dropdownClass('filter') + '" style="' + dropdownStyle('filter') + 'position:absolute; top:46px; right:0; width:240px; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:14px; z-index:60; display:flex; flex-direction:column; gap:12px;">'
-        + '<div><div style="font-size:12px; font-weight:600; letter-spacing:.03em; color:' + c.onSurfaceVariant + '; margin-bottom:6px;">' + T('SORT BY') + '</div>'
+        + '<div><div style="font-size:12px; font-weight:500; letter-spacing:.03em; color:' + c.onSurfaceVariant + '; margin-bottom:6px;">' + T('SORT BY') + '</div>'
         +   mSelectFrom('<select id="filterSortSelect" aria-label="' + T('Sort by') + '" style="' + filterField + '">'
               + TASK_SORTS.map(function (o) { return '<option value="' + o[0] + '"' + (state.taskSort === o[0] ? ' selected' : '') + '>' + T(o[1]) + '</option>'; }).join('')
               + '</select>', c)
         + '</div>'
-        + '<div><div style="font-size:12px; font-weight:600; letter-spacing:.03em; color:' + c.onSurfaceVariant + '; margin-bottom:6px;">' + T('ASSIGNEE') + '</div>'
+        + '<div><div style="font-size:12px; font-weight:500; letter-spacing:.03em; color:' + c.onSurfaceVariant + '; margin-bottom:6px;">' + T('ASSIGNEE') + '</div>'
         +   mSelectFrom('<select id="filterAssigneeSelect" aria-label="' + T('Assignee') + '" style="' + filterField + '">'
               + [['', T('Anyone')], ['none', T('Unassigned')]].concat(state.members.map(function (m) { return [String(m.id), esc(m.displayName)]; }))
                   .map(function (o) { return '<option value="' + o[0] + '"' + (state.filterAssignee === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('')
               + '</select>', c)
         + '</div>'
-        + '<div><div style="font-size:12px; font-weight:600; letter-spacing:.03em; color:' + c.onSurfaceVariant + '; margin-bottom:6px;">' + T('PRIORITY') + '</div>'
+        + '<div><div style="font-size:12px; font-weight:500; letter-spacing:.03em; color:' + c.onSurfaceVariant + '; margin-bottom:6px;">' + T('PRIORITY') + '</div>'
         + ['High', 'Medium', 'Low'].map(function (p) {
             return '<label class="interactive" style="display:flex; align-items:center; gap:8px; padding:5px 4px; border-radius:var(--r-sm); font-size:13px; cursor:pointer;"><input type="checkbox" data-action="toggleFilterPriority" data-id="' + p + '" ' + (state.filterPriority[p] ? 'checked' : '') + '></input>' + T(p) + '</label>';
           }).join('')
         + '</div>'
-        + '<div><div style="font-size:12px; font-weight:600; letter-spacing:.03em; color:' + c.onSurfaceVariant + '; margin-bottom:6px;">' + T('CALENDAR') + '</div>'
+        + '<div><div style="font-size:12px; font-weight:500; letter-spacing:.03em; color:' + c.onSurfaceVariant + '; margin-bottom:6px;">' + T('CALENDAR') + '</div>'
         + [['all', 'All'], ['shown', 'In calendar'], ['hidden', 'Not in calendar']].map(function (pair) {
             return '<label class="interactive" style="display:flex; align-items:center; gap:8px; padding:5px 4px; border-radius:var(--r-sm); font-size:13px; cursor:pointer;"><input type="radio" name="filterCalendar" data-action="setFilterCalendar" data-id="' + pair[0] + '" ' + (state.filterCalendar === pair[0] ? 'checked' : '') + '></input>' + T(pair[1]) + '</label>';
           }).join('')
         + '</div>'
-        + (filtersActive() ? '<span class="interactive" data-action="clearFilters" style="align-self:flex-end; font-size:12px; font-weight:600; color:' + c.primary + ';">' + T('Clear filters') + '</span>' : '')
+        + (filtersActive() ? '<span class="interactive" data-action="clearFilters" style="align-self:flex-end; font-size:12px; font-weight:500; color:' + c.primary + ';">' + T('Clear filters') + '</span>' : '')
         + '</div>'
       : '';
 
@@ -3851,7 +3851,7 @@
               var key = h[2], on = key && state.taskSort === key;
               var arrow = on ? '<svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4v12M5 11l5 5 5-5"></path></svg>' : '';
               var name = h[0] || h[1];
-              return '<div role="columnheader"' + (key ? ' class="interactive" data-action="sortByColumn" data-id="' + key + '" aria-sort="' + (on ? 'ascending' : 'none') + '" title="' + esc(T(on ? 'Back to the default order' : 'Sort by {col}', { col: name })) + '"' : '') + (h[1] ? ' aria-label="' + esc(h[1]) + '"' : '') + ' style="position:sticky; top:0; z-index:1; display:flex; align-items:center; gap:4px; height:32px; padding:0 12px; background:' + c.surface + '; font-size:12px; font-weight:' + (on ? 600 : 500) + '; color:' + (on ? c.onSurface : c.textMuted) + ';' + (i === 0 || i === 5 ? ' justify-content:center;' : '') + '">' + (i === 5 && !on ? '' : h[0]) + arrow + (i === 5 && !arrow ? '<svg width="12" height="12" viewBox="0 0 20 18" aria-hidden="true"><rect x="3" y="11" width="3.5" height="4" rx="1" fill="currentColor"></rect><rect x="8" y="7" width="3.5" height="8" rx="1" fill="currentColor"></rect><rect x="13" y="3" width="3.5" height="12" rx="1" fill="currentColor"></rect></svg>' : '') + '</div>';
+              return '<div role="columnheader"' + (key ? ' class="interactive" data-action="sortByColumn" data-id="' + key + '" aria-sort="' + (on ? 'ascending' : 'none') + '" title="' + esc(T(on ? 'Back to the default order' : 'Sort by {col}', { col: name })) + '"' : '') + (h[1] ? ' aria-label="' + esc(h[1]) + '"' : '') + ' style="position:sticky; top:0; z-index:1; display:flex; align-items:center; gap:4px; height:32px; padding:0 12px; background:' + c.surface + '; font-size:12px; letter-spacing:.02em; font-weight:500; color:' + (on ? c.primary : c.onSurfaceVariant) + ';' + (i === 0 || i === 5 ? ' justify-content:center;' : '') + '">' + (i === 5 && !on ? '' : h[0]) + arrow + (i === 5 && !arrow ? '<svg width="12" height="12" viewBox="0 0 20 18" aria-hidden="true"><rect x="3" y="11" width="3.5" height="4" rx="1" fill="currentColor"></rect><rect x="8" y="7" width="3.5" height="8" rx="1" fill="currentColor"></rect><rect x="13" y="3" width="3.5" height="12" rx="1" fill="currentColor"></rect></svg>' : '') + '</div>';
             }).join('')
         +   rowsHtml + emptyHtml
         + '</div></div>';
@@ -3863,7 +3863,7 @@
 
     return '<main id="task-list" tabindex="-1" class="content-sheet ' + animClass + '" style="flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; padding:24px 28px 16px; gap:14px; background:' + c.surface + ';">'
       + '<div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px;">'
-      +   '<div style="min-width:0; flex:1;"><div style="font-size:12px; color:' + c.onSurfaceVariant + '; margin-bottom:3px;">' + esc(pathLabel) + '</div><div class="page-title" title="' + esc(titleLabel) + '" style="font-size:24px; font-weight:600;">' + esc(titleLabel) + '</div></div>'
+      +   '<div style="min-width:0; flex:1;"><div style="font-size:12px; color:' + c.onSurfaceVariant + '; margin-bottom:3px;">' + esc(pathLabel) + '</div><div class="page-title" title="' + esc(titleLabel) + '" style="font-size:28px; line-height:36px; font-weight:500;">' + esc(titleLabel) + '</div></div>'
       +   '<div style="display:flex; align-items:center; gap:8px;">'
       +     '<div class="view-toggle" role="radiogroup" aria-label="' + T('View') + '" style="display:flex; align-items:center; gap:2px; padding:3px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + ';">'
       +       [['list', 'List', ICON.listView], ['grid', 'Board', ICON.gridView], ['calendar', 'Calendar', ICON.calendarView.replace('width="19" height="19"', 'width="16" height="16"')]].map(function (v) {
@@ -3877,8 +3877,8 @@
       +       filterPanel
       +     '</div>'
       +     (canCreateTask()
-              ? '<div class="interactive new-task-inline" data-action="openTaskModal" style="display:flex; align-items:center; gap:7px; height:40px; padding:0 18px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; font-weight:600;">' + ICON.plus + '<span>' + T('New Task') + '</span></div>'
-              : '<div class="new-task-inline" title="' + T('An administrator has to put your account in a department first') + '" style="display:flex; align-items:center; gap:7px; height:40px; padding:0 18px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + '; font-size:14px; font-weight:600; opacity:.7;">' + ICON.plus + '<span>' + T('New Task') + '</span></div>')
+              ? '<div class="interactive new-task-inline" data-action="openTaskModal" style="display:flex; align-items:center; gap:7px; height:40px; padding:0 18px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; font-weight:500;">' + ICON.plus + '<span>' + T('New Task') + '</span></div>'
+              : '<div class="new-task-inline" title="' + T('An administrator has to put your account in a department first') + '" style="display:flex; align-items:center; gap:7px; height:40px; padding:0 18px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + '; font-size:14px; font-weight:500; opacity:.7;">' + ICON.plus + '<span>' + T('New Task') + '</span></div>')
       +   '</div>'
       + '</div>'
       + '<div role="tablist" aria-label="' + T('Filter by status') + '" data-scroll-key="tabs" style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; border-bottom:1px solid ' + c.outlineVariant + ';">' + tabsHtml + '</div>'
@@ -3904,14 +3904,14 @@
     for (var i = 0; i < firstWeekday; i++) dayCells.push('<div></div>');
     for (var d = 1; d <= daysInMonth; d++) {
       if (d === todayDate) {
-        dayCells.push('<div style="display:flex; align-items:center; justify-content:center;"><span style="display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:' + c.primary + '; color:' + c.onPrimary + '; font-size:12px; font-weight:600;">' + d + '</span></div>');
+        dayCells.push('<div style="display:flex; align-items:center; justify-content:center;"><span style="display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:' + c.primary + '; color:' + c.onPrimary + '; font-size:12px; font-weight:500;">' + d + '</span></div>');
       } else {
         dayCells.push('<div style="display:flex; align-items:center; justify-content:center; font-size:12px;">' + d + '</div>');
       }
     }
     var trailing = (7 - (dayCells.length % 7)) % 7;
     for (var j = 0; j < trailing; j++) dayCells.push('<div></div>');
-    return '<div><div style="font-size:13px; font-weight:600; margin-bottom:8px;">' + esc(new Date(year, month, 1).toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</div>'
+    return '<div><div style="font-size:13px; font-weight:500; margin-bottom:8px;">' + esc(new Date(year, month, 1).toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</div>'
       + '<div style="display:grid; grid-template-columns:repeat(7,1fr); gap:4px; font-size:12px; color:' + c.onSurfaceVariant + '; text-align:center; margin-bottom:4px;">'
       + (LANG === 'ko' ? ['일', '월', '화', '수', '목', '금', '토'] : ['S', 'M', 'T', 'W', 'T', 'F', 'S']).map(function (x) { return '<div>' + x + '</div>'; }).join('')
       + '</div>'
@@ -3930,8 +3930,8 @@
       var check = done ? '<svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="' + c.onSecondary + '" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10l3.5 3.5L15 6.5"></path></svg>' : '';
       var tickable = canWriteDept(t.deptId);
       var when = t.overdue
-        ? '<span style="font-size:12px; font-weight:600; color:' + c.error + ';">' + T('Overdue') + ' &middot; ' + esc(formatDue(t.dueDate)) + '</span>'
-        : '<span style="font-size:12px; font-weight:600; color:' + c.onSurfaceVariant + ';">' + T('Today') + '</span>';
+        ? '<span style="font-size:12px; font-weight:500; color:' + c.error + ';">' + T('Overdue') + ' &middot; ' + esc(formatDue(t.dueDate)) + '</span>'
+        : '<span style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Today') + '</span>';
       return '<div class="' + oneShotClass('todayLeave:' + t.id).trim() + '" style="display:flex; align-items:flex-start; gap:9px; border-radius:var(--r-sm);">'
         +   (tickable
               ? '<div class="interactive' + oneShotClass('today:' + t.id) + '" data-action="toggleTodayTask" data-id="' + t.id + '" title="' + T(done ? 'Mark not done' : 'Mark done') + '" style="width:16px; height:16px; margin-top:1px; border-radius:var(--r-xs); background:' + boxBg + '; border:1.6px solid ' + boxBorder + '; display:flex; align-items:center; justify-content:center; flex-shrink:0;">' + check + '</div>'
@@ -3939,7 +3939,7 @@
         +   '<div class="interactive" data-action="openTask" data-id="' + t.id + '" style="flex:1; min-width:0;">'
         +     '<div style="display:flex; align-items:center; gap:5px; font-size:13px; color:' + textColor + '; text-decoration:' + (done ? 'line-through' : 'none') + ';">' + taskIconHtml(t, 14) + '<span>' + esc(t.title) + '</span></div>'
         +     '<div style="display:flex; align-items:center; gap:6px; margin-top:3px; flex-wrap:wrap;">' + when
-        +       (t.deptId ? '<span style="font-size:12px; font-weight:600; color:' + c.onSurfaceVariant + '; background:' + c.surfaceVariant + '; padding:1px 8px; border-radius:var(--r-sm);">' + esc(nodeLabel(t.deptId)) + '</span>' : '')
+        +       (t.deptId ? '<span style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + '; background:' + c.surfaceVariant + '; padding:1px 8px; border-radius:var(--r-sm);">' + esc(nodeLabel(t.deptId)) + '</span>' : '')
         +     '</div>'
         +   '</div>'
         + '</div>';
@@ -3971,21 +3971,21 @@
 
     return '<div class="' + drawerClass('right-panel', state.mobileCalendarOpen, state.mobileCalendarAnim) + '" data-scroll-key="schedule" style="width:320px; flex-shrink:0; min-height:0; background:' + c.surfaceContainerLow + '; border-left:1px solid ' + c.outlineVariant + '; overflow-y:auto; padding:20px 16px; display:flex; flex-direction:column; gap:16px;">'
       + '<div class="drawer-header-row" style="align-items:center; justify-content:space-between;">'
-      +   '<span style="font-size:15px; font-weight:600;">' + T('Schedule') + '</span>'
+      +   '<span style="font-size:16px; font-weight:500;">' + T('Schedule') + '</span>'
       +   '<span class="interactive drawer-close-btn" data-action="closeMobileCalendar" title="' + T('Close') + '" style="align-items:center; justify-content:center; width:26px; height:26px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
       + '</div>'
       + '<div style="background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); padding:16px; display:flex; flex-direction:column; gap:12px;">'
-      +   '<span style="font-size:14px; font-weight:600;">' + T('Calendar') + '</span>'
+      +   '<span style="font-size:14px; font-weight:500;">' + T('Calendar') + '</span>'
       +   miniCalendar(c)
       + '</div>'
       + '<div style="background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); padding:16px; display:flex; flex-direction:column; gap:11px;">'
-      +   '<span style="font-size:14px; font-weight:600;">' + T('Due Today') + (state.todayTasks.length ? ' <span style="font-size:12px; font-weight:600; padding:1px 7px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">' + state.todayTasks.length + '</span>' : '') + '</span>' + todayHtml + todayEmpty
+      +   '<span style="font-size:14px; font-weight:500;">' + T('Due Today') + (state.todayTasks.length ? ' <span style="font-size:12px; font-weight:500; padding:1px 7px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">' + state.todayTasks.length + '</span>' : '') + '</span>' + todayHtml + todayEmpty
       + '</div>'
       + '<div style="background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); padding:16px; display:flex; flex-direction:column; gap:12px;">'
-      +   '<span class="interactive" data-action="toggleFeeds" role="button" aria-expanded="' + (state.feedsOpen ? 'true' : 'false') + '" aria-controls="feed-list" style="display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600;">'
+      +   '<span class="interactive" data-action="toggleFeeds" role="button" aria-expanded="' + (state.feedsOpen ? 'true' : 'false') + '" aria-controls="feed-list" style="display:flex; align-items:center; gap:8px; font-size:14px; font-weight:500;">'
       +     '<svg class="tree-chevron' + (state.feedsOpen ? ' expanded' : '') + oneShotClass('feeds') + '" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 5l6 5-6 5"></path></svg>'
       +     '<span style="flex:1;">' + T('Department Calendars') + '</span>'
-      +     (flatOpts.length ? '<span style="font-size:12px; font-weight:600; padding:1px 7px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">' + flatOpts.length + '</span>' : '')
+      +     (flatOpts.length ? '<span style="font-size:12px; font-weight:500; padding:1px 7px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">' + flatOpts.length + '</span>' : '')
       +   '</span>'
       +   '<div class="tree-children' + (state.feedsOpen ? ' expanded' : '') + oneShotClass('feeds') + '" id="feed-list">'
       +     '<div class="tree-children-inner" style="gap:12px;">' + mappingRows + mappingEmpty + '</div>'
@@ -4051,7 +4051,7 @@
       +     (editing && !readOnly ? '<div class="interactive" data-action="deleteTask" style="font-size:13px; font-weight:500; color:' + c.error + '; padding:6px 8px; border-radius:var(--r-sm);">' + T('Delete') + '</div>' : '<span style="font-size:12px; color:' + c.textMuted + ';">' + (readOnly ? '' : T(/Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘ Enter to save' : 'Ctrl Enter to save')) + '</span>')
       +     '<div style="display:flex; gap:8px;">'
       +       '<div class="interactive" data-action="closeTaskModal" style="display:flex; align-items:center; justify-content:center; height:36px; padding:0 14px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + '; font-size:13px; font-weight:500;">' + T(readOnly ? 'Close' : 'Cancel') + '</div>'
-      +       (readOnly ? '' : '<div class="interactive" data-action="saveTask" style="display:flex; align-items:center; justify-content:center; height:36px; padding:0 16px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:13px; font-weight:600;">' + (editing ? T('Save Changes') : T('Create Task')) + '</div>')
+      +       (readOnly ? '' : '<div class="interactive" data-action="saveTask" style="display:flex; align-items:center; justify-content:center; height:36px; padding:0 16px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:13px; font-weight:500;">' + (editing ? T('Save Changes') : T('Create Task')) + '</div>')
       +     '</div>'
       +   '</div>'
       + '</div></div>';
@@ -4100,8 +4100,8 @@
     }).join('');
     var pct = items.length ? Math.round(done / items.length * 100) : 0;
     return '<div style="display:flex; flex-direction:column; gap:4px;">'
-      + '<div style="display:flex; align-items:center; gap:8px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Checklist') + '</label>'
-      +   (items.length && editing ? '<span style="font-size:12px; font-weight:600; color:' + c.onSurfaceVariant + ';">' + done + '/' + items.length + '</span>'
+      + '<div style="display:flex; align-items:center; gap:8px;"><label style="font-size:16px; font-weight:500; color:' + c.onSurface + ';">' + T('Checklist') + '</label>'
+      +   (items.length && editing ? '<span style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + done + '/' + items.length + '</span>'
           + '<span style="flex:1; height:4px; border-radius:2px; background:' + c.surfaceContainerHigh + '; overflow:hidden;"><span style="display:block; height:100%; width:' + pct + '%; background:' + c.secondary + '; transition:width .3s;"></span></span>' : '')
       + '</div>'
       + rows
@@ -4140,7 +4140,7 @@
     var all = events.concat(comments).sort(function (x, y) { return new Date(x.at) - new Date(y.at); });
     var avatar = function (name, size) {
       var col = avatarColors(name, c.dark);
-      return '<span style="display:flex; align-items:center; justify-content:center; width:' + size + 'px; height:' + size + 'px; border-radius:50%; flex-shrink:0; background:' + col.bg + '; color:' + col.color + '; font-size:12px; font-weight:600;">' + esc(computeInitials(name)) + '</span>';
+      return '<span style="display:flex; align-items:center; justify-content:center; width:' + size + 'px; height:' + size + 'px; border-radius:50%; flex-shrink:0; background:' + col.bg + '; color:' + col.color + '; font-size:12px; font-weight:500;">' + esc(computeInitials(name)) + '</span>';
     };
     var items = all.map(function (x) {
       if (x.kind === 'event') {
@@ -4153,7 +4153,7 @@
         + avatar(cm.authorName || '?', 24)
         + '<div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">'
         +   '<div style="display:flex; align-items:center; gap:8px;">'
-        +     '<span style="font-size:13px; font-weight:600;">' + esc(cm.authorName) + '</span>'
+        +     '<span style="font-size:13px; font-weight:500;">' + esc(cm.authorName) + '</span>'
         +     '<span style="font-size:12px; color:' + c.textMuted + ';">' + esc(formatStamp(cm.createdAt)) + '</span>'
         +     ((cm.mine || isAdmin()) ? '<span class="interactive" data-action="deleteComment" data-id="' + cm.id + '" title="' + T('Delete comment') + '" style="margin-left:auto; display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:var(--r-sm); color:' + c.textMuted + ';">' + ICON.close + '</span>' : '')
         +   '</div>'
@@ -4162,7 +4162,7 @@
     }).join('');
     var me = state.user ? state.user.displayName : '';
     return '<div style="display:flex; flex-direction:column; gap:2px; padding-top:16px; border-top:1px solid ' + c.outlineVariant + ';">'
-      + '<span style="font-size:14px; font-weight:600; margin-bottom:6px;">' + T('Activity') + (state.comments.length ? ' <span class="tnum" style="font-weight:400; color:' + c.textMuted + ';">· ' + T(state.comments.length === 1 ? '{n} comment' : '{n} comments', { n: state.comments.length }) + '</span>' : '') + '</span>'
+      + '<span style="font-size:16px; font-weight:500; margin-bottom:6px;">' + T('Activity') + (state.comments.length ? ' <span class="tnum" style="font-weight:400; color:' + c.textMuted + ';">· ' + T(state.comments.length === 1 ? '{n} comment' : '{n} comments', { n: state.comments.length }) + '</span>' : '') + '</span>'
       + (all.length ? items : '<div style="font-size:13px; color:' + c.textMuted + '; padding:4px 0 8px 0;">' + T('No comments yet.') + '</div>')
       + '</div>'
       + '<div class="comment-composer" style="position:sticky; bottom:-28px; margin:8px -24px -28px; padding:12px 24px 20px; background:' + c.surface + '; border-top:1px solid ' + c.outlineVariant + '; display:flex; gap:10px; align-items:flex-start;">'
@@ -4187,7 +4187,7 @@
       var active = i === state.mention.index;
       return '<div class="interactive" role="option" aria-selected="' + (active ? 'true' : 'false') + '" data-action="pickMention" data-id="' + m.id + '" style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:var(--r-sm); font-size:13px; background:' + (active ? c.primaryContainer : 'transparent') + '; color:' + (active ? c.onPrimaryContainer : c.onSurface) + ';">'
         + withImageFallback('/api/users/' + m.id + '/avatar?v=' + state.avatarVersion,
-            '<div style="width:22px; height:22px; border-radius:50%; background:' + c.tertiaryContainer + '; color:' + c.onTertiaryContainer + '; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center;">' + esc(computeInitials(m.displayName)) + '</div>', 22, '50%')
+            '<div style="width:22px; height:22px; border-radius:50%; background:' + c.tertiaryContainer + '; color:' + c.onTertiaryContainer + '; font-size:12px; font-weight:500; display:flex; align-items:center; justify-content:center;">' + esc(computeInitials(m.displayName)) + '</div>', 22, '50%')
         + '<span>' + esc(m.displayName) + '</span>'
         + (m.deptId ? '<span style="margin-left:auto; font-size:12px; color:' + c.onSurfaceVariant + ';">' + esc(nodeLabel(m.deptId)) + '</span>' : '')
         + '</div>';
@@ -4210,7 +4210,7 @@
     var r = state.resetResult;
     if (!r) return '';
     return '<div class="' + oneShotClass('resetResult').trim() + '" style="display:flex; flex-direction:column; gap:7px; padding:13px; border-radius:var(--r-md); background:' + c.primaryContainer + '; color:' + c.onPrimaryContainer + ';">'
-      + '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:13px; font-weight:600; flex:1;">' + esc(T('Temporary password for {name}', { name: r.name })) + '</span>'
+      + '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:13px; font-weight:500; flex:1;">' + esc(T('Temporary password for {name}', { name: r.name })) + '</span>'
       +   '<span class="interactive" data-action="dismissResetResult" title="' + T('Done') + '" style="display:flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%;">' + ICON.close + '</span></div>'
       + '<div style="display:flex; align-items:center; gap:8px;"><code style="flex:1; font-size:18px; letter-spacing:.06em; font-weight:600; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;">' + esc(r.temp) + '</code>'
       +   '<span class="interactive" data-action="copyResetPassword" title="' + T('Copy') + '" style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:var(--r-sm);">' + (state.copiedToken === 'reset-pw' ? '<span class="anim-copied" style="display:flex;">' + ICON.check + '</span>' : ICON.copy) + '</span></div>'
@@ -4248,7 +4248,7 @@
         : '<span class="interactive" data-action="resetUserPassword" data-id="' + u.id + '" style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Reset password') + '</span>';
 
       var statusControl = pending
-        ? '<span class="interactive" data-action="approveUser" data-id="' + u.id + '" style="font-size:12px; font-weight:600; color:' + c.primary + ';">' + T('Approve') + '</span>'
+        ? '<span class="interactive" data-action="approveUser" data-id="' + u.id + '" style="font-size:12px; font-weight:500; color:' + c.primary + ';">' + T('Approve') + '</span>'
         : (isSelf ? ''
           : '<span class="interactive" data-action="setUserStatus" data-id="' + u.id + '" data-value="' + (disabled ? 'active' : 'disabled') + '" style="font-size:12px; font-weight:500; color:' + (disabled ? c.primary : c.error) + ';">'
             + (disabled ? T('Re-enable') : T('Disable')) + '</span>');
@@ -4257,8 +4257,8 @@
         + '<div style="display:flex; align-items:center; gap:8px;">'
         +   '<span style="font-size:13px; font-weight:500;">' + esc(u.displayName) + '</span>'
         +   '<span style="font-size:12px; color:' + c.onSurfaceVariant + ';">@' + esc(u.username) + '</span>'
-        +   (u.mustChangePassword ? '<span style="margin-left:auto; font-size:12px; font-weight:600; padding:2px 8px; border-radius:var(--r-sm); background:' + c.tertiaryContainer + '; color:' + c.onTertiaryContainer + ';">' + T('Needs new password') + '</span>' : '')
-        +   '<span style="' + (u.mustChangePassword ? '' : 'margin-left:auto; ') + 'font-size:12px; font-weight:600; padding:2px 8px; border-radius:var(--r-sm); background:' + badgeBg + '; color:' + badgeFg + ';">' + badgeText + '</span>'
+        +   (u.mustChangePassword ? '<span style="margin-left:auto; font-size:12px; font-weight:500; padding:2px 8px; border-radius:var(--r-sm); background:' + c.tertiaryContainer + '; color:' + c.onTertiaryContainer + ';">' + T('Needs new password') + '</span>' : '')
+        +   '<span style="' + (u.mustChangePassword ? '' : 'margin-left:auto; ') + 'font-size:12px; font-weight:500; padding:2px 8px; border-radius:var(--r-sm); background:' + badgeBg + '; color:' + badgeFg + ';">' + badgeText + '</span>'
         + '</div>'
         + '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">'
         +   deptSelect
@@ -4270,7 +4270,7 @@
     var waiting = pendingUserCount();
     return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="closeUsers" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:50;">'
       + '<div role="dialog" data-scroll-key="accounts" aria-modal="true" aria-label="' + esc(T('Accounts')) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:520px; max-width:94vw; max-height:88vh; overflow-y:auto; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:10px; box-shadow:var(--e3);">'
-      +   '<span style="font-size:18px; font-weight:600;">' + T('Accounts') + '</span>'
+      +   '<span style="font-size:20px; font-weight:500;">' + T('Accounts') + '</span>'
       +   '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">'
       +     (waiting > 0 ? T(waiting === 1 ? '{n} account waiting for approval.' : '{n} accounts waiting for approval.', { n: waiting }) + ' ' : '')
       +     T('A member can only add or change work in their own department, so give each person a department before approving them.')
@@ -4278,7 +4278,7 @@
       +   resetResultBox(c)
       +   (state.users.length === 0 ? '<div style="font-size:13px; color:' + c.onSurfaceVariant + '; padding:12px 0;">' + T('No accounts yet.') + '</div>' : rows)
       +   '<div style="display:flex; justify-content:flex-end; margin-top:8px;">'
-      +     '<div class="interactive" data-action="closeUsers" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 20px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; font-weight:600;">' + T('Done') + '</div>'
+      +     '<div class="interactive" data-action="closeUsers" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 20px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; font-weight:500;">' + T('Done') + '</div>'
       +   '</div>'
       + '</div></div>';
   }
@@ -4540,7 +4540,7 @@
       + '<div role="dialog" aria-modal="true" aria-label="' + esc(T('How to use {app}', { app: state.appName })) + '" tabindex="-1" class="guide-card ' + mo.card + '" style="' + mo.cardStyle + 'background:' + c.surface + '; color:' + c.onSurface + '; --guide-rule:' + c.outlineVariant + '; --guide-code-bg:' + c.surfaceContainerHigh + ';">'
       +   '<div style="display:flex; align-items:center; gap:12px; padding:22px 24px 10px 24px;">'
       +     brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 32, 'none')
-      +     '<div style="flex:1; min-width:0;"><div style="font-size:18px; font-weight:600;">' + esc(T('How to use {app}', { app: state.appName })) + '</div>'
+      +     '<div style="flex:1; min-width:0;"><div style="font-size:20px; font-weight:500;">' + esc(T('How to use {app}', { app: state.appName })) + '</div>'
       +       '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + esc(state.user ? state.user.displayName : '') + ' · ' + esc(guideLang() === 'ko' ? (state.user && state.user.role === 'admin' ? '관리자' : '멤버') : (state.user && state.user.role === 'admin' ? 'administrator' : 'member')) + '</div></div>'
       +     '<span class="interactive" data-action="closeGuide" title="' + T('Close') + '" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:50%; color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
       +   '</div>'
@@ -4617,7 +4617,7 @@
       +     '<div style="flex:1; min-width:0; display:flex; align-items:center; gap:10px; position:relative;">'
       +       iconBlock
       +       ((state.iconPickerOpen || state.iconPickerClosing) && writable ? iconPicker(c, t) : '')
-      +       '<h2 style="flex:1; min-width:0; margin:0; font-size:18px; line-height:1.4; font-weight:600; overflow-wrap:anywhere; color:' + v.titleColor + '; text-decoration:' + v.titleDeco + ';">' + esc(t.title) + '</h2>'
+      +       '<h2 style="flex:1; min-width:0; margin:0; font-size:22px; line-height:1.35; font-weight:500; overflow-wrap:anywhere; color:' + v.titleColor + '; text-decoration:' + v.titleDeco + ';">' + esc(t.title) + '</h2>'
       +     '</div>'
       +     (writable ? '<span class="interactive" data-action="editFromDetail" title="' + T('Edit title, description and repeat') + '" aria-label="' + T('Edit task') + '" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--r-sm); flex-shrink:0; color:' + c.onSurfaceVariant + ';">' + pencil + '</span>' : '')
       +     '<span class="interactive" data-action="closeTaskDetail" title="' + T('Close') + '" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--r-sm); flex-shrink:0; color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
@@ -4661,8 +4661,8 @@
     var m = closing ? exit : enter;
     return '<div class="icon-picker ' + m.cls + '" data-dropdown="icon" style="' + m.style + 'background:' + c.surface + '; border:1px solid ' + c.outlineVariant + ';">'
       + '<div style="display:flex; align-items:center; gap:10px; padding:2px 4px 8px 4px;">'
-      +   '<span style="font-size:12px; font-weight:600; flex:1;">' + T('Icon') + '</span>'
-      +   '<span class="interactive" data-action="uploadTaskIcon" style="font-size:12px; font-weight:600; color:' + c.primary + ';">' + T('Upload image') + '</span>'
+      +   '<span style="font-size:12px; font-weight:500; flex:1;">' + T('Icon') + '</span>'
+      +   '<span class="interactive" data-action="uploadTaskIcon" style="font-size:12px; font-weight:500; color:' + c.primary + ';">' + T('Upload image') + '</span>'
       +   (t.icon ? '<span class="interactive" data-action="removeTaskIcon" style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Remove') + '</span>' : '')
       + '</div>'
       + '<div class="emoji-tabs" style="border-bottom:1px solid ' + c.outlineVariant + ';">' + tabs + '</div>'
@@ -4699,9 +4699,9 @@
     var busy = state.uploading > 0 ? '<span style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T(state.uploading === 1 ? 'Uploading {n} file…' : 'Uploading {n} files…', { n: state.uploading }) + '</span>' : '';
     return '<div style="display:flex; flex-direction:column; gap:8px;">'
       + '<div style="display:flex; align-items:center; gap:10px;">'
-      +   '<label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Attachments') + (state.attachments.length ? ' (' + state.attachments.length + ')' : '') + '</label>'
+      +   '<label style="font-size:16px; font-weight:500; color:' + c.onSurface + ';">' + T('Attachments') + (state.attachments.length ? ' (' + state.attachments.length + ')' : '') + '</label>'
       +   busy
-      +   (writable ? '<span class="interactive" data-action="pickAttachments" style="margin-left:auto; font-size:13px; font-weight:600; color:' + c.primary + ';">' + T('+ Add files') + '</span>' : '')
+      +   (writable ? '<span class="interactive" data-action="pickAttachments" style="margin-left:auto; font-size:13px; font-weight:500; color:' + c.primary + ';">' + T('+ Add files') + '</span>' : '')
       + '</div>'
       + (tiles ? '<div class="att-grid">' + tiles + '</div>' : '')
       + rows
@@ -4741,7 +4741,7 @@
   function passwordModal(c) {
     if (state.passwordModalPhase === 'closed') return '';
     return modalShell('password', state.passwordModalPhase, c, 'Change password', 400,
-      '<span style="font-size:18px; font-weight:600;">' + T('Change password') + '</span>'
+      '<span style="font-size:20px; font-weight:500;">' + T('Change password') + '</span>'
       + '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('Your other sign-ins - other browsers and phones using this password - are signed out. App passwords for phone sync keep working.') + '</div>'
       + passwordFields(c, false)
       + '<div style="display:flex; justify-content:flex-end; gap:8px; margin-top:4px;">' + pillButton('closePasswordModal', 'Cancel', c, false) + pillButton('submitPasswordChange', 'Change password', c, true) + '</div>');
@@ -4756,7 +4756,7 @@
     try { document.documentElement.setAttribute('data-theme', c.dark ? 'dark' : 'light'); } catch (e) {}
     return '<div style="' + vars + 'min-height:100vh; display:flex; align-items:center; justify-content:center; background:' + c.surfaceContainerLow + '; color:' + c.onSurface + ';">'
       + '<div class="auth-card" role="dialog" aria-label="' + T('Choose a new password') + '" style="width:400px; max-width:92vw; background:' + c.surface + '; border-radius:var(--r-lg); padding:30px; box-shadow:var(--e2); display:flex; flex-direction:column; gap:14px;">'
-      +   '<div style="display:flex; align-items:center; gap:10px;">' + brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 36, false) + '<div style="font-size:18px; font-weight:600;">' + T('Choose a new password') + '</div></div>'
+      +   '<div style="display:flex; align-items:center; gap:10px;">' + brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 36, false) + '<div style="font-size:20px; font-weight:500;">' + T('Choose a new password') + '</div></div>'
       +   '<div style="font-size:13px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('An administrator reset the password for {name}. Enter the temporary password you were given, then one of your own.', { name: '<b>' + esc(state.user.displayName) + '</b>' }) + '</div>'
       +   passwordFields(c, true)
       +   '<div class="interactive" data-action="submitPasswordChange" style="height:44px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:14px;">' + T('Set password') + '</div>'
@@ -4857,11 +4857,11 @@
     return modalShell('settings', state.settingsPhase, c, 'Settings', 760,
       '<div class="settings-layout" style="display:flex; gap:24px; min-height:420px;">'
       + '<div class="settings-nav" style="width:180px; flex-shrink:0; display:flex; flex-direction:column; gap:2px; padding-right:16px; border-right:1px solid ' + c.outlineVariant + ';">'
-      +   '<div style="font-size:18px; font-weight:600; padding:2px 10px 12px;">' + T('Settings') + '</div>'
+      +   '<div style="font-size:20px; font-weight:500; padding:2px 10px 12px;">' + T('Settings') + '</div>'
       +   sections.map(navItem).join('')
       + '</div>'
       + '<div style="flex:1; min-width:0;">'
-      +   '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;"><h2 style="margin:0; font-size:18px; font-weight:600;">' + T(current[1]) + '</h2>'
+      +   '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;"><h2 style="margin:0; font-size:20px; font-weight:500;">' + T(current[1]) + '</h2>'
       +     '<span class="interactive" data-action="closeSettings" aria-label="' + T('Close') + '" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span></div>'
       +   body
       + '</div></div>');
@@ -4869,7 +4869,7 @@
 
   function pillButton(action, label, c, primary, extra) {
     label = T(label);
-    return '<div class="interactive" data-action="' + action + '"' + (extra || '') + ' style="display:flex; align-items:center; justify-content:center; height:38px; padding:0 18px; border-radius:var(--r-sm); font-size:13px; font-weight:600; flex-shrink:0; '
+    return '<div class="interactive" data-action="' + action + '"' + (extra || '') + ' style="display:flex; align-items:center; justify-content:center; height:38px; padding:0 18px; border-radius:var(--r-sm); font-size:13px; font-weight:500; flex-shrink:0; '
       + (primary ? 'background:' + c.primary + '; color:' + c.onPrimary + ';' : 'color:' + c.onSurfaceVariant + ';') + '">' + label + '</div>';
   }
 
@@ -4885,14 +4885,14 @@
         +   '</div>'
         + '</div>'
         + (t.canRestore
-          ? '<span class="interactive" data-action="restoreTrashed" data-id="' + t.id + '" style="font-size:13px; font-weight:600; color:' + c.primary + '; padding:6px;">' + T('Restore') + '</span>'
+          ? '<span class="interactive" data-action="restoreTrashed" data-id="' + t.id + '" style="font-size:13px; font-weight:500; color:' + c.primary + '; padding:6px;">' + T('Restore') + '</span>'
             + '<span class="interactive" data-action="purgeTrashed" data-id="' + t.id + '" title="' + T('Delete for good') + '" style="font-size:13px; font-weight:500; color:' + c.error + '; padding:6px;">' + T('Delete') + '</span>'
           : '<span style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T('Another department') + '</span>')
         + '</div>';
     }).join('');
     var anyRestorable = state.trash.some(function (t) { return t.canRestore; });
     return modalShell('trash', state.trashModalPhase, c, 'Trash', 520,
-      '<span style="font-size:18px; font-weight:600;">' + T('Trash') + '</span>'
+      '<span style="font-size:20px; font-weight:500;">' + T('Trash') + '</span>'
       + '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('Deleted tasks wait here for 10 days, with their comments and checklist, and are then removed for good. Restoring one puts it back where it was.') + '</div>'
       + (state.trash.length ? rows : '<div style="font-size:13px; color:' + c.onSurfaceVariant + '; padding:18px 0;">' + T('The trash is empty.') + '</div>')
       + '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px;">'
@@ -4907,7 +4907,7 @@
     var created = state.appPwCreated;
     var createdBox = created
       ? '<div class="' + oneShotClass('appPwNew').trim() + '" style="display:flex; flex-direction:column; gap:8px; padding:14px; border-radius:var(--r-md); background:' + c.primaryContainer + '; color:' + c.onPrimaryContainer + ';">'
-        + '<div style="font-size:13px; font-weight:600;">App password for ' + esc(created.name) + '</div>'
+        + '<div style="font-size:13px; font-weight:500;">App password for ' + esc(created.name) + '</div>'
         + '<div style="display:flex; align-items:center; gap:8px;"><code style="flex:1; font-size:18px; letter-spacing:.06em; font-weight:600; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap:anywhere;">' + esc(created.token) + '</code>'
         +   '<span class="interactive" data-action="copyAppPassword" title="' + T('Copy') + '" style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:var(--r-sm);">' + (state.copiedToken === 'app-pw' ? '<span class="anim-copied" style="display:flex;">' + ICON.check + '</span>' : ICON.copy) + '</span></div>'
         + '<div style="font-size:12px; line-height:1.45;">' + T('Enter it as the password on the device now. It is shown only this once - if you lose it, revoke it and make another.') + '</div>'
@@ -4921,7 +4921,7 @@
         + '</div>';
     }).join('');
     return modalShell('appPasswords', state.appPwModalPhase, c, 'Phone sync', 480,
-      '<span style="font-size:18px; font-weight:600;">' + T('Phone sync') + '</span>'
+      '<span style="font-size:20px; font-weight:500;">' + T('Phone sync') + '</span>'
       + '<div style="font-size:12px; line-height:1.55; color:' + c.onSurfaceVariant + ';">' + T('A phone’s reminders app signs in with a CalDAV account. Give each device its own {term} instead of your real one: if a phone is lost, revoke its line here and nothing else changes.', { term: '<b>' + T('app password') + '</b>' }) + '</div>'
       + '<table class="guide-table" style="font-size:13px;">'
       +   '<tr><th style="color:' + c.onSurfaceVariant + ';">' + T('Server') + '</th><td>' + code(location.origin + '/caldav/') + '</td></tr>'
@@ -4933,7 +4933,7 @@
       +   '<input id="appPwNameInput" data-field="appPwName" value="' + esc(state.appPwName) + '" maxlength="60" placeholder="' + T('Device name, e.g. iPhone') + '" style="flex:1; min-width:0; height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:13px; background:' + c.surface + '; color:' + c.onSurface + ';"></input>'
       +   pillButton('createAppPassword', 'Create', c, true)
       + '</div>'
-      + '<div style="font-size:13px; font-weight:600; margin-top:6px;">' + T('Your devices') + '</div>'
+      + '<div style="font-size:13px; font-weight:500; margin-top:6px;">' + T('Your devices') + '</div>'
       + (state.appPasswords.length ? rows : '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T('No app passwords yet.') + '</div>')
       + '<div style="display:flex; justify-content:flex-end; margin-top:6px;">' + pillButton('closeAppPasswords', 'Done', c, true) + '</div>');
   }
@@ -4944,7 +4944,7 @@
     var f = state.reminderForm;
     var field = 'height:36px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:13px; background:' + c.surface + '; color:' + c.onSurface + ';';
     return modalShell('reminders', state.reminderModalPhase, c, 'Due-date reminders', 460,
-      '<span style="font-size:18px; font-weight:600;">' + T('Due-date reminders') + '</span>'
+      '<span style="font-size:20px; font-weight:500;">' + T('Due-date reminders') + '</span>'
       + '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('Once a day the server tells each person, in their notifications, which of their unfinished tasks are due today and which are due tomorrow. Tasks with nobody assigned are left out.') + '</div>'
       + '<label class="interactive" style="display:flex; align-items:center; gap:9px; font-size:14px; font-weight:500; cursor:pointer;"><input type="checkbox" id="reminderEnabledInput"' + (f.enabled ? ' checked' : '') + '></input>' + T('Send due-date reminders every day') + '</label>'
       + '<div style="display:flex; flex-direction:column; gap:4px; opacity:' + (f.enabled ? '1' : '.5') + ';"><span style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Time') + '</span>'
@@ -4973,12 +4973,12 @@
           return '<div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid ' + c.outlineVariant + '; font-size:13px;">'
             + '<code style="flex:1; min-width:0; overflow-wrap:anywhere; font-size:12px;">' + esc(fl.name) + '</code>'
             + '<span style="color:' + c.onSurfaceVariant + '; font-size:12px; white-space:nowrap;">' + formatBytes(fl.size) + '</span>'
-            + '<a href="/api/backups/' + encodeURIComponent(fl.name) + '" download style="font-size:12px; font-weight:600; color:' + c.primary + '; text-decoration:none;">' + T('Download') + '</a>'
+            + '<a href="/api/backups/' + encodeURIComponent(fl.name) + '" download style="font-size:12px; font-weight:500; color:' + c.primary + '; text-decoration:none;">' + T('Download') + '</a>'
             + '</div>';
         }).join('')
       : '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T('No backups in the folder yet.') + '</div>';
     return modalShell('backups', state.backupModalPhase, c, 'Backups', 520,
-      '<span style="font-size:18px; font-weight:600;">' + T('Backups') + '</span>'
+      '<span style="font-size:20px; font-weight:500;">' + T('Backups') + '</span>'
       + '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('A consistent copy of the whole database, taken while the server keeps running. Backups go to {dir} on the server (set with {flag}). Download one now and then so a copy lives off that machine too.', { dir: b ? '<code style="overflow-wrap:anywhere;">' + esc(b.dir) + '</code>' : T('the backups folder'), flag: '<code>-backup-dir</code>' }) + '</div>'
       + (b && b.attachmentsCount ? '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T(b.attachmentsCount === 1 ? 'Task attachments take {size} ({n} file), kept as files in {dir}. Backups keep one copy of each file, shared between them, and a download is a zip of the database with its files.' : 'Task attachments take {size} ({n} files), kept as files in {dir}. Backups keep one copy of each file, shared between them, and a download is a zip of the database with its files.', { size: formatBytes(b.attachmentsBytes), n: b.attachmentsCount, dir: '<code style="overflow-wrap:anywhere;">' + esc(b.attachmentsDir || 'attachments') + '</code>' }) + '</div>' : '')
       + '<label class="interactive" style="display:flex; align-items:center; gap:9px; font-size:14px; font-weight:500; cursor:pointer;"><input type="checkbox" id="backupEnabledInput"' + (f.enabled ? ' checked' : '') + '></input>' + T('Back up automatically every day') + '</label>'
@@ -4991,8 +4991,8 @@
       + (b ? '<div style="font-size:12px; color:' + c.onSurfaceVariant + '; margin-top:-4px;">' + esc(T('The server’s clock reads {time} ({zone}) right now. If the server was off at the set time, that day’s backup runs as soon as it starts.', { time: b.serverTime, zone: b.serverZone })) + '</div>' : '')
       + '<div style="display:flex; gap:8px; justify-content:flex-end;">' + pillButton('saveBackupSettings', 'Save schedule', c, true) + '</div>'
       + status
-      + '<div style="display:flex; align-items:center; justify-content:space-between; margin-top:4px;"><span style="font-size:13px; font-weight:600;">' + T('Backup files') + '</span>'
-      +   '<span class="interactive" data-action="runBackup" style="font-size:13px; font-weight:600; color:' + c.primary + '; opacity:' + (state.backupBusy ? '.5' : '1') + ';">' + (state.backupBusy ? T('Backing up…') : T('Back up now')) + '</span></div>'
+      + '<div style="display:flex; align-items:center; justify-content:space-between; margin-top:4px;"><span style="font-size:13px; font-weight:500;">' + T('Backup files') + '</span>'
+      +   '<span class="interactive" data-action="runBackup" style="font-size:13px; font-weight:500; color:' + c.primary + '; opacity:' + (state.backupBusy ? '.5' : '1') + ';">' + (state.backupBusy ? T('Backing up…') : T('Back up now')) + '</span></div>'
       + '<div data-scroll-key="backup-files" style="max-height:220px; overflow-y:auto;">' + files + '</div>'
       + '<div style="display:flex; justify-content:flex-end; margin-top:6px;">' + pillButton('closeBackups', 'Done', c, false) + '</div>');
   }
@@ -5019,7 +5019,7 @@
 
     return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="closeAddDept" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:50;">'
       + '<div role="dialog" aria-modal="true" aria-label="' + esc(T('Add Department')) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:380px; max-width:92vw; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:14px; box-shadow:var(--e3);">'
-      +   '<span style="font-size:18px; font-weight:600;">' + T('Add Department') + '</span>'
+      +   '<span style="font-size:20px; font-weight:500;">' + T('Add Department') + '</span>'
       +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Name') + '</label>'
       +     '<input id="newDeptNameInput" data-form="newDeptForm" data-field="name" value="' + esc(f.name) + '" placeholder="' + T('e.g. Data Team') + '" style="height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>'
       +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Parent Department') + '</label>'
@@ -5028,7 +5028,7 @@
       +     '</select>', c) + '</div>'
       +   '<div style="display:flex; justify-content:flex-end; gap:10px; margin-top:6px;">'
       +     '<div class="interactive" data-action="closeAddDept" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 18px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + '; font-size:14px; font-weight:500;">' + T('Cancel') + '</div>'
-      +     '<div class="interactive" data-action="createDept" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 20px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; font-weight:600;">' + T('Create') + '</div>'
+      +     '<div class="interactive" data-action="createDept" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 20px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; font-weight:500;">' + T('Create') + '</div>'
       +   '</div>'
       + '</div></div>';
   }
@@ -5044,7 +5044,7 @@
 
     return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="closeMapping" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:50;">'
       + '<div role="dialog" aria-modal="true" aria-label="' + esc(T('Department settings')) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:380px; max-width:92vw; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:14px; box-shadow:var(--e3);">'
-      +   '<span style="font-size:18px; font-weight:600;">' + T('Department') + '</span>'
+      +   '<span style="font-size:20px; font-weight:500;">' + T('Department') + '</span>'
       +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Department') + '</label>'
       +     mSelectFrom('<select id="mappingDeptSelect" data-form="mappingForm" data-field="deptId" style="height:38px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"><option value="">' + T('— Select —') + '</option>' + opts + '</select>', c) + '</div>'
       +   (f.deptId ? '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Name') + '</label>'
@@ -5065,7 +5065,7 @@
       +     (f.deptId ? '<div class="interactive" data-action="deleteDept" style="font-size:14px; font-weight:500; color:' + c.error + '; padding:8px 6px;">' + T('Delete') + '</div>' : '<span></span>')
       +     '<div style="display:flex; gap:10px;">'
       +       '<div class="interactive" data-action="closeMapping" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 18px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + '; font-size:14px; font-weight:500;">' + T('Cancel') + '</div>'
-      +       '<div class="interactive" data-action="saveMapping" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 20px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; font-weight:600;">' + T('Save') + '</div>'
+      +       '<div class="interactive" data-action="saveMapping" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 20px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; font-weight:500;">' + T('Save') + '</div>'
       +     '</div>'
       +   '</div>'
       + '</div></div>';
