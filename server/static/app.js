@@ -44,6 +44,11 @@
   }
 
   var NARROW_QUERY = '(max-width: 860px)';
+  var WIDE_QUERY = '(min-width: 1200px)';
+  // At and above this width the department list is a permanent column.
+  function isWideScreen() {
+    return !!(window.matchMedia && window.matchMedia(WIDE_QUERY).matches);
+  }
   function isNarrowScreen() {
     return !!(window.matchMedia && window.matchMedia(NARROW_QUERY).matches);
   }
@@ -434,7 +439,7 @@
     tasks: [],
     todayTasks: [],
     activity: [],
-    taskMeta: { page: 1, pageSize: 6, total: 0, totalPages: 1, statusCounts: {} },
+    taskMeta: { page: 1, pageSize: 50, total: 0, totalPages: 1, statusCounts: {} },
     summary: { all: 0, mine: 0, trash: 0, byDept: {} },
     tasksLoading: false,
     activitySeen: loadActivitySeen(),
@@ -446,7 +451,7 @@
     viewMode: 'list',
     viewToggleAnim: null,
     page: 1,
-    pageSize: 6,
+    pageSize: 50,
     filterOpen: false,
     filterPriority: { High: true, Medium: true, Low: true },
     filterCalendar: 'all',
@@ -1528,6 +1533,20 @@
     return out;
   }
 
+  // "Today", "Tomorrow", "Friday", "3 days late" near now; a date further out.
+  function relativeDue(iso, overdue) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+    if (!m) return formatDue(iso);
+    var due = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    var now = new Date(); now = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var days = Math.round((due - now) / 86400000);
+    if (days < 0) return overdue ? T(days === -1 ? '1 day late' : '{n} days late', { n: -days }) : formatDue(iso);
+    if (days === 0) return T('Today');
+    if (days === 1) return T('Tomorrow');
+    if (days < 7) return due.toLocaleDateString(LOCALE, { weekday: 'long' });
+    return formatDue(iso);
+  }
+
   function formatDue(iso) {
     if (!iso) return T('No due date');
     var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
@@ -1807,6 +1826,13 @@
       var onWidth = function () { render(); };
       if (widthMq.addEventListener) widthMq.addEventListener('change', onWidth);
       else if (widthMq.addListener) widthMq.addListener(onWidth);
+      var wideMq = window.matchMedia(WIDE_QUERY);
+      var onWide = function () {
+        if (wideMq.matches && state.mobileNavOpen) setState({ mobileNavOpen: false, mobileNavAnim: null });
+        else render();
+      };
+      if (wideMq.addEventListener) wideMq.addEventListener('change', onWide);
+      else if (wideMq.addListener) wideMq.addListener(onWide);
 
       var mq = window.matchMedia('(prefers-color-scheme: dark)');
       var onSchemeChange = function () {
@@ -2837,27 +2863,49 @@
       + '<b style="font-weight:600;">' + esc(where) + '</b> · ' + text + '</span>';
   }
 
+  // Status as a small ring that fills as work moves on: empty to do, half in
+  // progress, three quarters in review, full with a check when done.
+  function statusIconHtml(status, color, size) {
+    size = size || 16;
+    var ring = '<circle cx="10" cy="10" r="7.5" fill="none" stroke="' + color + '" stroke-width="2"></circle>';
+    var inner = '';
+    if (status === 'inprogress') inner = '<path d="M10 4.5a5.5 5.5 0 0 1 0 11z" fill="' + color + '"></path>';
+    else if (status === 'review') inner = '<path d="M10 4.5a5.5 5.5 0 1 1-5.5 5.5H10z" fill="' + color + '"></path>';
+    else if (status === 'done') { ring = '<circle cx="10" cy="10" r="8.5" fill="' + color + '"></circle>'; inner = '<path d="M6.5 10.2l2.4 2.4 4.6-4.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>'; }
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 20 20" aria-hidden="true" style="flex-shrink:0;">' + ring + inner + '</svg>';
+  }
+
+  // Priority as signal bars: three for high, two for medium, one for low.
+  function priorityIconHtml(priority, color, faint) {
+    var n = priority === 'High' ? 3 : priority === 'Medium' ? 2 : 1;
+    var bars = [[3, 11, 4], [8, 7, 8], [13, 3, 12]].map(function (b, i) {
+      return '<rect x="' + b[0] + '" y="' + b[1] + '" width="3.5" height="' + b[2] + '" rx="1" fill="' + (i < n ? color : faint) + '"></rect>';
+    }).join('');
+    return '<svg width="16" height="16" viewBox="0 0 20 18" aria-hidden="true">' + bars + '</svg>';
+  }
+
   function taskRow(t, maps, c) {
     var v = taskView(t, maps, c);
+    var shown = t.overdue ? 'overdue' : t.status;
+    var dot = (maps.statusStyle[t.status] || maps.statusStyle.todo).dot;
+    var done = t.status === 'done';
+    var cell = 'display:flex; align-items:center; min-width:0; padding:0 12px; height:44px; border-bottom:1px solid ' + c.outlineVariant + ';';
+    var dept = t.deptId ? '<span style="max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:500; padding:2px 8px; border-radius:var(--r-xs); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';">' + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span>' : '';
     // One row is one control: the cells sit on the table's own columns through
     // subgrid, so the whole row lights up under the pointer and takes a single
     // stop in the tab order, instead of six cells each reacting on their own.
     return '<div class="interactive task-row' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + '" data-action="openTask" data-id="' + t.id + '" style="grid-column:1 / -1; display:grid; grid-template-columns:subgrid;">'
-      + '<div style="display:flex; align-items:center; padding:13px 16px; border-bottom:1px solid ' + c.outlineVariant + ';">'
-      +   '<span style="display:inline-flex; align-items:center; gap:6px; padding:3px 8px; border-radius:var(--r-xs); background:' + v.statusBg + '; color:' + v.statusColor + '; font-size:12px; font-weight:500;"><svg width="8" height="8" viewBox="0 0 20 20" fill="' + v.statusDot + '"><circle cx="10" cy="10" r="8"></circle></svg>' + v.statusLabel + '</span>'
+      + '<div title="' + esc(v.statusLabel) + '" style="' + cell + ' justify-content:center; padding:0 0 0 8px;">' + statusIconHtml(t.status, dot) + '<span style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0);">' + esc((STATUS_META[shown] || STATUS_META.todo).label) + '</span></div>'
+      + '<div style="' + cell + ' gap:8px;">'
+      +   taskIconHtml(t, 16)
+      +   '<span style="flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; font-weight:500; color:' + (done ? c.textMuted : c.onSurface) + ';">' + esc(t.title) + '</span>'
+      +   '<span style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0; font-size:12px; color:' + c.textMuted + ';">' + taskBadges(t, c) + (t.calendarVisible ? '<span title="' + T('Shown in calendar') + '" style="display:inline-flex; color:' + c.textMuted + ';"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="14" height="13" rx="2"></rect><path d="M3 8h14M7 2v4M13 2v4"></path></svg></span>' : '') + '</span>'
+      +   (t.match ? '<span style="flex:1; min-width:0;">' + searchMatchHtml(t, c) + '</span>' : '')
       + '</div>'
-      + '<div style="display:flex; flex-direction:column; justify-content:center; min-width:0; padding:13px 16px; border-bottom:1px solid ' + c.outlineVariant + ';">'
-      +   '<span style="display:flex; align-items:center; gap:6px; font-size:14px; font-weight:500; color:' + v.titleColor + '; text-decoration:' + v.titleDeco + ';">' + taskIconHtml(t, 16) + '<span>' + esc(t.title) + '</span></span>'
-      +   '<span style="display:flex; align-items:center; gap:7px; font-size:12px; color:' + c.onSurfaceVariant + ';">' + esc(nodeLabel(t.deptId)) + taskBadges(t, c) + '</span>'
-      +   searchMatchHtml(t, c)
-      + '</div>'
-      + '<div style="display:flex; align-items:center; gap:8px; padding:13px 16px; border-bottom:1px solid ' + c.outlineVariant + ';">'
-      +   assigneeAvatarHtml(t, v, 24)
-      +   '<span style="font-size:13px;">' + esc(t.assignee) + '</span>'
-      + '</div>'
-      + '<div style="display:flex; align-items:center; gap:6px; padding:13px 16px; border-bottom:1px solid ' + c.outlineVariant + '; font-size:13px;"><span style="width:7px; height:7px; border-radius:50%; background:' + v.priorityColor + '; flex-shrink:0;"></span>' + esc(T(t.priority)) + '</div>'
-      + '<div style="display:flex; align-items:center; padding:13px 16px; border-bottom:1px solid ' + c.outlineVariant + '; font-size:13px; color:' + v.dueColor + '; font-weight:' + v.dueWeight + ';">' + esc(formatDue(t.dueDate)) + '</div>'
-      + '<div style="display:flex; align-items:center; padding:13px 16px; border-bottom:1px solid ' + c.outlineVariant + ';">' + v.syncIcon + '</div>'
+      + '<div style="' + cell + '">' + dept + '</div>'
+      + '<div style="' + cell + ' gap:8px;">' + (t.assignee ? assigneeAvatarHtml(t, v, 20) + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; color:' + c.onSurfaceVariant + ';">' + esc(t.assignee) + '</span>' : '<span style="font-size:13px; color:' + c.textMuted + ';">' + T('Unassigned') + '</span>') + '</div>'
+      + '<div class="tnum" style="' + cell + ' font-size:13px; white-space:nowrap; color:' + (t.overdue ? c.error : (t.dueDate ? c.onSurfaceVariant : c.textMuted)) + '; font-weight:' + (t.overdue ? 500 : 400) + ';">' + esc(t.dueDate ? relativeDue(t.dueDate, t.overdue) : '—') + '</div>'
+      + '<div title="' + esc(T(t.priority)) + '" style="' + cell + ' justify-content:center;">' + priorityIconHtml(t.priority, v.priorityColor, c.outlineVariant) + '</div>'
       + '</div>';
   }
 
@@ -3062,7 +3110,7 @@
       : '';
 
     var accountPanel = (state.accountOpen || state.dropdownClosing === 'account')
-      ? '<div class="' + dropdownClass('account') + '" style="' + dropdownStyle('account') + 'position:absolute; top:46px; right:0; width:220px; background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:60; display:flex; flex-direction:column; gap:2px;">'
+      ? '<div class="' + dropdownClass('account') + '" style="' + dropdownStyle('account') + 'position:absolute; top:46px; right:0; width:296px; background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:60; display:flex; flex-direction:column; gap:2px;">'
         + '<div style="padding:8px 10px 6px 10px; display:flex; align-items:center; gap:10px;">'
           +   avatarHtml(avatarColors(state.user.displayName, c.dark).bg, avatarColors(state.user.displayName, c.dark).color, 44)
           +   '<div style="min-width:0;"><div style="font-size:13px; font-weight:600;">' + esc(state.user.displayName) + '</div><div style="font-size:12px; color:' + c.onSurfaceVariant + ';">@' + esc(state.user.username) + ' · ' + esc(T(state.user.role)) + '</div></div>'
@@ -3091,7 +3139,7 @@
           : '')
         + '<div class="appearance-in-menu" style="flex-direction:column; gap:8px; padding:6px 10px 10px 10px;">'
         +   '<label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Appearance') + '</label>'
-        +   '<div style="display:flex; align-items:center; gap:10px;">'
+        +   '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">'
         +     accentControls(c)
         +     '<span class="interactive" data-action="cycleThemeMode" title="' + T(state.themeMode === 'light' ? 'Theme: Light' : state.themeMode === 'dark' ? 'Theme: Dark' : 'Theme: System') + '" style="margin-left:auto; display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">'
         +       (state.themeMode === 'light' ? ICON.themeLight : state.themeMode === 'dark' ? ICON.themeDark : ICON.themeSystem)
@@ -3212,7 +3260,7 @@
 
     // Closed, the drawer is off screen and out of the reading order; it is
     // still rendered so it can slide in and out.
-    var hidden = !state.mobileNavOpen && state.mobileNavAnim !== 'anim-close';
+    var hidden = !isWideScreen() && !state.mobileNavOpen && state.mobileNavAnim !== 'anim-close';
     return '<nav class="no-scrollbar ' + drawerClass('left-nav', state.mobileNavOpen, state.mobileNavAnim) + '" aria-label="' + T('Departments') + '" aria-hidden="' + (hidden ? 'true' : 'false') + '"' + (hidden ? ' inert' : '') + ' data-scroll-key="sidebar" style="min-height:0; background:' + c.surfaceContainerLow + '; overflow-y:auto; overflow-x:hidden; padding:18px 12px; display:flex; flex-direction:column; gap:2px;">'
       + '<div style="display:flex; align-items:center; justify-content:space-between; padding:0 8px 10px 8px;">'
       +   '<span style="font-size:12px; font-weight:600; letter-spacing:.04em; color:' + c.onSurfaceVariant + ';">' + T('DEPARTMENTS') + '</span>'
@@ -3255,10 +3303,11 @@
     var tabsHtml = TAB_ORDER.map(function (id) {
       var count = statusCount(id);
       var active = state.activeTab === id;
-      var bg = active ? c.primaryContainer : 'transparent';
-      var color = active ? c.onPrimaryContainer : (id === 'overdue' ? c.error : c.onSurfaceVariant);
-      return '<div class="interactive' + (active ? oneShotClass('tab') : '') + '" data-action="setTab" data-id="' + id + '" role="tab" aria-selected="' + (active ? 'true' : 'false') + '" aria-label="' + TAB_LABELS[id] + ', ' + T(count === 1 ? '{n} task' : '{n} tasks', { n: count }) + '" style="display:flex; align-items:center; gap:6px; padding:8px 16px; border-radius:var(--r-sm); background:' + bg + '; color:' + color + '; font-size:13px; font-weight:' + (active ? 600 : 500) + ';">'
-        + '<span>' + TAB_LABELS[id] + '</span><span style="opacity:.75;">' + count + '</span></div>';
+      var bg = 'transparent';
+      var color = active ? c.onSurface : (id === 'overdue' && count ? c.error : c.onSurfaceVariant);
+      var underline = active ? c.primary : 'transparent';
+      return '<div class="interactive' + (active ? oneShotClass('tab') : '') + '" data-action="setTab" data-id="' + id + '" role="tab" aria-selected="' + (active ? 'true' : 'false') + '" aria-label="' + TAB_LABELS[id] + ', ' + T(count === 1 ? '{n} task' : '{n} tasks', { n: count }) + '" style="display:flex; align-items:center; gap:6px; height:38px; padding:0 4px; margin-bottom:-1px; border-radius:0; background:' + bg + '; color:' + color + '; font-size:14px; font-weight:' + (active ? 600 : 400) + '; border-bottom:2px solid ' + underline + ';">'
+        + '<span>' + TAB_LABELS[id] + '</span><span style="font-size:12px; font-weight:500; color:' + (active ? c.onSurfaceVariant : c.textMuted) + ';">' + count + '</span></div>';
     }).join('');
 
     var maps = styleMaps(c);
@@ -3304,10 +3353,10 @@
       var rowsHtml = pageItems.map(function (t) { return taskRow(t, maps, c); }).join('');
       var emptyHtml = pageItems.length === 0
         ? '<div style="grid-column:1 / -1; padding:40px 16px; text-align:center; font-size:13px; color:' + c.onSurfaceVariant + ';">' + T('No tasks match.') + '</div>' : '';
-      bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" style="flex:1; min-height:0; overflow:auto; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); background:' + c.surface + ';">'
-        + '<div style="display:grid; grid-template-columns:132px minmax(220px,1fr) 168px 104px 104px 88px; min-width:820px;">'
-        +   [T('Status'), T('Task'), T('Assignee'), T('Priority'), T('Due Date'), T('Calendar')].map(function (h) {
-              return '<div style="position:sticky; top:0; background:' + c.surfaceContainerLow + '; font-size:12px; font-weight:600; color:' + c.onSurfaceVariant + '; padding:12px 16px; border-bottom:2px solid ' + c.outlineVariant + ';">' + h + '</div>';
+      bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" style="flex:1; min-height:0; overflow:auto;">'
+        + '<div role="table" style="display:grid; grid-template-columns:36px minmax(240px,1fr) 140px 168px 112px 52px; min-width:760px;">'
+        +   [['', T('Status')], [T('Task')], [T('Department')], [T('Assignee')], [T('Due Date')], ['', T('Priority')]].map(function (h, i) {
+              return '<div' + (h[1] ? ' aria-label="' + esc(h[1]) + '"' : '') + ' style="position:sticky; top:0; z-index:1; display:flex; align-items:center; height:32px; padding:0 12px; background:' + c.surface + '; font-size:12px; font-weight:500; color:' + c.textMuted + '; border-bottom:1px solid ' + c.outlineVariant + ';' + (i === 0 || i === 5 ? ' justify-content:center;' : '') + '">' + h[0] + '</div>';
             }).join('')
         +   rowsHtml + emptyHtml
         + '</div></div>';
@@ -3336,11 +3385,11 @@
               : '<div class="new-task-inline" title="' + T('An administrator has to put your account in a department first') + '" style="display:flex; align-items:center; gap:7px; height:40px; padding:0 18px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + '; font-size:14px; font-weight:600; opacity:.7;">' + ICON.plus + '<span>' + T('New Task') + '</span></div>')
       +   '</div>'
       + '</div>'
-      + '<div role="tablist" aria-label="' + T('Filter by status') + '" data-scroll-key="tabs" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' + tabsHtml + '</div>'
+      + '<div role="tablist" aria-label="' + T('Filter by status') + '" data-scroll-key="tabs" style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; border-bottom:1px solid ' + c.outlineVariant + ';">' + tabsHtml + '</div>'
       + bodyHtml
       + '<div style="flex-shrink:0; display:flex; align-items:center; justify-content:space-between; font-size:13px; color:' + c.onSurfaceVariant + ';">'
       +   '<span aria-live="polite">' + T('Showing {a}-{b} of {n}', { a: rangeStart, b: rangeEnd, n: meta.total }) + '</span>'
-      +   '<div style="display:flex; align-items:center; gap:14px;"><span>' + T('Page {p} of {n}', { p: page, n: totalPages }) + '</span>'
+      +   '<div style="display:' + (totalPages > 1 ? 'flex' : 'none') + '; align-items:center; gap:14px;"><span>' + T('Page {p} of {n}', { p: page, n: totalPages }) + '</span>'
       +     '<div style="display:flex; align-items:center; gap:4px;">'
       +       '<div class="interactive" data-action="prevPage" aria-label="' + T('Previous page') + '" aria-disabled="' + (page <= 1 ? 'true' : 'false') + '" style="width:28px; height:28px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; color:' + c.onSurfaceVariant + '; opacity:' + (page <= 1 ? '.4' : '1') + '; pointer-events:' + (page <= 1 ? 'none' : 'auto') + ';">' + ICON.chevronLeft + '</div>'
       +       '<div class="interactive" data-action="nextPage" aria-label="' + T('Next page') + '" aria-disabled="' + (page >= totalPages ? 'true' : 'false') + '" style="width:28px; height:28px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; color:' + c.onSurfaceVariant + '; opacity:' + (page >= totalPages ? '.4' : '1') + '; pointer-events:' + (page >= totalPages ? 'none' : 'auto') + ';">' + ICON.chevronRight + '</div>'

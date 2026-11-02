@@ -244,17 +244,23 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 /* The bar sits above the scrolling region and owns the safe area over it, so
    the status bar never scrolls away with the content. */
 .top-bar {
-  height: calc(64px + env(safe-area-inset-top, 0px));
+  height: calc(56px + env(safe-area-inset-top, 0px));
   padding: env(safe-area-inset-top, 0px) calc(20px + env(safe-area-inset-right, 0px)) 0 calc(20px + env(safe-area-inset-left, 0px));
 }
 
-.calendar-drawer-btn, .drawer-close-btn, .drawer-header-row,
+.drawer-close-btn, .drawer-header-row,
 .mobile-search-btn { display: none; }
-/* The menu button is on every screen, and so is the drawer it opens. */
+/* The schedule (calendar, due today, calendar feeds) is a drawer on every
+   screen now, opened from the calendar button; the task list gets the width. */
+.calendar-drawer-btn { display: flex; }
+.right-panel .drawer-close-btn, .right-panel .drawer-header-row { display: flex; }
+/* The menu button opens the department drawer below the wide breakpoint;
+   at and above it the departments are a permanent column. */
 .hamburger-btn { display: flex; }
-/* Accent and theme live in the bar on desktop and in the account menu on a
-   phone, where there is room for them. */
-.appearance-in-menu { display: none; }
+/* Accent and theme are set now and then, not all day: they live in the
+   account menu on every screen rather than in the bar. */
+.appearance-controls, .topbar-divider { display: none !important; }
+.appearance-in-menu { display: flex; }
 /* ---- guide ---- */
 .guide-card {
   width: 640px;
@@ -361,8 +367,40 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
   z-index: 85;
 }
 
+/* The schedule drawer, on every screen. */
+.right-panel {
+  position: fixed;
+  top: env(safe-area-inset-top, 0px);
+  bottom: env(safe-area-inset-bottom, 0px);
+  right: 0;
+  z-index: 90;
+  width: min(86vw, 340px) !important;
+  transform: translateX(100%);
+  visibility: hidden;
+}
+.right-panel.open, .right-panel.anim-open, .right-panel.anim-close { visibility: visible; box-shadow: var(--e3); }
+.right-panel.open { transform: translateX(0); }
+.right-panel.anim-open { animation: drawerSlideInRight var(--m-slow) var(--ease) forwards; }
+.right-panel.anim-close { animation: drawerSlideOutRight var(--m-base) ease forwards; }
+
+/* Wide screens: the department list stops being a drawer. */
+@media (min-width: 1200px) {
+  .hamburger-btn, .left-nav .drawer-close-btn { display: none !important; }
+  .left-nav {
+    position: relative;
+    top: auto; bottom: auto; left: auto;
+    z-index: auto;
+    width: 248px;
+    flex-shrink: 0;
+    transform: none;
+    visibility: visible;
+    box-shadow: none !important;
+    animation: none !important;
+  }
+}
+
 @media (max-width: 860px) {
-  .hamburger-btn, .calendar-drawer-btn, .drawer-close-btn, .mobile-search-btn { display: flex; }
+  .hamburger-btn, .drawer-close-btn, .mobile-search-btn { display: flex; }
   .drawer-header-row { display: flex; margin-bottom: -4px; }
   .desktop-search-bar { display: none; }
 
@@ -372,10 +410,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
      fits a 360px screen, which is what was pushing the calendar button off
      the right edge. */
   .app-name-text,
-  .appearance-controls,
-  .topbar-divider,
   .account-meta { display: none !important; }
-  .appearance-in-menu { display: flex; }
 
   .top-bar {
     height: calc(60px + env(safe-area-inset-top, 0px));
@@ -431,24 +466,6 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
   textarea { min-height: 76px !important; line-height: 1.5 !important; }
   /* Tick boxes get a finger-sized target of their own. */
   /* The box stays Material size; the row it sits in is the finger target. */
-
-  .right-panel {
-    position: fixed;
-    top: env(safe-area-inset-top, 0px);
-    bottom: env(safe-area-inset-bottom, 0px);
-    z-index: 90;
-    width: 82vw;
-    max-width: 320px;
-    visibility: hidden;
-  }
-  .right-panel.open, .right-panel.anim-open, .right-panel.anim-close { visibility: visible; box-shadow: var(--e3); }
-  /* Nothing of ours paints the status bar or the home indicator: the panels
-     and the layer behind them both stop at the insets. */
-
-  .right-panel { right: 0; transform: translateX(100%); }
-  .right-panel.open { transform: translateX(0); }
-  .right-panel.anim-open { animation: drawerSlideInRight var(--m-slow) var(--ease) forwards; }
-  .right-panel.anim-close { animation: drawerSlideOutRight var(--m-base) ease forwards; }
 
 }
 
