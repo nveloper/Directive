@@ -442,6 +442,9 @@
     taskMeta: { page: 1, pageSize: 50, total: 0, totalPages: 1, statusCounts: {} },
     summary: { all: 0, mine: 0, trash: 0, byDept: {} },
     tasksLoading: false,
+    tasksLoaded: false,
+    dragTaskId: null,
+    dropStatus: '',
     activitySeen: loadActivitySeen(),
     copiedToken: '',
     // The subscribe links are set up once and then rarely looked at, so the
@@ -1725,6 +1728,7 @@
     return api('GET', '/api/tasks?' + taskQueryParams()).then(function (res) {
       if (token !== taskFetchToken || !res) return;
       state.tasks = res.tasks || [];
+      state.tasksLoaded = true;
       state.taskMeta = {
         page: res.page, pageSize: res.pageSize, total: res.total,
         totalPages: res.totalPages, statusCounts: res.statusCounts || {}
@@ -3039,27 +3043,105 @@
       + '</div>';
   }
 
+  // What an empty list says depends on why it is empty, and offers the way on.
+  function emptyStateHtml(c) {
+    var searching = state.searchQuery.trim().length > 0;
+    var icon, title, text, action = '';
+    if (searching) {
+      icon = '<circle cx="21" cy="21" r="11"></circle><path d="M29 29l9 9"></path>';
+      title = T('No results for “{q}”', { q: state.searchQuery.trim() });
+      text = T('Search covers titles, descriptions, checklists, comments and file names.');
+      action = '<span class="interactive" data-action="clearSearch" style="height:32px; padding:0 14px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; display:inline-flex; align-items:center; font-size:13px; font-weight:500;">' + T('Clear search') + '</span>';
+    } else if (filtersActive() || state.activeTab !== 'all') {
+      icon = '<path d="M8 12h32M14 24h20M20 36h8"></path>';
+      title = T('No tasks match');
+      text = T('Nothing here with the current tab and filters.');
+      action = filtersActive() ? '<span class="interactive" data-action="clearFilters" style="height:32px; padding:0 14px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; display:inline-flex; align-items:center; font-size:13px; font-weight:500;">' + T('Clear filters') + '</span>' : '';
+    } else {
+      icon = '<rect x="9" y="8" width="30" height="34" rx="4"></rect><path d="M17 18h14M17 25h14M17 32h8"></path>';
+      title = T('No tasks yet');
+      text = T('Tasks added here show up for everyone in the department.');
+      action = canCreateTask() ? '<span class="interactive" data-action="openTaskModal" style="height:32px; padding:0 14px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500;">' + ICON.plus + T('New Task') + '</span>' : '';
+    }
+    return '<div style="grid-column:1 / -1; display:flex; flex-direction:column; align-items:center; gap:8px; padding:64px 16px; text-align:center;">'
+      + '<svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="' + c.textMuted + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + icon + '</svg>'
+      + '<div style="font-size:15px; font-weight:600; margin-top:4px;">' + esc(title) + '</div>'
+      + '<div style="font-size:13px; color:' + c.onSurfaceVariant + '; max-width:340px; line-height:1.5;">' + esc(text) + '</div>'
+      + (action ? '<div style="margin-top:8px;">' + action + '</div>' : '')
+      + '</div>';
+  }
+  function skeletonRows(c, n) {
+    var out = '';
+    for (var i = 0; i < n; i++) {
+      out += '<div class="skeleton-row" style="grid-column:1 / -1; display:flex; align-items:center; gap:14px; height:44px; padding:0 12px; border-bottom:1px solid ' + c.outlineVariant + ';">'
+        + '<span class="skeleton" style="width:16px; height:16px; border-radius:50%;"></span>'
+        + '<span class="skeleton" style="width:' + (38 + (i * 13) % 30) + '%; height:12px;"></span>'
+        + '<span style="flex:1;"></span><span class="skeleton" style="width:80px; height:12px;"></span></div>';
+    }
+    return out;
+  }
+
+  // On a phone each task is a two-line row: what it is, then where, who and when.
+  function taskMobileRow(t, maps, c) {
+    var dot = (maps.statusStyle[t.status] || maps.statusStyle.todo).dot;
+    var done = t.status === 'done';
+    var bits = [];
+    if (t.deptId) bits.push(esc(nodeLabel(t.deptId).split(' · ').pop()));
+    if (t.assignee) bits.push(esc(t.assignee));
+    var due = t.dueDate ? '<span class="tnum" style="color:' + (t.overdue ? c.error : c.onSurfaceVariant) + '; font-weight:' + (t.overdue ? 500 : 400) + ';">' + esc(relativeDue(t.dueDate, t.overdue)) + '</span>' : '';
+    return '<div class="interactive task-row' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + '" data-action="openTask" data-id="' + t.id + '" style="display:flex; align-items:flex-start; gap:12px; padding:12px 4px; border-bottom:1px solid ' + c.outlineVariant + ';">'
+      + '<span style="padding-top:2px;">' + statusIconHtml(t.status, dot, 18) + '</span>'
+      + '<div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">'
+      +   '<div style="display:flex; align-items:center; gap:6px; min-width:0;">' + taskIconHtml(t, 16) + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:15px; font-weight:500; color:' + (done ? c.textMuted : c.onSurface) + ';">' + esc(t.title) + '</span></div>'
+      +   '<div style="display:flex; align-items:center; gap:8px; font-size:13px; color:' + c.onSurfaceVariant + '; min-width:0;"><span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + bits.join(' · ') + '</span>' + taskBadges(t, c) + '<span style="flex:1;"></span>' + due + '</div>'
+      +   searchMatchHtml(t, c)
+      + '</div>'
+      + '<span style="padding-top:3px;">' + priorityIconHtml(t.priority, maps.priorityColor[t.priority], c.outlineVariant) + '</span>'
+      + '</div>';
+  }
+
+  // Board: one column per status; dragging a card to another column changes
+  // its status.
+  function boardHtml(items, maps, c) {
+    var cols = EDITABLE_STATUSES.map(function (st) {
+      var list = items.filter(function (t) { return t.status === st; });
+      var dot = maps.statusStyle[st].dot;
+      return '<section class="board-col" data-drop-status="' + st + '" aria-label="' + esc(TAB_LABELS[st]) + '" style="flex:1 1 0; min-width:240px; display:flex; flex-direction:column; gap:8px; padding:8px; border-radius:var(--r-md); background:' + c.surfaceContainerLow + ';">'
+        + '<div style="display:flex; align-items:center; gap:8px; padding:4px 4px 2px;">' + statusIconHtml(st, dot, 14) + '<span style="font-size:13px; font-weight:600;">' + TAB_LABELS[st] + '</span><span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + list.length + '</span></div>'
+        + list.map(function (t) { return taskCard(t, maps, c); }).join('')
+        + (list.length ? '' : '<div style="padding:16px 8px; text-align:center; font-size:12px; color:' + c.textMuted + ';">' + T('Drop a task here') + '</div>')
+        + '</section>';
+    }).join('');
+    return '<div style="display:flex; gap:12px; align-items:flex-start; min-width:min-content;">' + cols + '</div>';
+  }
+
   function taskCard(t, maps, c) {
     var v = taskView(t, maps, c);
-    var cls = 'interactive' + (t.id === state.justAddedTaskId ? ' row-highlight' : '');
-    return '<div class="' + cls + '" data-action="openTask" data-id="' + t.id + '" style="background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); padding:14px; min-width:0; display:flex; flex-direction:column; gap:10px;">'
-      + '<div style="display:flex; align-items:center; justify-content:space-between;">'
-      +   '<span style="display:inline-flex; align-items:center; gap:6px; padding:3px 8px; border-radius:var(--r-xs); background:' + v.statusBg + '; color:' + v.statusColor + '; font-size:12px; font-weight:500;"><svg width="8" height="8" viewBox="0 0 20 20" fill="' + v.statusDot + '"><circle cx="10" cy="10" r="8"></circle></svg>' + v.statusLabel + '</span>'
-      +   v.syncIcon
-      + '</div>'
-      + '<div><div style="display:flex; align-items:center; gap:6px; font-size:14px; font-weight:500; color:' + v.titleColor + '; text-decoration:' + v.titleDeco + ';">' + taskIconHtml(t, 16) + '<span>' + esc(t.title) + '</span></div><div style="display:flex; align-items:center; gap:7px; font-size:12px; color:' + c.onSurfaceVariant + '; margin-top:2px;">' + esc(nodeLabel(t.deptId)) + taskBadges(t, c) + '</div>' + searchMatchHtml(t, c) + '</div>'
-      + '<div style="display:flex; align-items:center; justify-content:space-between;">'
-      +   '<div style="display:flex; align-items:center; gap:6px;">' + assigneeAvatarHtml(t, v, 22) + '<span style="font-size:12px;">' + esc(t.assignee) + '</span></div>'
-      +   '<span style="font-size:12px; color:' + v.dueColor + '; font-weight:' + v.dueWeight + ';">' + esc(formatDue(t.dueDate)) + '</span>'
+    var writable = canWriteDept(t.deptId);
+    var cls = 'interactive board-card' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + '';
+    return '<div class="' + cls + '"' + (writable ? ' draggable="true"' : '') + ' data-action="openTask" data-id="' + t.id + '" style="background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e1); padding:12px; min-width:0; display:flex; flex-direction:column; gap:8px;">'
+      + '<div style="display:flex; align-items:flex-start; gap:6px; font-size:14px; font-weight:500; line-height:1.4; color:' + (t.status === 'done' ? c.textMuted : c.onSurface) + ';">' + taskIconHtml(t, 16) + '<span style="min-width:0; overflow-wrap:anywhere;">' + esc(t.title) + '</span></div>'
+      + '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px; color:' + c.textMuted + ';">' + (t.deptId ? '<span style="font-weight:500; padding:1px 6px; border-radius:var(--r-xs); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';">' + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span>' : '') + taskBadges(t, c) + '</div>'
+      + searchMatchHtml(t, c)
+      + '<div style="display:flex; align-items:center; gap:6px;">'
+      +   (t.assignee ? assigneeAvatarHtml(t, v, 20) : '') + '<span style="flex:1;"></span>'
+      +   (t.dueDate ? '<span class="tnum" style="font-size:12px; color:' + (t.overdue ? c.error : c.onSurfaceVariant) + '; font-weight:' + (t.overdue ? 500 : 400) + ';">' + esc(relativeDue(t.dueDate, t.overdue)) + '</span>' : '')
+      +   priorityIconHtml(t.priority, v.priorityColor, c.outlineVariant)
       + '</div>'
       + '</div>';
   }
 
+
   // ---- auth screen ----
   function inputField(id, form, field, value, placeholder, type, c) {
-    placeholder = T(placeholder);
-    return '<input id="' + id + '" data-form="' + form + '" data-field="' + field + '" type="' + type + '" value="' + esc(value) + '" placeholder="' + esc(placeholder) + '" style="height:44px; padding:0 14px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; width:100%; background:' + c.surface + '; color:' + c.onSurface + ';"></input>';
+    // A label stays above the field: a placeholder alone vanishes as soon as
+    // something is typed, and with it what the field was for.
+    var label = T(placeholder);
+    var auto = field === 'password' ? (state.authView === 'register' ? 'new-password' : 'current-password') : (field === 'username' ? 'username' : 'name');
+    return '<label for="' + id + '" style="display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:500; color:' + c.onSurface + ';">' + esc(label)
+      + '<input id="' + id + '" data-form="' + form + '" data-field="' + field + '" type="' + type + '" autocomplete="' + auto + '" value="' + esc(value) + '" style="height:40px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; font-weight:400; width:100%; background:' + c.surface + '; color:' + c.onSurface + ';"></input></label>';
   }
+
 
   // What the sign-in card says depends on whether this install has any
   // accounts yet: the very first person becomes the administrator and is let
@@ -3085,17 +3167,20 @@
     }).join('');
     try { document.body.style.background = c.surfaceContainerLow; } catch (e) {}
     try { document.documentElement.setAttribute('data-theme', c.dark ? 'dark' : 'light'); } catch (e) {}
-    return '<div style="' + vars + 'min-height:100vh; display:flex; align-items:center; justify-content:center; background:' + c.surfaceContainerLow + '; font-family:inherit;">'
-      + '<div class="auth-card" style="width:380px; max-width:92vw; background:' + c.surface + '; border-radius:var(--r-lg); padding:32px; box-shadow:var(--e2); display:flex; flex-direction:column; gap:14px;">'
-      +   '<div style="display:flex; align-items:center; gap:10px; margin-bottom:2px;">' + brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 36, false) + '<div style="font-size:18px; font-weight:600; color:' + c.onSurface + ';">' + esc(state.appName) + '</div></div>'
-      +   '<div style="font-size:13px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + esc(authBlurb(isRegister)) + '</div>'
+    var title = isRegister ? (state.setupRequired ? T('Set up your workspace') : T('Create an account')) : T('Log in');
+    return '<div style="' + vars + 'min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px 16px; background:' + c.surfaceContainerLow + '; font-family:inherit;">'
+      + '<div class="auth-card" style="width:360px; max-width:100%; display:flex; flex-direction:column; gap:16px;">'
+      +   '<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">' + brandIconHtml(c.primary, c.onPrimary, 32, false) + '<div style="font-size:15px; font-weight:600; color:' + c.onSurface + ';">' + esc(state.appName) + '</div></div>'
+      +   '<div><h1 class="page-title" style="margin:0 0 6px; font-size:24px; font-weight:600; color:' + c.onSurface + ';">' + esc(title) + '</h1>'
+      +   '<div style="font-size:13px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + esc(authBlurb(isRegister)) + '</div></div>'
       +   (state.authNotice ? '<div style="font-size:13px; line-height:1.45; color:' + c.onPrimaryContainer + '; background:' + c.primaryContainer + '; padding:10px 12px; border-radius:var(--r-sm);">' + esc(state.authNotice) + '</div>' : '')
       +   (isRegister ? inputField('authDisplayName', 'authForm', 'displayName', f.displayName, 'Display name', 'text', c) : '')
       +   inputField('authUsername', 'authForm', 'username', f.username, 'Username', 'text', c)
       +   inputField('authPassword', 'authForm', 'password', f.password, 'Password', 'password', c)
-      +   (state.authError ? '<div style="font-size:13px; color:' + c.error + ';">' + esc(state.authError) + '</div>' : '')
-      +   '<div class="interactive" data-action="' + (isRegister ? 'submitRegister' : 'submitLogin') + '" style="height:44px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:14px;">' + (isRegister ? T('Create account') : T('Log in')) + '</div>'
-      +   '<div class="interactive" data-action="switchAuthView" data-id="' + (isRegister ? 'login' : 'register') + '" style="text-align:center; font-size:13px; color:' + c.primary + '; font-weight:500;">' + (isRegister ? T('Already have an account? Log in') : T('New here? Create an account')) + '</div>'
+      +   (state.authError ? '<div role="alert" style="font-size:13px; color:' + c.error + ';">' + esc(state.authError) + '</div>' : '')
+      +   '<div class="interactive" data-action="' + (isRegister ? 'submitRegister' : 'submitLogin') + '" style="height:40px; margin-top:4px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:14px;">' + (isRegister ? T('Create account') : T('Log in')) + '</div>'
+      +   '<div style="height:1px; background:' + c.outlineVariant + '; margin:4px 0;"></div>'
+      +   '<div class="interactive" data-action="switchAuthView" data-id="' + (isRegister ? 'login' : 'register') + '" style="align-self:flex-start; font-size:13px; color:' + c.primary + '; font-weight:500;">' + (isRegister ? T('Already have an account? Log in') : T('New here? Create an account')) + '</div>'
       + '</div>'
       + '</div>';
   }
@@ -3143,7 +3228,7 @@
       + mSelectMenu(c)
       + datePickerPopover(c)
       + (canCreateTask()
-        ? '<div class="interactive fab-new-task" data-action="openTaskModal" aria-label="' + T('New task') + '" style="position:fixed; right:18px; bottom:calc(18px + env(safe-area-inset-bottom, 0px)); z-index:45; align-items:center; justify-content:center; gap:8px; height:56px; padding:0 22px; border-radius:16px; background:' + c.primary + '; color:' + c.onPrimary + '; font-size:15px; font-weight:600; box-shadow:var(--e2);">' + ICON.plus + '<span>' + T('New Task') + '</span></div>'
+        ? '<div class="interactive fab-new-task" data-action="openTaskModal" aria-label="' + T('New task') + '" style="position:fixed; right:18px; bottom:calc(18px + env(safe-area-inset-bottom, 0px)); z-index:45; align-items:center; justify-content:center; width:56px; height:56px; border-radius:50%; background:' + c.primary + '; color:' + c.onPrimary + '; box-shadow:var(--e2);">' + ICON.plus.replace('width="17" height="17"', 'width="24" height="24"') + '</div>'
         : '')
       + '</div>';
   }
@@ -3464,15 +3549,18 @@
       : '';
 
     var bodyHtml;
-    if (state.viewMode === 'grid' || isNarrowScreen()) {
-      var cardsHtml = pageItems.map(function (t) { return taskCard(t, maps, c); }).join('');
-      var gridEmpty = pageItems.length === 0
-        ? '<div style="grid-column:1/-1; padding:40px 16px; text-align:center; font-size:13px; color:' + c.onSurfaceVariant + ';">' + T('No tasks match.') + '</div>' : '';
-      bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" style="flex:1; min-height:0; overflow:auto;"><div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:12px; padding:2px;">' + cardsHtml + gridEmpty + '</div></div>';
+    var loadingNow = !state.tasksLoaded;
+    if (isNarrowScreen()) {
+      bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" style="flex:1; min-height:0; overflow:auto;"><div style="display:flex; flex-direction:column; border-top:1px solid ' + c.outlineVariant + ';">'
+        + (loadingNow ? skeletonRows(c, 6) : (pageItems.length ? pageItems.map(function (t) { return taskMobileRow(t, maps, c); }).join('') : emptyStateHtml(c)))
+        + '</div></div>';
+    } else if (state.viewMode === 'grid') {
+      bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" style="flex:1; min-height:0; overflow:auto;">'
+        + (loadingNow ? '<div style="display:grid;">' + skeletonRows(c, 6) + '</div>' : (pageItems.length ? boardHtml(pageItems, maps, c) : '<div style="display:grid;">' + emptyStateHtml(c) + '</div>'))
+        + '</div>';
     } else {
       var rowsHtml = pageItems.map(function (t) { return taskRow(t, maps, c); }).join('');
-      var emptyHtml = pageItems.length === 0
-        ? '<div style="grid-column:1 / -1; padding:40px 16px; text-align:center; font-size:13px; color:' + c.onSurfaceVariant + ';">' + T('No tasks match.') + '</div>' : '';
+      var emptyHtml = loadingNow ? skeletonRows(c, 8) : (pageItems.length === 0 ? emptyStateHtml(c) : '');
       bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" style="flex:1; min-height:0; overflow:auto;">'
         + '<div role="table" style="display:grid; grid-template-columns:36px minmax(240px,1fr) 140px 168px 112px 52px; min-width:760px;">'
         +   [['', T('Status')], [T('Task')], [T('Department')], [T('Assignee')], [T('Due Date')], ['', T('Priority')]].map(function (h, i) {
@@ -3492,8 +3580,8 @@
       +   '<div style="display:flex; align-items:center; gap:8px;">'
       +     '<div class="view-toggle" style="position:relative; display:flex; align-items:center; gap:2px; padding:3px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + ';">'
       +       '<div class="view-toggle-thumb' + (state.viewToggleAnim ? ' ' + state.viewToggleAnim : '') + '" style="background:' + c.surface + '; box-shadow:var(--e1); transform:translateX(' + (state.viewMode === 'grid' ? 32 : 0) + 'px);"></div>'
-      +       '<div class="interactive" data-action="setViewMode" data-id="list" style="position:relative; z-index:1; width:30px; height:30px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; color:' + (state.viewMode === 'list' ? c.onSurface : c.onSurfaceVariant) + ';">' + ICON.listView + '</div>'
-      +       '<div class="interactive" data-action="setViewMode" data-id="grid" style="position:relative; z-index:1; width:30px; height:30px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; color:' + (state.viewMode === 'grid' ? c.onSurface : c.onSurfaceVariant) + ';">' + ICON.gridView + '</div>'
+      +       '<div class="interactive" data-action="setViewMode" data-id="list" title="' + T('List') + '" aria-label="' + T('List') + '" style="position:relative; z-index:1; width:30px; height:30px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; color:' + (state.viewMode === 'list' ? c.onSurface : c.onSurfaceVariant) + ';">' + ICON.listView + '</div>'
+      +       '<div class="interactive" data-action="setViewMode" data-id="grid" title="' + T('Board') + '" aria-label="' + T('Board') + '" style="position:relative; z-index:1; width:30px; height:30px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; color:' + (state.viewMode === 'grid' ? c.onSurface : c.onSurfaceVariant) + ';">' + ICON.gridView + '</div>'
       +     '</div>'
       +     '<div data-dropdown="filter" style="position:relative;">'
       +       '<div class="interactive filter-btn" data-action="toggleFilterOpen" title="' + T('Filter') + '" style="position:relative; display:flex; align-items:center; gap:6px; height:40px; padding:0 16px; border-radius:var(--r-sm); border:1px solid ' + (filtersActive() ? c.primary : c.outline) + '; color:' + (filtersActive() ? c.primary : c.onSurfaceVariant) + '; font-size:14px; font-weight:500;">' + ICON.filter + '<span class="btn-label">' + T('Filter') + '</span>'
@@ -4956,7 +5044,37 @@
     return !!types && Array.prototype.indexOf.call(types, 'Files') !== -1;
   }
 
+  // Dragging a board card. Nothing re-renders while the drag is under way -
+  // replacing the dragged element would cancel the drag - so the column
+  // highlight is a class set directly on the column.
+  function markDropColumn(col) {
+    Array.prototype.forEach.call(document.querySelectorAll('.board-col.drop-over'), function (x) { if (x !== col) x.classList.remove('drop-over'); });
+    if (col) col.classList.add('drop-over');
+  }
+  document.addEventListener('dragstart', function (e) {
+    var card = e.target.closest && e.target.closest('.board-card[draggable="true"]');
+    if (!card) return;
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', card.getAttribute('data-id')); } catch (err) {}
+    state.dragTaskId = Number(card.getAttribute('data-id'));
+    state.dropStatus = '';
+    setTimeout(function () { card.classList.add('dragging'); }, 0);
+  });
+  document.addEventListener('dragend', function () {
+    state.dragTaskId = null; state.dropStatus = '';
+    markDropColumn(null);
+    Array.prototype.forEach.call(document.querySelectorAll('.board-card.dragging'), function (x) { x.classList.remove('dragging'); });
+  });
   document.addEventListener('dragover', function (e) {
+    if (state.dragTaskId) {
+      var col = e.target.closest && e.target.closest('[data-drop-status]');
+      markDropColumn(col);
+      state.dropStatus = col ? col.getAttribute('data-drop-status') : '';
+      if (!col) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      return;
+    }
     if (!dragHasFiles(e) || !detailAcceptsFiles()) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
@@ -4967,6 +5085,22 @@
     if (state.dragOver && !e.relatedTarget) setState({ dragOver: false });
   });
   document.addEventListener('drop', function (e) {
+    if (state.dragTaskId) {
+      e.preventDefault();
+      var id = state.dragTaskId, st = state.dropStatus;
+      var t = findLoadedTask(id);
+      state.dragTaskId = null; state.dropStatus = '';
+      markDropColumn(null);
+      if (!t || !st || t.status === st) return;
+      t.status = st;
+      if (st === 'done') t.overdue = false;
+      render();
+      api('PUT', '/api/tasks/' + id + '/status', { status: st }).then(function (res) {
+        if (res && res.nextId) showSnackbar(T('Done. The next one is scheduled.'));
+        return refreshTasks();
+      }).then(render).catch(function (err) { window.alert(TE(err.message)); refreshTasks().then(render); });
+      return;
+    }
     if (!dragHasFiles(e)) return;
     e.preventDefault();
     if (state.dragOver) setState({ dragOver: false });

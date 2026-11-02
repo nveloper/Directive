@@ -735,3 +735,12 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: .38; cu
   .settings-nav > div:first-child { display: none; }
 }
 #commentDraftInput { resize: none !important; }
+
+/* Loading placeholders: a soft pulse, still when motion is reduced. */
+@keyframes skeletonPulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+.skeleton { display: block; border-radius: var(--r-xs); background: var(--surface-container-high); animation: skeletonPulse 1.2s ease-in-out infinite; }
+
+/* Board: the card being dragged stays as a faint outline of where it was. */
+.board-card[draggable="true"] { cursor: grab; }
+.board-card.dragging { opacity: .4; }
+.board-col.drop-over { background: var(--primary-container) !important; outline: 2px dashed var(--primary); outline-offset: -2px; }
