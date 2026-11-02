@@ -64,6 +64,7 @@ window.DIRECTIVE_KO = {
   '{n} comment': '코멘트 {n}개',
   '{n} comments': '코멘트 {n}개',
   'No due date': '기한 없음',
+  'No description.': '설명이 없습니다.',
   'Due {date}': '기한 {date}',
 
   // ---- right panel ----

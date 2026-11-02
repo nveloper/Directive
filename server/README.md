@@ -362,4 +362,4 @@ server against the wrong database leaves another database's files alone.
 - `ratelimit.go` — per-IP throttle on the sign-in endpoints
 - `ics.go` — the per-department `.ics` calendar feed
 - `caldav.go` — the CalDAV server: tasks as VTODO, two-way
-- `static/` — the frontend (`index.html`, `app.js`, `styles.css`, font)
+- `static/` — the frontend (`index.html`, `app.js`, `styles.css`, and the Pretendard font in `fonts/`, SIL Open Font License)
