@@ -1,14 +1,5 @@
-/* Pretendard (SIL OFL 1.1, see fonts/PRETENDARD-LICENSE.txt): one typeface
-   for Korean and Latin alike, with real weights from a single variable file.
-   The version is in the file name so the server can let browsers keep it. */
-@font-face {
-  font-family: 'Pretendard Variable';
-  src: url('fonts/pretendard-variable-1.3.9.woff2') format('woff2-variations'),
-       url('fonts/pretendard-variable-1.3.9.woff2') format('woff2');
-  font-weight: 45 920;
-  font-style: normal;
-  font-display: swap;
-}
+/* Fonts: fonts/fonts.css (Google Sans Flex for Latin, Noto Sans KR for
+   Hangul), linked from index.html before this file. */
 
 /* ---- design tokens ----------------------------------------------------
    Colours live in app.js (deriveColors), because the accent is chosen at run
@@ -17,9 +8,10 @@
 :root {
   /* radius */
   --r-xs: 4px;   /* checkboxes, chips, tags */
-  --r-sm: 6px;   /* buttons, fields, menu items, rows */
-  --r-md: 10px;  /* cards, popovers, menus */
-  --r-lg: 14px;  /* dialogs, panels */
+  --r-sm: 8px;   /* fields, chips, menu items, rows (Material: small) */
+  --r-md: 12px;  /* cards, popovers, menus (Material: medium) */
+  --r-lg: 28px;  /* dialogs, sheets (Material: extra large) */
+  --r-full: 999px; /* buttons, nav indicators, search */
 
   /* elevation */
   --e1: 0 1px 2px rgb(0 0 0 / .06);
@@ -48,16 +40,13 @@
 html, body {
   margin: 0;
   height: 100%;
-  font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
-  font-feature-settings: 'ss06';  /* a distinguishable l and I */
+  font-family: 'Google Sans Flex Variable', 'Noto Sans KR Variable', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   overflow: hidden;          /* the app scrolls its own regions, never the page */
   overscroll-behavior: none; /* and no rubber-banding past them */
 }
-/* Large text is set a touch tighter, as display type usually is. */
-.page-title, [role="dialog"] h2 { letter-spacing: -0.02em; }
 b, strong { font-weight: 600; }
 /* Counts and dates line up in columns. */
 .tnum, [role="tab"], [aria-live] { font-variant-numeric: tabular-nums; }
@@ -396,6 +385,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
     visibility: visible;
     box-shadow: none !important;
     animation: none !important;
+    border-right: none;
   }
 }
 
@@ -769,3 +759,18 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: .38; cu
 .task-row:hover .sel-box ~ .status-ring, .task-row:focus-visible .sel-box ~ .status-ring, .selecting .sel-box ~ .status-ring { display: none; }
 .status-ring { display: flex; }
 .bulk-bar { max-width: calc(100vw - 24px); overflow-x: auto; }
+
+/* ---- Material You shape and frame -----------------------------------
+   The page is a tonal frame (surface container) with the content on a sheet
+   whose top corners are rounded; buttons, the search bar, segmented
+   controls and the navigation indicator are full pills, as in Material 3. */
+.content-sheet { border-radius: 28px 28px 0 0; margin-right: 12px; }
+@media (max-width: 1199px) { .content-sheet { margin-left: 12px; } }
+@media (max-width: 860px) { .content-sheet { border-radius: 24px 24px 0 0; margin: 0 !important; } }
+.new-task-inline, .filter-btn, .view-toggle, .view-toggle > *, .bulk-bar .mselect-trigger,
+.task-form-chips .mselect-trigger, .task-form-chips .date-trigger, .task-form-chips label,
+[data-action="saveTask"], [data-action="saveMapping"], [data-action="postComment"],
+[data-action="submitLogin"], [data-action="submitRegister"], [data-action="saveDisplayName"],
+[data-action="saveAppName"], [data-action="closeTaskModal"], [data-action="closeMapping"],
+.fab-new-task { border-radius: var(--r-full) !important; }
+.view-toggle > * { width: 36px !important; }

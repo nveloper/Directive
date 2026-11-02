@@ -212,111 +212,102 @@
     probe.src = url;
   }
 
-  // The palette has two halves. The accent - the one colour a person picks -
-  // is derived here at run time, and is spent on very little: the primary
-  // button, the selected item and the focus ring. Everything else is fixed:
-  // near-neutral surfaces with no tint of the accent in them, and status,
-  // priority and avatar colours that mean the same thing whatever the accent
-  // is. (The role names are Material's, kept so the markup did not have to
-  // change; what they hold is not.)
-  var NEUTRAL = {
-    light: {
-      surface: '#FFFFFF',              // panels, cards, dialogs
-      surfaceContainerLow: '#F7F7F5',  // the canvas behind them, sidebars
-      surfaceContainer: '#F1F1EF',     // menus, table headers
-      surfaceContainerHigh: '#EAEAE7', // hover, counts, tracks
-      surfaceVariant: '#F1F1EF',       // tags and code
-      onSurface: '#1B1B1A',            // text
-      onSurfaceVariant: '#5E5E59',     // secondary text
-      textMuted: '#8E8E88',            // placeholders, quiet icons
-      outline: '#CFCFCA',              // field borders
-      outlineVariant: '#E4E4E0',       // dividers
-      error: '#DC2626',
-      errorContainer: '#FDECEC',
-      onErrorContainer: '#9F1C1C',
-      success: '#16A34A',
-      warning: '#B45309',
-      warningContainer: '#FDF1DC',
-      onWarningContainer: '#8A4B05'
-    },
-    dark: {
-      surface: '#17171A',
-      surfaceContainerLow: '#0F0F11',
-      surfaceContainer: '#1E1E22',
-      surfaceContainerHigh: '#27272C',
-      surfaceVariant: '#222226',
-      onSurface: '#EDEDEF',
-      onSurfaceVariant: '#A1A1AA',
-      textMuted: '#71717A',
-      outline: '#3A3A42',
-      outlineVariant: '#2A2A30',
-      error: '#F87171',
-      errorContainer: '#3A1517',
-      onErrorContainer: '#FCA5A5',
-      success: '#22C55E',
-      warning: '#F59E0B',
-      warningContainer: '#33250D',
-      onWarningContainer: '#FCD34D'
-    }
-  };
-
-  // Status colours: grey to do, blue in progress, amber in review, green
-  // done, red overdue. Each has a dot colour, and a tint and a text colour
-  // for the label it sits in.
-  var STATUS_COLORS = {
-    light: {
-      todo:       { dot: '#8E8E88', bg: '#EFEFEC', color: '#4A4A46' },
-      inprogress: { dot: '#2F6FEB', bg: '#E8EFFD', color: '#1A4DB8' },
-      review:     { dot: '#D97706', bg: '#FDF1DC', color: '#8A4B05' },
-      done:       { dot: '#16A34A', bg: '#E4F4E9', color: '#13703A' },
-      overdue:    { dot: '#DC2626', bg: '#FDECEC', color: '#A61B1B' }
-    },
-    dark: {
-      todo:       { dot: '#8B8B94', bg: '#26262B', color: '#BDBDC4' },
-      inprogress: { dot: '#5B8DEF', bg: '#172340', color: '#93B4F6' },
-      review:     { dot: '#F59E0B', bg: '#33250D', color: '#FBC560' },
-      done:       { dot: '#22C55E', bg: '#10291A', color: '#6EE19A' },
-      overdue:    { dot: '#F87171', bg: '#3A1517', color: '#FCA5A5' }
-    }
-  };
-  var PRIORITY_COLORS = {
-    light: { High: '#EA580C', Medium: '#5E5E59', Low: '#B4B4AE' },
-    dark: { High: '#FB923C', Medium: '#A1A1AA', Low: '#5C5C66' }
-  };
+  // Material You: one seed colour - the accent - tints every surface a little
+  // and fills selected things with a soft tonal container, so the app reads
+  // as one colour family rather than grey with a blue button. Surfaces step
+  // by tone (container tiers) instead of being split by lines.
+  //
+  // Status colours keep distinct hues - grey to do, blue in progress, amber in
+  // review, green done, red overdue - so in progress and done never look
+  // alike, but each is harmonized toward the seed (Material's colour
+  // harmonization: turned up to 15 degrees toward it) so they sit in the same
+  // family instead of reading as stock UI colours.
+  var STATUS_HUES = { inprogress: 255, review: 70, done: 150, overdue: 27 };
+  var PRIORITY_HUE = 45;
+  function harmonize(hue, seed) {
+    var d = ((seed - hue + 540) % 360) - 180;
+    return hue + Math.max(-15, Math.min(15, d * 0.5));
+  }
 
   function deriveColors(seed, dark) {
     var base = hexToOklch(seed);
-    var h = base.H, C = base.C;
-    // tone: 0-100, mapped straight onto OKLCH lightness, which is perceptually
-    // even across hues - a yellow and a blue at the same tone look as light
-    // as each other, so any accent lands at a readable lightness.
+    var h = base.H, C = Math.max(base.C, 0.04);
     function tone(hue, chroma, t) { return oklchToHex(t / 100, chroma, hue); }
-    var n = NEUTRAL[dark ? 'dark' : 'light'];
+    var n = Math.min(C * 0.12, 0.016);   // neutral surfaces: just a hint of the seed
+    var nv = Math.min(C * 0.22, 0.03);   // neutral-variant: a little more
+    var sec = Math.min(C * 0.4, 0.06);   // secondary: the seed, muted
     var c = {};
-    Object.keys(n).forEach(function (k) { c[k] = n[k]; });
     if (!dark) {
-      c.primary = tone(h, C, 50);
+      c.primary = tone(h, C, 48);
       c.onPrimary = '#FFFFFF';
-      c.primaryContainer = tone(h, Math.min(C * 0.3, 0.045), 95.5);
-      c.onPrimaryContainer = tone(h, Math.min(C, 0.16), 38);
+      c.primaryContainer = tone(h, Math.min(C * 0.6, 0.09), 92);
+      c.onPrimaryContainer = tone(h, Math.min(C, 0.14), 28);
+      c.secondaryContainer = tone(h, sec, 90);
+      c.onSecondaryContainer = tone(h, sec, 22);
+      c.surface = tone(h, n, 99);
+      c.surfaceContainerLow = tone(h, n, 96.5);
+      c.surfaceContainer = tone(h, n, 94.5);
+      c.surfaceContainerHigh = tone(h, n, 92);
+      c.surfaceVariant = tone(h, nv, 92);
+      c.onSurface = tone(h, n, 16);
+      c.onSurfaceVariant = tone(h, nv, 38);
+      c.textMuted = tone(h, nv, 55);
+      c.outline = tone(h, nv, 72);
+      c.outlineVariant = tone(h, nv, 88);
+      c.error = tone(harmonize(27, h), 0.19, 52);
+      c.errorContainer = tone(harmonize(27, h), 0.06, 93);
+      c.onErrorContainer = tone(harmonize(27, h), 0.12, 32);
+      c.success = tone(harmonize(150, h), 0.14, 55);
+      c.warning = tone(harmonize(70, h), 0.14, 52);
+      c.warningContainer = tone(harmonize(70, h), 0.06, 93);
+      c.onWarningContainer = tone(harmonize(70, h), 0.1, 35);
     } else {
-      c.primary = tone(h, C, 74);
-      c.onPrimary = tone(h, Math.min(C * 0.3, 0.04), 16);
-      c.primaryContainer = tone(h, Math.min(C * 0.45, 0.07), 27);
-      c.onPrimaryContainer = tone(h, Math.min(C * 0.6, 0.1), 88);
+      c.primary = tone(h, Math.min(C, 0.14), 80);
+      c.onPrimary = tone(h, Math.min(C, 0.1), 22);
+      c.primaryContainer = tone(h, Math.min(C * 0.6, 0.08), 32);
+      c.onPrimaryContainer = tone(h, Math.min(C * 0.6, 0.08), 92);
+      c.secondaryContainer = tone(h, sec, 32);
+      c.onSecondaryContainer = tone(h, sec, 90);
+      c.surface = tone(h, n, 15);
+      c.surfaceContainerLow = tone(h, n, 18);
+      c.surfaceContainer = tone(h, n, 21);
+      c.surfaceContainerHigh = tone(h, n, 25);
+      c.surfaceVariant = tone(h, nv, 28);
+      c.onSurface = tone(h, n, 92);
+      c.onSurfaceVariant = tone(h, nv, 80);
+      c.textMuted = tone(h, nv, 62);
+      c.outline = tone(h, nv, 45);
+      c.outlineVariant = tone(h, nv, 30);
+      c.error = tone(harmonize(27, h), 0.14, 75);
+      c.errorContainer = tone(harmonize(27, h), 0.07, 30);
+      c.onErrorContainer = tone(harmonize(27, h), 0.08, 90);
+      c.success = tone(harmonize(150, h), 0.13, 75);
+      c.warning = tone(harmonize(70, h), 0.13, 78);
+      c.warningContainer = tone(harmonize(70, h), 0.06, 30);
+      c.onWarningContainer = tone(harmonize(70, h), 0.08, 90);
     }
-    // The old secondary and tertiary roles were further shades of the accent.
-    // Where they marked something done they are now the success green, where
-    // they marked a warning the amber, and elsewhere a plain neutral.
     c.secondary = c.success;
-    c.onSecondary = dark ? '#0F0F11' : '#FFFFFF';
-    c.secondaryContainer = c.surfaceContainerHigh;
-    c.onSecondaryContainer = c.onSurface;
+    c.onSecondary = dark ? c.onPrimary : '#FFFFFF';
     c.tertiary = c.warning;
     c.tertiaryContainer = c.warningContainer;
     c.onTertiaryContainer = c.onWarningContainer;
     c.dark = dark;
     return c;
+  }
+
+  // Status and priority colours for a scheme, harmonized toward its seed.
+  function statusColors(c) {
+    var h = hexToOklch(state.accent).H, dk = c.dark, out = {};
+    function tone(hue, chroma, t) { return oklchToHex(t / 100, chroma, hue); }
+    out.todo = { dot: c.textMuted, bg: c.surfaceContainerHigh, color: c.onSurfaceVariant };
+    Object.keys(STATUS_HUES).forEach(function (k) {
+      var hue = harmonize(STATUS_HUES[k], h);
+      out[k] = dk
+        ? { dot: tone(hue, 0.13, 74), bg: tone(hue, 0.06, 30), color: tone(hue, 0.08, 88) }
+        : { dot: tone(hue, 0.16, k === 'review' ? 66 : 56), bg: tone(hue, 0.05, 93), color: tone(hue, 0.12, 34) };
+    });
+    var ph = harmonize(PRIORITY_HUE, h);
+    return { status: out, priority: { High: dk ? tone(ph, 0.14, 74) : tone(ph, 0.17, 58), Medium: c.onSurfaceVariant, Low: c.outline } };
   }
 
   // Letter avatars take one of eight quiet hues from the name, so a person
@@ -2975,11 +2966,8 @@
 
   // ---- shared task view helpers ----
   function styleMaps(c) {
-    var mode = c.dark ? 'dark' : 'light';
-    return {
-      statusStyle: STATUS_COLORS[mode],
-      priorityColor: PRIORITY_COLORS[mode]
-    };
+    var sc = statusColors(c);
+    return { statusStyle: sc.status, priorityColor: sc.priority };
   }
 
   function taskView(t, maps, c) {
@@ -3476,7 +3464,7 @@
       var cssVar = '--' + k.replace(/([A-Z])/g, '-$1').toLowerCase();
       return cssVar + ':' + c[k] + ';';
     }).join('');
-    try { document.body.style.background = c.surface; } catch (e) {}
+    try { document.body.style.background = c.surfaceContainer; } catch (e) {}
     try { document.documentElement.setAttribute('data-theme', c.dark ? 'dark' : 'light'); } catch (e) {}
 
     // The scrim behind a mobile drawer has to stay put for the drawer's own
@@ -3486,7 +3474,7 @@
     var drawerOpenOrClosing = state.mobileNavOpen || state.mobileCalendarOpen || drawerClosing;
     var scrimClass = 'mobile-scrim ' + ((state.mobileNavOpen || state.mobileCalendarOpen) ? 'open' : 'closing');
 
-    return '<div class="' + oneShotClass('palette').trim() + '" style="' + vars + 'position:relative; display:flex; flex-direction:column; width:100%; height:100vh; height:100dvh; background:' + c.surface + '; color:' + c.onSurface + '; overflow:hidden;">'
+    return '<div class="' + oneShotClass('palette').trim() + '" style="' + vars + 'position:relative; display:flex; flex-direction:column; width:100%; height:100vh; height:100dvh; background:' + c.surfaceContainer + '; color:' + c.onSurface + '; overflow:hidden;">'
       + '<a class="skip-link" href="#task-list">' + T('Skip to tasks') + '</a>'
       + topBar(c)
       + '<div style="flex:1; min-height:0; display:flex; overflow:hidden; position:relative;">'
@@ -3657,7 +3645,7 @@
         + '</div>'
       : '';
 
-    return '<header class="top-bar" style="flex-shrink:0; display:flex; align-items:center; gap:16px; background:' + c.surface + '; border-bottom:1px solid ' + c.outlineVariant + ';">'
+    return '<header class="top-bar" style="flex-shrink:0; display:flex; align-items:center; gap:16px; background:transparent;">'
       + '<div class="interactive hamburger-btn" data-action="toggleSidebar" title="' + T('Departments') + '" style="align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; color:' + c.onSurfaceVariant + '; flex-shrink:0;">' + ICON.hamburger + '</div>'
       + '<div style="display:flex; align-items:center; gap:10px;">'
       +   (state.user.role === 'admin'
@@ -3667,10 +3655,9 @@
       + '</div>'
       + '<div class="mobile-page-title" style="min-width:0; font-size:17px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + esc(currentPageTitle()) + '</div>'
       + '<div class="topbar-center" style="flex:1; display:flex; justify-content:center;">'
-      +   '<div class="desktop-search-bar" style="align-items:center; gap:8px; width:420px; max-width:100%; height:40px; padding:0 14px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">'
+      +   '<div class="desktop-search-bar" style="align-items:center; gap:10px; width:520px; max-width:100%; height:44px; padding:0 18px; border-radius:22px; background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">'
       +     ICON.search
       +     '<input id="searchInput" data-field="searchQuery" value="' + esc(state.searchQuery) + '" placeholder="' + T('Search tasks, comments, files') + '" style="border:none; outline:none; background:transparent; flex:1; font-size:14px; color:inherit;"></input>'
-      +     (state.searchQuery ? '' : '<span class="interactive" data-action="openPalette" title="' + T('Command menu') + '" style="flex-shrink:0; font-size:12px; padding:1px 6px; border-radius:var(--r-xs); border:1px solid ' + c.outlineVariant + '; color:' + c.textMuted + ';">' + (/Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘K' : 'Ctrl K') + '</span>')
       +     searchClear
       +   '</div>'
       +   '<div class="interactive mobile-search-btn" data-action="openMobileSearch" title="' + T('Search') + '" style="align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; color:' + c.onSurfaceVariant + ';">' + ICON.search + '</div>'
@@ -3736,13 +3723,13 @@
       var childrenHtml = d.children.map(function (child) {
         var childSelected = state.selectedNode === child.id;
         var childCount = state.summary.byDept[child.id] || 0;
-        return '<div class="interactive' + (childSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="' + esc(child.id) + '"' + (childSelected ? ' aria-current="true"' : '') + ' style="display:flex; align-items:center; padding:7px 10px; font-size:13px; font-weight:' + (childSelected ? 600 : 400) + '; border-radius:var(--r-sm); background:' + (childSelected ? c.surfaceContainerHigh : 'transparent') + '; color:' + (childSelected ? c.onSurface : c.onSurfaceVariant) + ';">'
+        return '<div class="interactive' + (childSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="' + esc(child.id) + '"' + (childSelected ? ' aria-current="true"' : '') + ' style="display:flex; align-items:center; padding:7px 10px; font-size:13px; font-weight:' + (childSelected ? 600 : 400) + '; border-radius:var(--r-sm); background:' + (childSelected ? c.secondaryContainer : 'transparent') + '; color:' + (childSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
           + (child.color ? '<span style="margin-right:8px; display:flex;">' + deptDot(child.id, 8) + '</span>' : '') + '<span style="flex:1;">' + esc(child.name) + '</span>'
           + '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + childCount + '</span>'
           + '</div>';
       }).join('');
 
-      return '<div class="dept-row' + (selected ? oneShotClass('node') : '') + '" style="display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:var(--r-sm); background:' + (selected ? c.surfaceContainerHigh : 'transparent') + '; margin-top:2px;">'
+      return '<div class="dept-row' + (selected ? oneShotClass('node') : '') + '" style="display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:' + (selected ? c.secondaryContainer : 'transparent') + '; color:' + (selected ? c.onSecondaryContainer : 'inherit') + '; margin-top:2px;">'
         + '<svg class="interactive tree-chevron' + (expanded ? ' expanded' : '') + (anim ? ' ' + anim : '') + '" data-action="toggleExpand" data-id="' + esc(d.id) + '" role="button" aria-expanded="' + (expanded ? 'true' : 'false') + '" aria-controls="subtree-' + esc(d.id) + '" aria-label="' + (expanded ? 'Collapse ' : 'Expand ') + esc(d.name) + '" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 5l6 5-6 5"></path></svg>'
         + '<span class="interactive" data-action="selectNode" data-id="' + esc(d.id) + '" style="display:flex; align-items:center; gap:6px; flex:1; min-width:0; border-radius:var(--r-sm);">'
         +   deptDot(d.id, 8) + '<span style="font-size:14px; font-weight:' + (selected ? 600 : 400) + ';">' + esc(d.name) + '</span>'
@@ -3758,18 +3745,18 @@
     // Closed, the drawer is off screen and out of the reading order; it is
     // still rendered so it can slide in and out.
     var hidden = !isWideScreen() && !state.mobileNavOpen && state.mobileNavAnim !== 'anim-close';
-    return '<nav class="no-scrollbar ' + drawerClass('left-nav', state.mobileNavOpen, state.mobileNavAnim) + '" aria-label="' + T('Departments') + '" aria-hidden="' + (hidden ? 'true' : 'false') + '"' + (hidden ? ' inert' : '') + ' data-scroll-key="sidebar" style="min-height:0; background:' + c.surfaceContainerLow + '; overflow-y:auto; overflow-x:hidden; padding:18px 12px; display:flex; flex-direction:column; gap:2px;">'
+    return '<nav class="no-scrollbar ' + drawerClass('left-nav', state.mobileNavOpen, state.mobileNavAnim) + '" aria-label="' + T('Departments') + '" aria-hidden="' + (hidden ? 'true' : 'false') + '"' + (hidden ? ' inert' : '') + ' data-scroll-key="sidebar" style="min-height:0; background:' + c.surfaceContainer + '; overflow-y:auto; overflow-x:hidden; padding:18px 12px; display:flex; flex-direction:column; gap:2px;">'
       + '<div style="display:flex; align-items:center; justify-content:space-between; padding:0 8px 10px 8px;">'
       +   '<span style="font-size:12px; font-weight:500; color:' + c.textMuted + ';">' + T('Departments') + '</span>'
       +   (isAdmin() ? '<span class="interactive" data-action="openAddDept" title="' + T('Add Department') + '" aria-label="' + T('Add Department') + '" style="display:flex; align-items:center; justify-content:center; width:24px; height:24px; margin-left:auto; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.plus + '</span>' : '')
       +   '<span class="interactive drawer-close-btn" data-action="closeMobileNav" title="' + T('Close') + '" style="align-items:center; justify-content:center; width:26px; height:26px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
       + '</div>'
-      + '<div class="interactive' + (allSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="all" style="display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:var(--r-sm); background:' + (allSelected ? c.surfaceContainerHigh : 'transparent') + '; color:' + c.onSurfaceVariant + ';">'
+      + '<div class="interactive' + (allSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="all" style="display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:999px; background:' + (allSelected ? c.secondaryContainer : 'transparent') + '; color:' + (allSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
       +   '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l1-4h10l1 4"></path><path d="M3 8h14v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8Z"></path><path d="M8 11h4"></path></svg>'
       +   '<span style="flex:1; font-size:14px;">' + T('All Tasks') + '</span>'
       +   '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + allCount + '</span>'
       + '</div>'
-      + '<div class="interactive' + (mineSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="mine" style="display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:var(--r-sm); background:' + (mineSelected ? c.surfaceContainerHigh : 'transparent') + '; color:' + c.onSurfaceVariant + ';">'
+      + '<div class="interactive' + (mineSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="mine" style="display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:999px; background:' + (mineSelected ? c.secondaryContainer : 'transparent') + '; color:' + (mineSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
       +   '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="3"></circle><path d="M4 16a6 6 0 0 1 12 0"></path></svg>'
       +   '<span style="flex:1; font-size:14px; font-weight:' + (mineSelected ? 600 : 400) + ';">' + T('My Tasks') + '</span>'
       +   '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + state.summary.mine + '</span>'
@@ -3806,7 +3793,7 @@
       var count = statusCount(id);
       var active = state.activeTab === id;
       var bg = 'transparent';
-      var color = active ? c.onSurface : (id === 'overdue' && count ? c.error : c.onSurfaceVariant);
+      var color = active ? c.primary : (id === 'overdue' && count ? c.error : c.onSurfaceVariant);
       var underline = active ? c.primary : 'transparent';
       return '<div class="interactive' + (active ? oneShotClass('tab') : '') + '" data-action="setTab" data-id="' + id + '" role="tab" aria-selected="' + (active ? 'true' : 'false') + '" aria-label="' + TAB_LABELS[id] + ', ' + T(count === 1 ? '{n} task' : '{n} tasks', { n: count }) + '" style="display:flex; align-items:center; gap:6px; height:38px; padding:0 4px; margin-bottom:-1px; border-radius:0; background:' + bg + '; color:' + color + '; font-size:14px; font-weight:' + (active ? 600 : 400) + '; border-bottom:2px solid ' + underline + ';">'
         + '<span>' + TAB_LABELS[id] + '</span><span style="font-size:12px; font-weight:500; color:' + (active ? c.onSurfaceVariant : c.textMuted) + ';">' + count + '</span></div>';
@@ -3878,7 +3865,7 @@
     var rangeEnd = (page - 1) * meta.pageSize + pageItems.length;
     var animClass = state.contentAnim === 'out' ? 'content-out' : (state.contentAnim === 'in' ? 'content-in' : '');
 
-    return '<main id="task-list" tabindex="-1" class="' + animClass + '" style="flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; padding:22px 26px; gap:14px;">'
+    return '<main id="task-list" tabindex="-1" class="content-sheet ' + animClass + '" style="flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; padding:24px 28px 16px; gap:14px; background:' + c.surface + ';">'
       + '<div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px;">'
       +   '<div style="min-width:0; flex:1;"><div style="font-size:12px; color:' + c.onSurfaceVariant + '; margin-bottom:3px;">' + esc(pathLabel) + '</div><div class="page-title" title="' + esc(titleLabel) + '" style="font-size:24px; font-weight:600;">' + esc(titleLabel) + '</div></div>'
       +   '<div style="display:flex; align-items:center; gap:8px;">'
@@ -4056,7 +4043,7 @@
       +   '<div style="display:flex; align-items:center; gap:8px; font-size:12px; color:' + c.textMuted + ';"><span>' + esc(title) + '</span>'
       +     '<span class="interactive" data-action="closeTaskModal" aria-label="' + T('Close') + '" style="margin-left:auto; display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span></div>'
       +   (readOnly ? '<div style="font-size:13px; line-height:1.45; color:' + c.onSurfaceVariant + '; background:' + c.surfaceContainerHigh + '; padding:9px 11px; border-radius:var(--r-sm);">' + esc(T('This task belongs to {dept}, so it is read-only for you.', { dept: nodeLabel(editedTask.deptId) })) + '</div>' : '')
-      +   '<input' + lock + ' id="newTaskTitleInput" class="bare-field" data-form="newTaskForm" data-field="title" value="' + esc(f.title) + '" placeholder="' + T('Task title') + '" aria-label="' + T('Title') + '" style="height:40px; padding:0; border:none; font-size:20px; font-weight:600; letter-spacing:-0.01em; background:transparent; color:' + c.onSurface + ';"></input>'
+      +   '<input' + lock + ' id="newTaskTitleInput" class="bare-field" data-form="newTaskForm" data-field="title" value="' + esc(f.title) + '" placeholder="' + T('Task title') + '" aria-label="' + T('Title') + '" style="height:40px; padding:0; border:none; font-size:22px; font-weight:500; background:transparent; color:' + c.onSurface + ';"></input>'
       +   '<textarea' + lock + ' id="newTaskDescInput" class="bare-field autosize" data-form="newTaskForm" data-field="description" rows="2" placeholder="' + T('Add a description…') + '" aria-label="' + T('Description') + '" style="min-height:44px; max-height:240px; padding:0; border:none; font-size:14px; line-height:1.6; font-family:inherit; resize:none; background:transparent; color:' + c.onSurface + ';">' + esc(f.description || '') + '</textarea>'
       +   '<div class="task-form-chips" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">'
       +     statusChip + assigneeChip + priorityChip + dueChip + repeatChip + deptChip + (editing ? calChip : '')
