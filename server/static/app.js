@@ -132,6 +132,9 @@
   // the letter shows through underneath. Avoids fetching a "does this user
   // have a photo" flag up front.
   function withImageFallback(src, fallbackHtml, sizePx, radiusCss, wrapperAttrs) {
+    // The static demo (demo/) has no server to serve pictures, so it asks for
+    // the letters straight away instead of a request that can only fail.
+    if (window.DIRECTIVE_DEMO) return '<div ' + (wrapperAttrs || '') + ' style="display:flex; flex-shrink:0;">' + fallbackHtml + '</div>';
     return '<div ' + (wrapperAttrs || '') + ' style="position:relative; width:' + sizePx + 'px; height:' + sizePx + 'px; flex-shrink:0;">'
       + fallbackHtml
       + '<img src="' + esc(src) + '" alt="" style="position:absolute; inset:0; width:100%; height:100%; border-radius:' + radiusCss + '; object-fit:cover; pointer-events:none;" onerror="this.remove()">'
