@@ -296,7 +296,7 @@
     // Centred at the bottom, clear of the sidebar, the + button and the detail
     // panel's comment box; it steps aside for the selection bar and toasts.
     var css = document.createElement('style');
-    css.textContent = '.demo-badge { left: 50% !important; transform: translateX(-50%); white-space: nowrap; } body:has(.bulk-bar, .snackbar) .demo-badge { display: none; }';
+    css.textContent = '.demo-badge { left: 50% !important; transform: translateX(-50%); white-space: nowrap; } body:has(.bulk-bar, .snackbar, .detail-overlay, .modal-overlay) .demo-badge { display: none; }';
     document.head.appendChild(css);
     document.body.appendChild(b);
   });

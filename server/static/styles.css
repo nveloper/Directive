@@ -254,7 +254,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 .guide-card {
   width: 640px;
   max-width: 94vw;
-  max-height: 86vh;
+  max-height: calc(86vh / var(--zoom, 1));
   display: flex;
   flex-direction: column;
   border-radius: var(--r-lg);
@@ -552,7 +552,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 
 /* Task detail: the reading view a task opens into. */
 .task-detail {
-  width: 680px; max-width: 94vw; max-height: 90vh; overflow-y: auto;
+  width: 680px; max-width: 94vw; max-height: calc(90vh / var(--zoom, 1)); overflow-y: auto;
   border-radius: var(--r-lg); padding: 24px 26px; display: flex; flex-direction: column; gap: 16px;
   box-shadow: var(--e3); outline: 2px dashed transparent; outline-offset: -8px;
   transition: outline-color var(--m-fast);
@@ -782,3 +782,10 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: .38; cu
 /* Body copy gets room to breathe; numbers in tables keep their columns. */
 body { line-height: 1.45; }
 .detail-body { font-size: 15px !important; line-height: 1.7 !important; }
+
+/* Touch screens are read at arm's length: everything one step bigger
+   (12px text becomes 13px+), taps get taller to match. Mouse screens keep
+   the base scale. The app shell divides its viewport height by --zoom. */
+@media (pointer: coarse) { :root { --zoom: 1.08; } }
+@media (pointer: coarse) and (min-width: 700px) { :root { --zoom: 1.15; } }
+#root { zoom: var(--zoom, 1); }

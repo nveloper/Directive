@@ -49,6 +49,14 @@
   function isWideScreen() {
     return !!(window.matchMedia && window.matchMedia(WIDE_QUERY).matches);
   }
+  // Touch screens (phones, tablets) get the two-line task rows instead of the
+  // table: the table's extra columns are too much to take in at arm's length.
+  function isTouchScreen() {
+    return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  }
+  function useCardRows() {
+    return isNarrowScreen() || (isTouchScreen() && state.viewMode === 'list');
+  }
   function isNarrowScreen() {
     return !!(window.matchMedia && window.matchMedia(NARROW_QUERY).matches);
   }
@@ -443,6 +451,8 @@
     searchQuery: '',
     viewMode: (function () { try { var v = localStorage.getItem('directive_view'); return /^(list|grid|calendar)$/.test(v || '') ? v : 'list'; } catch (e) { return 'list'; } })(),
     calMonth: '',
+    calWeekStart: '',
+    calSpan: '',
     selected: {},
     bulkBusy: false,
     paletteOpen: false,
@@ -1799,7 +1809,7 @@
   }
 
   function listScrollKey() {
-    return 'list:' + state.selectedNode + ':' + state.activeTab + ':' + state.page + ':' + state.searchQuery.trim() + ':' + (isNarrowScreen() ? 'cards' : state.viewMode);
+    return 'list:' + state.selectedNode + ':' + state.activeTab + ':' + state.page + ':' + state.searchQuery.trim() + ':' + (useCardRows() ? 'cards' : state.viewMode);
   }
 
   function statusCount(id) {
@@ -3221,7 +3231,7 @@
     var section = function (title, list, offset) { return list.length ? '<div style="padding:8px 10px 4px; font-size:12px; font-weight:500; color:' + c.textMuted + ';">' + T(title) + '</div>' + list.map(function (x, i) { return row(x, i + offset); }).join('') : ''; };
     var empty = !all.length ? '<div style="padding:24px; text-align:center; font-size:13px; color:' + c.textMuted + ';">' + T('Nothing matches.') + '</div>' : '';
     return '<div class="modal-overlay overlay-in" data-backdrop="closePalette" style="position:fixed; background:rgba(0,0,0,.25); display:flex; align-items:flex-start; justify-content:center; padding-top:14vh; z-index:97;">'
-      + '<div role="dialog" aria-modal="true" aria-label="' + T('Command menu') + '" class="card-in" style="width:560px; max-width:94vw; max-height:64vh; display:flex; flex-direction:column; background:' + c.surface + '; border-radius:var(--r-lg); box-shadow:var(--e3); overflow:hidden;">'
+      + '<div role="dialog" aria-modal="true" aria-label="' + T('Command menu') + '" class="card-in" style="width:560px; max-width:94vw; max-height:calc(64vh / var(--zoom, 1)); display:flex; flex-direction:column; background:' + c.surface + '; border-radius:var(--r-lg); box-shadow:var(--e3); overflow:hidden;">'
       +   '<div style="display:flex; align-items:center; gap:10px; padding:0 16px; border-bottom:1px solid ' + c.outlineVariant + ';"><span style="display:flex; color:' + c.textMuted + ';">' + ICON.search + '</span>'
       +     '<input id="paletteInput" role="combobox" aria-expanded="true" aria-controls="paletteList" aria-activedescendant="palette-opt-' + idx + '" autocomplete="off" value="' + esc(state.paletteQuery) + '" placeholder="' + T('Type a command or search tasks…') + '" style="flex:1; height:52px; border:none; outline:none; box-shadow:none !important; font-size:15px; background:transparent; color:' + c.onSurface + ';"></div>'
       +   '<div id="paletteList" role="listbox" style="flex:1; min-height:0; overflow-y:auto; padding:4px 8px 8px;">'
@@ -3315,14 +3325,50 @@
     if (/^\d{4}-\d{2}$/.test(state.calMonth)) return state.calMonth;
     return isoOf(new Date()).slice(0, 7);
   }
+  // Touch screens open on a week: seven tall days hold every task at a
+  // readable size, where a month squeezes six rows into the same height.
+  function calendarSpan() {
+    if (state.calSpan === 'week' || state.calSpan === 'month') return state.calSpan;
+    return isTouchScreen() ? 'week' : 'month';
+  }
+  function weekStartOf(d) { var s = new Date(d.getFullYear(), d.getMonth(), d.getDate()); s.setDate(s.getDate() - s.getDay()); return s; }
   function calendarRange() {
+    if (calendarSpan() === 'week') {
+      var ws = /^\d{4}-\d{2}-\d{2}$/.test(state.calWeekStart)
+        ? new Date(Number(state.calWeekStart.slice(0, 4)), Number(state.calWeekStart.slice(5, 7)) - 1, Number(state.calWeekStart.slice(8, 10)))
+        : weekStartOf(new Date());
+      var we = new Date(ws); we.setDate(ws.getDate() + 6);
+      return { week: true, days: 7, first: ws, start: ws, from: isoOf(ws), to: isoOf(we) };
+    }
     var m = calendarMonth();
     var first = new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1);
     var start = new Date(first); start.setDate(1 - first.getDay());
     var end = new Date(start); end.setDate(start.getDate() + 41);
-    return { first: first, start: start, from: isoOf(start), to: isoOf(end) };
+    return { days: 42, first: first, start: start, from: isoOf(start), to: isoOf(end) };
+  }
+  function setCalendarSpan(span) {
+    if (span === calendarSpan()) return;
+    // Keep the reader in the same place: a week lands in the month it is
+    // in, and a month opens on its first week (or this week, if current).
+    var r = calendarRange();
+    if (span === 'month') state.calMonth = isoOf(r.week ? new Date(r.start.getFullYear(), r.start.getMonth(), r.start.getDate() + 3) : r.first).slice(0, 7);
+    else {
+      var today = new Date();
+      state.calWeekStart = isoOf(weekStartOf(isoOf(today).slice(0, 7) === calendarMonth() ? today : r.first));
+    }
+    state.calSpan = span;
+    render();
+    fetchTasks().then(render);
   }
   function shiftCalendar(delta) {
+    if (calendarSpan() === 'week') {
+      var base = delta === 0 ? new Date() : calendarRange().start;
+      var ws = weekStartOf(base); ws.setDate(ws.getDate() + 7 * delta);
+      state.calWeekStart = isoOf(ws);
+      render();
+      fetchTasks().then(render);
+      return;
+    }
     var m = calendarMonth();
     var d = delta === 0 ? new Date() : new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1 + delta, 1);
     state.calMonth = isoOf(d).slice(0, 7);
@@ -3334,23 +3380,26 @@
     var byDay = {};
     items.forEach(function (t) { if (t.dueDate) (byDay[t.dueDate] = byDay[t.dueDate] || []).push(t); });
     var today = isoOf(new Date());
-    var month = r.first.getMonth();
+    var month = r.week ? -1 : r.first.getMonth();
+    var touch = isTouchScreen();
     var head = (LANG === 'ko' ? ['일', '월', '화', '수', '목', '금', '토'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']).map(function (x, i) {
       return '<div style="padding:6px 8px; font-size:12px; font-weight:500; color:' + (i === 0 ? c.error : c.textMuted) + ';">' + x + '</div>';
     }).join('');
     var cells = '';
-    for (var i = 0; i < 42; i++) {
+    for (var i = 0; i < r.days; i++) {
       var d = new Date(r.start); d.setDate(r.start.getDate() + i);
-      var iso = isoOf(d), inMonth = d.getMonth() === month, list = byDay[iso] || [];
-      var shown = list.slice(0, 4);
-      cells += '<div class="cal-cell" style="min-width:0; min-height:112px; padding:6px; display:flex; flex-direction:column; gap:3px; border-right:1px solid ' + c.outlineVariant + '; border-bottom:1px solid ' + c.outlineVariant + '; background:' + (inMonth ? c.surface : c.surfaceContainerLow) + ';">'
+      var iso = isoOf(d), inMonth = r.week || d.getMonth() === month, list = byDay[iso] || [];
+      // A week shows every task; a month on a touch screen shows one per day
+      // and counts the rest, so the names that are there stay readable.
+      var shown = r.week ? list : list.slice(0, touch ? 1 : 4);
+      cells += '<div class="cal-cell" style="min-width:0; min-height:' + (r.week ? 'calc(100dvh / var(--zoom, 1) - 300px)' : '112px') + '; padding:6px; display:flex; flex-direction:column; gap:3px; border-right:1px solid ' + c.outlineVariant + '; border-bottom:1px solid ' + c.outlineVariant + '; background:' + (inMonth ? c.surface : c.surfaceContainerLow) + ';">'
         + '<span class="tnum" style="align-self:flex-start; min-width:22px; height:22px; padding:0 6px; display:inline-flex; align-items:center; justify-content:center; border-radius:11px; font-size:12px; font-weight:' + (iso === today ? 600 : 400) + '; ' + (iso === today ? 'background:' + c.primary + '; color:' + c.onPrimary + ';' : 'color:' + (inMonth ? c.onSurfaceVariant : c.textMuted) + ';') + '">' + d.getDate() + '</span>'
         + shown.map(function (t) {
             var col = deptColor(t.deptId) || c.outline;
             var done = t.status === 'done';
-            return '<div class="interactive" data-action="openTask" data-id="' + t.id + '" title="' + esc(t.title) + '" style="display:flex; align-items:center; gap:5px; min-width:0; height:22px; padding:0 6px; border-radius:4px; font-size:12px; background:' + c.surfaceContainer + '; box-shadow:inset 3px 0 0 ' + col + '; color:' + (done ? c.textMuted : (t.overdue ? c.error : c.onSurface)) + ';">'
+            return '<div class="interactive" data-action="openTask" data-id="' + t.id + '" title="' + esc(t.title) + '" style="display:flex; align-items:center; gap:5px; min-width:0; ' + (r.week ? 'min-height:28px; padding:4px 6px; align-items:flex-start; font-size:13px; line-height:1.35;' : 'height:22px; padding:0 6px; font-size:12px;') + ' border-radius:4px; background:' + c.surfaceContainer + '; box-shadow:inset 3px 0 0 ' + col + '; color:' + (done ? c.textMuted : (t.overdue ? c.error : c.onSurface)) + ';">'
               + statusIconHtml(t.status, (maps.statusStyle[t.status] || maps.statusStyle.todo).dot, 11)
-              + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;' + (done ? ' text-decoration:line-through;' : '') + '">' + esc(t.title) + '</span></div>';
+              + '<span style="overflow:hidden; text-overflow:ellipsis; ' + (r.week ? 'overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;' : 'white-space:nowrap;') + (done ? ' text-decoration:line-through;' : '') + '">' + esc(t.title) + '</span></div>';
           }).join('')
         + (list.length > shown.length ? '<span title="' + esc(list.slice(shown.length).map(function (t) { return t.title; }).join('\n')) + '" style="font-size:12px; color:' + c.textMuted + '; padding-left:6px;">' + T('+{n} more', { n: list.length - shown.length }) + '</span>' : '')
         + '</div>';
@@ -3359,8 +3408,14 @@
     var undated = state.taskMeta.total >= 100 ? '<span style="font-size:12px; color:' + c.textMuted + ';">' + T('Showing the first 100 tasks due this month.') + '</span>' : '';
     return '<div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">'
       +   '<span style="font-size:16px; font-weight:500; margin-right:6px;">' + esc(r.first.toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</span>'
-      +   nav(-1, 'Previous month', ICON.chevronLeft) + nav(0, 'Today', T('Today')) + nav(1, 'Next month', ICON.chevronRight)
+      +   nav(-1, r.week ? 'Previous week' : 'Previous month', ICON.chevronLeft) + nav(0, 'Today', T('Today')) + nav(1, r.week ? 'Next week' : 'Next month', ICON.chevronRight)
       +   '<span style="flex:1;"></span>' + undated
+      +   '<div role="group" aria-label="' + T('Calendar span') + '" style="display:inline-flex; border:1px solid ' + c.outline + '; border-radius:var(--r-full); overflow:hidden;">'
+      +     [['week', 'Week'], ['month', 'Month']].map(function (p) {
+              var on = calendarSpan() === p[0];
+              return '<span class="interactive" data-action="setCalendarSpan" data-id="' + p[0] + '" aria-pressed="' + on + '" style="display:inline-flex; align-items:center; height:32px; padding:0 14px; font-size:13px; font-weight:500; background:' + (on ? c.secondaryContainer : 'transparent') + '; color:' + (on ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">' + T(p[1]) + '</span>';
+            }).join('')
+      +   '</div>'
       + '</div>'
       + '<div role="grid" aria-label="' + T('Calendar') + '" style="display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); border-top:1px solid ' + c.outlineVariant + '; border-left:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); overflow:hidden;">'
       +   head.replace(/<div style="/g, '<div style="border-right:1px solid ' + c.outlineVariant + '; border-bottom:1px solid ' + c.outlineVariant + '; background:' + c.surfaceContainerLow + '; ')
@@ -3436,7 +3491,7 @@
     try { document.body.style.background = c.surfaceContainerLow; } catch (e) {}
     try { document.documentElement.setAttribute('data-theme', c.dark ? 'dark' : 'light'); } catch (e) {}
     var title = isRegister ? (state.setupRequired ? T('Set up your workspace') : T('Create an account')) : T('Log in');
-    return '<div style="' + vars + 'min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px 16px; background:' + c.surfaceContainerLow + '; font-family:inherit;">'
+    return '<div style="' + vars + 'min-height:calc(100vh / var(--zoom, 1)); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px 16px; background:' + c.surfaceContainerLow + '; font-family:inherit;">'
       + '<div class="auth-card" style="width:360px; max-width:100%; display:flex; flex-direction:column; gap:16px;">'
       +   '<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">' + brandIconHtml(c.primary, c.onPrimary, 32, false) + '<div style="font-size:16px; font-weight:500; color:' + c.onSurface + ';">' + esc(state.appName) + '</div></div>'
       +   '<div><h1 class="page-title" style="margin:0 0 6px; font-size:28px; line-height:36px; font-weight:500; color:' + c.onSurface + ';">' + esc(title) + '</h1>'
@@ -3470,7 +3525,7 @@
     var drawerOpenOrClosing = state.mobileNavOpen || state.mobileCalendarOpen || drawerClosing;
     var scrimClass = 'mobile-scrim ' + ((state.mobileNavOpen || state.mobileCalendarOpen) ? 'open' : 'closing');
 
-    return '<div class="' + oneShotClass('palette').trim() + '" style="' + vars + 'position:relative; display:flex; flex-direction:column; width:100%; height:100vh; height:100dvh; background:' + c.surfaceContainer + '; color:' + c.onSurface + '; overflow:hidden;">'
+    return '<div class="' + oneShotClass('palette').trim() + '" style="' + vars + 'position:relative; display:flex; flex-direction:column; width:100%; height:calc(100vh / var(--zoom, 1)); height:calc(100dvh / var(--zoom, 1)); background:' + c.surfaceContainer + '; color:' + c.onSurface + '; overflow:hidden;">'
       + '<a class="skip-link" href="#task-list">' + T('Skip to tasks') + '</a>'
       + topBar(c)
       + '<div style="flex:1; min-height:0; display:flex; overflow:hidden; position:relative;">'
@@ -3830,8 +3885,10 @@
 
     var bodyHtml;
     var loadingNow = !state.tasksLoaded;
-    if (isNarrowScreen()) {
-      bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" style="flex:1; min-height:0; overflow:auto;"><div style="display:flex; flex-direction:column; gap:2px;">'
+    if (useCardRows()) {
+      // Wider than a phone, the rows stop at a readable width so each date
+      // stays near its title instead of at the far edge of the screen.
+      bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" style="flex:1; min-height:0; overflow:auto;"><div style="display:flex; flex-direction:column; gap:2px; max-width:680px;">'
         + (loadingNow ? skeletonRows(c, 6) : (pageItems.length ? pageItems.map(function (t) { return taskMobileRow(t, maps, c); }).join('') : emptyStateHtml(c)))
         + '</div></div>';
     } else if (state.viewMode === 'calendar') {
@@ -3861,8 +3918,15 @@
     var rangeEnd = (page - 1) * meta.pageSize + pageItems.length;
     var animClass = state.contentAnim === 'out' ? 'content-out' : (state.contentAnim === 'in' ? 'content-in' : '');
 
+    var narrow = isNarrowScreen();
+    var filterHtml = '<div data-dropdown="filter" style="position:relative;' + (narrow ? ' flex-shrink:0;' : '') + '">'
+      +   '<div class="interactive filter-btn" data-action="toggleFilterOpen" title="' + T('Filter') + '" style="position:relative; display:flex; align-items:center; gap:6px; height:40px; padding:0 16px; border-radius:var(--r-sm); border:1px solid ' + (filtersActive() ? c.primary : c.outline) + '; color:' + (filtersActive() ? c.primary : c.onSurfaceVariant) + '; font-size:14px; font-weight:500;">' + ICON.filter + '<span class="btn-label">' + T('Filter') + '</span>'
+      +     (filtersActive() ? '<span aria-label="' + T('Filters on') + '" style="position:absolute; top:6px; right:8px; width:7px; height:7px; border-radius:50%; background:' + c.primary + ';"></span>' : '') + '</div>'
+      +   filterPanel
+      + '</div>';
+    var tablistHtml = '<div role="tablist" aria-label="' + T('Filter by status') + '" data-scroll-key="tabs" style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; border-bottom:1px solid ' + c.outlineVariant + ';' + (narrow ? ' flex:1; min-width:0;' : '') + '">' + tabsHtml + '</div>';
     return '<main id="task-list" tabindex="-1" class="content-sheet ' + animClass + '" style="flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; padding:24px 28px 16px; gap:14px; background:' + c.surface + ';">'
-      + '<div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px;">'
+      + '<div style="display:' + (narrow ? 'none' : 'flex') + '; align-items:flex-start; justify-content:space-between; gap:16px;">'
       +   '<div style="min-width:0; flex:1;"><div style="font-size:12px; color:' + c.onSurfaceVariant + '; margin-bottom:3px;">' + esc(pathLabel) + '</div><div class="page-title" title="' + esc(titleLabel) + '" style="font-size:28px; line-height:36px; font-weight:500;">' + esc(titleLabel) + '</div></div>'
       +   '<div style="display:flex; align-items:center; gap:8px;">'
       +     '<div class="view-toggle" role="radiogroup" aria-label="' + T('View') + '" style="display:flex; align-items:center; gap:2px; padding:3px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + ';">'
@@ -3871,17 +3935,13 @@
                 return '<div class="interactive" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setViewMode" data-id="' + v[0] + '" title="' + T(v[1]) + '" aria-label="' + T(v[1]) + '" style="width:30px; height:30px; border-radius:4px; display:flex; align-items:center; justify-content:center; color:' + (on ? c.onSurface : c.onSurfaceVariant) + '; background:' + (on ? c.surface : 'transparent') + ';' + (on ? ' box-shadow:var(--e1);' : '') + '">' + v[2] + '</div>';
               }).join('')
       +     '</div>'
-      +     '<div data-dropdown="filter" style="position:relative;">'
-      +       '<div class="interactive filter-btn" data-action="toggleFilterOpen" title="' + T('Filter') + '" style="position:relative; display:flex; align-items:center; gap:6px; height:40px; padding:0 16px; border-radius:var(--r-sm); border:1px solid ' + (filtersActive() ? c.primary : c.outline) + '; color:' + (filtersActive() ? c.primary : c.onSurfaceVariant) + '; font-size:14px; font-weight:500;">' + ICON.filter + '<span class="btn-label">' + T('Filter') + '</span>'
-      +         (filtersActive() ? '<span aria-label="' + T('Filters on') + '" style="position:absolute; top:6px; right:8px; width:7px; height:7px; border-radius:50%; background:' + c.primary + ';"></span>' : '') + '</div>'
-      +       filterPanel
-      +     '</div>'
-      +     (canCreateTask()
+      +     (narrow ? '' : filterHtml)
+            +     (canCreateTask()
               ? '<div class="interactive new-task-inline" data-action="openTaskModal" style="display:flex; align-items:center; gap:7px; height:40px; padding:0 18px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; font-weight:500;">' + ICON.plus + '<span>' + T('New Task') + '</span></div>'
               : '<div class="new-task-inline" title="' + T('An administrator has to put your account in a department first') + '" style="display:flex; align-items:center; gap:7px; height:40px; padding:0 18px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + '; font-size:14px; font-weight:500; opacity:.7;">' + ICON.plus + '<span>' + T('New Task') + '</span></div>')
       +   '</div>'
       + '</div>'
-      + '<div role="tablist" aria-label="' + T('Filter by status') + '" data-scroll-key="tabs" style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; border-bottom:1px solid ' + c.outlineVariant + ';">' + tabsHtml + '</div>'
+      + (narrow ? '<div style="display:flex; align-items:center; gap:4px;">' + tablistHtml + filterHtml + '</div>' : tablistHtml)
       + bodyHtml
       + '<div style="flex-shrink:0; display:flex; align-items:center; justify-content:space-between; font-size:13px; color:' + c.onSurfaceVariant + ';">'
       +   '<span aria-live="polite">' + (meta.total ? T('Showing {a}-{b} of {n}', { a: rangeStart, b: rangeEnd, n: meta.total }) : '') + '</span>'
@@ -4035,7 +4095,7 @@
 
     var title = T(readOnly ? 'Task' : (editing ? 'Edit Task' : 'New Task'));
     return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="closeTaskModal" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,' + (stacked ? '.25' : '.4') + '); display:flex; align-items:flex-start; justify-content:center; padding-top:12vh; z-index:55;">'
-      + '<div role="dialog" class="task-form ' + mo.card + '" data-scroll-key="' + esc('task:' + (state.editingTaskId || 'new')) + '" aria-modal="true" aria-label="' + esc(title) + '" tabindex="-1" style="' + mo.cardStyle + 'width:600px; max-width:94vw; max-height:80vh; overflow-y:auto; background:' + c.surface + '; border-radius:var(--r-lg); padding:20px 24px; display:flex; flex-direction:column; gap:12px; box-shadow:var(--e3);">'
+      + '<div role="dialog" class="task-form ' + mo.card + '" data-scroll-key="' + esc('task:' + (state.editingTaskId || 'new')) + '" aria-modal="true" aria-label="' + esc(title) + '" tabindex="-1" style="' + mo.cardStyle + 'width:600px; max-width:94vw; max-height:calc(80vh / var(--zoom, 1)); overflow-y:auto; background:' + c.surface + '; border-radius:var(--r-lg); padding:20px 24px; display:flex; flex-direction:column; gap:12px; box-shadow:var(--e3);">'
       +   '<div style="display:flex; align-items:center; gap:8px; font-size:12px; color:' + c.textMuted + ';"><span>' + esc(title) + '</span>'
       +     '<span class="interactive" data-action="closeTaskModal" aria-label="' + T('Close') + '" style="margin-left:auto; display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span></div>'
       +   (readOnly ? '<div style="font-size:13px; line-height:1.45; color:' + c.onSurfaceVariant + '; background:' + c.surfaceContainerHigh + '; padding:9px 11px; border-radius:var(--r-sm);">' + esc(T('This task belongs to {dept}, so it is read-only for you.', { dept: nodeLabel(editedTask.deptId) })) + '</div>' : '')
@@ -4269,7 +4329,7 @@
 
     var waiting = pendingUserCount();
     return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="closeUsers" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:50;">'
-      + '<div role="dialog" data-scroll-key="accounts" aria-modal="true" aria-label="' + esc(T('Accounts')) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:520px; max-width:94vw; max-height:88vh; overflow-y:auto; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:10px; box-shadow:var(--e3);">'
+      + '<div role="dialog" data-scroll-key="accounts" aria-modal="true" aria-label="' + esc(T('Accounts')) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:520px; max-width:94vw; max-height:calc(88vh / var(--zoom, 1)); overflow-y:auto; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:10px; box-shadow:var(--e3);">'
       +   '<span style="font-size:20px; font-weight:500;">' + T('Accounts') + '</span>'
       +   '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">'
       +     (waiting > 0 ? T(waiting === 1 ? '{n} account waiting for approval.' : '{n} accounts waiting for approval.', { n: waiting }) + ' ' : '')
@@ -4754,7 +4814,7 @@
     var vars = Object.keys(c).map(function (k) { return '--' + k.replace(/([A-Z])/g, '-$1').toLowerCase() + ':' + c[k] + ';'; }).join('');
     try { document.body.style.background = c.surfaceContainerLow; } catch (e) {}
     try { document.documentElement.setAttribute('data-theme', c.dark ? 'dark' : 'light'); } catch (e) {}
-    return '<div style="' + vars + 'min-height:100vh; display:flex; align-items:center; justify-content:center; background:' + c.surfaceContainerLow + '; color:' + c.onSurface + ';">'
+    return '<div style="' + vars + 'min-height:calc(100vh / var(--zoom, 1)); display:flex; align-items:center; justify-content:center; background:' + c.surfaceContainerLow + '; color:' + c.onSurface + ';">'
       + '<div class="auth-card" role="dialog" aria-label="' + T('Choose a new password') + '" style="width:400px; max-width:92vw; background:' + c.surface + '; border-radius:var(--r-lg); padding:30px; box-shadow:var(--e2); display:flex; flex-direction:column; gap:14px;">'
       +   '<div style="display:flex; align-items:center; gap:10px;">' + brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 36, false) + '<div style="font-size:20px; font-weight:500;">' + T('Choose a new password') + '</div></div>'
       +   '<div style="font-size:13px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('An administrator reset the password for {name}. Enter the temporary password you were given, then one of your own.', { name: '<b>' + esc(state.user.displayName) + '</b>' }) + '</div>'
@@ -4769,7 +4829,7 @@
   function modalShell(name, phase, c, label, width, inner) {
     var mo = modalMotion(name, phase === 'closing');
     return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="' + BACKDROP_CLOSERS[name] + '" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:50;">'
-      + '<div role="dialog" data-scroll-key="' + name + '" aria-modal="true" aria-label="' + esc(T(label)) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:' + width + 'px; max-width:94vw; max-height:88vh; overflow-y:auto; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:12px; box-shadow:var(--e3);">'
+      + '<div role="dialog" data-scroll-key="' + name + '" aria-modal="true" aria-label="' + esc(T(label)) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:' + width + 'px; max-width:94vw; max-height:calc(88vh / var(--zoom, 1)); overflow-y:auto; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:12px; box-shadow:var(--e3);">'
       + inner
       + '</div></div>';
   }
@@ -5080,6 +5140,7 @@
     bulkDelete: function () { bulkDelete(); },
     openPalette: function () { openPalette(); },
     runPaletteItem: function (el) { runPaletteItem(Number(el.getAttribute('data-id'))); },
+    setCalendarSpan: function (el) { setCalendarSpan(el.getAttribute('data-id')); },
     shiftCalendar: function (el) { shiftCalendar(Number(el.getAttribute('data-id'))); },
     setMappingColor: function (el) { setState({ mappingForm: Object.assign({}, state.mappingForm, { color: el.getAttribute('data-id') }) }); },
     sortByColumn: function (el) { var k = el.getAttribute('data-id'); setTaskSort(state.taskSort === k ? 'created' : k); },
