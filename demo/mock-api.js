@@ -28,11 +28,11 @@
     { id: 5, username: 'hoon', displayName: L('Hoon Jung', '정훈'), role: 'member', status: 'active', deptId: 'engineering/backend' }
   ];
   var depts = [
-    { id: 'engineering', name: L('Engineering', '개발'), parentId: '', calendarList: '', tag: '', feedToken: 'demo1', color: '#0090FF' },
+    { id: 'engineering', name: L('Engineering', '개발'), parentId: '', calendarList: '', tag: '', feedToken: 'demo1', color: '' },
     { id: 'engineering/frontend', name: L('Frontend', '프론트엔드'), parentId: 'engineering', calendarList: '', tag: '', feedToken: 'demo2', color: '' },
-    { id: 'engineering/backend', name: L('Backend', '백엔드'), parentId: 'engineering', calendarList: '', tag: '', feedToken: 'demo3', color: '#12A594' },
-    { id: 'design', name: L('Design', '디자인'), parentId: '', calendarList: '', tag: '', feedToken: 'demo4', color: '#D6409F' },
-    { id: 'marketing', name: L('Marketing', '마케팅'), parentId: '', calendarList: '', tag: '', feedToken: 'demo5', color: '#F76B15' }
+    { id: 'engineering/backend', name: L('Backend', '백엔드'), parentId: 'engineering', calendarList: '', tag: '', feedToken: 'demo3', color: '' },
+    { id: 'design', name: L('Design', '디자인'), parentId: '', calendarList: '', tag: '', feedToken: 'demo4', color: '' },
+    { id: 'marketing', name: L('Marketing', '마케팅'), parentId: '', calendarList: '', tag: '', feedToken: 'demo5', color: '' }
   ];
   var nextId = 100;
   function task(id, title, deptId, who, priority, due, status, extra) {
@@ -45,8 +45,8 @@
   }
   var tasks = [
     task(1, L('Migrate the auth service to OAuth 2.1', '인증 서비스를 OAuth 2.1로 이전'), 'engineering/backend', 5, 'High', day(1), 'inprogress', { description: L('Token store first, then a staged rollout.\nSpec: https://oauth.net/2.1/', '토큰 저장소부터, 그다음 단계적으로 배포합니다.\n명세: https://oauth.net/2.1/') }),
-    task(2, L('Fix chart rendering on Safari', 'Safari에서 차트가 안 그려지는 문제'), 'engineering/frontend', 4, 'High', day(-2), 'todo', { icon: '🐞' }),
-    task(3, L('Redesign the onboarding flow', '온보딩 흐름 다시 디자인'), 'design', 2, 'Medium', day(0), 'review', { icon: '🎨' }),
+    task(2, L('Fix chart rendering on Safari', 'Safari에서 차트가 안 그려지는 문제'), 'engineering/frontend', 4, 'High', day(-2), 'todo'),
+    task(3, L('Redesign the onboarding flow', '온보딩 흐름 다시 디자인'), 'design', 2, 'Medium', day(0), 'review'),
     task(4, L('Design tokens v2', '디자인 토큰 v2'), 'design', 2, 'Low', day(9), 'todo'),
     task(5, L('Q4 campaign landing page copy', '4분기 캠페인 랜딩 페이지 문구'), 'marketing', 3, 'Medium', day(4), 'inprogress'),
     task(6, L('Weekly metrics report', '주간 지표 보고서'), 'marketing', 1, 'Low', day(3), 'todo', { recurrence: 'FREQ=WEEKLY' }),

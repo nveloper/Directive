@@ -222,8 +222,6 @@
   // alike, but each is harmonized toward the seed (Material's colour
   // harmonization: turned up to 15 degrees toward it) so they sit in the same
   // family instead of reading as stock UI colours.
-  var STATUS_HUES = { inprogress: 255, review: 70, done: 150, overdue: 27 };
-  var PRIORITY_HUE = 45;
   function harmonize(hue, seed) {
     var d = ((seed - hue + 540) % 360) - 180;
     return hue + Math.max(-15, Math.min(15, d * 0.5));
@@ -286,7 +284,7 @@
       c.warningContainer = tone(harmonize(70, h), 0.06, 30);
       c.onWarningContainer = tone(harmonize(70, h), 0.08, 90);
     }
-    c.secondary = c.success;
+    c.secondary = c.primary;
     c.onSecondary = dark ? c.onPrimary : '#FFFFFF';
     c.tertiary = c.warning;
     c.tertiaryContainer = c.warningContainer;
@@ -296,30 +294,28 @@
   }
 
   // Status and priority colours for a scheme, harmonized toward its seed.
+  // Status and priority in one colour family. The ring's shape already says
+  // how far along a task is (empty, half, three quarters, full), so colour
+  // only has to separate "not started" from "under way": grey for to do, the
+  // accent for everything after it. Red is kept for one thing - late work -
+  // so it still stands out. High priority is the accent; the rest are grey.
   function statusColors(c) {
-    var h = hexToOklch(state.accent).H, dk = c.dark, out = {};
-    function tone(hue, chroma, t) { return oklchToHex(t / 100, chroma, hue); }
-    out.todo = { dot: c.textMuted, bg: c.surfaceContainerHigh, color: c.onSurfaceVariant };
-    Object.keys(STATUS_HUES).forEach(function (k) {
-      var hue = harmonize(STATUS_HUES[k], h);
-      out[k] = dk
-        ? { dot: tone(hue, 0.13, 74), bg: tone(hue, 0.06, 30), color: tone(hue, 0.08, 88) }
-        : { dot: tone(hue, 0.16, k === 'review' ? 66 : 56), bg: tone(hue, 0.05, 93), color: tone(hue, 0.12, 34) };
-    });
-    var ph = harmonize(PRIORITY_HUE, h);
-    return { status: out, priority: { High: dk ? tone(ph, 0.14, 74) : tone(ph, 0.17, 58), Medium: c.onSurfaceVariant, Low: c.outline } };
+    var on = { dot: c.primary, bg: c.secondaryContainer, color: c.onSecondaryContainer };
+    return {
+      status: {
+        todo: { dot: c.textMuted, bg: c.surfaceContainerHigh, color: c.onSurfaceVariant },
+        inprogress: on, review: on, done: on,
+        overdue: { dot: c.error, bg: c.errorContainer, color: c.onErrorContainer }
+      },
+      priority: { High: c.primary, Medium: c.onSurfaceVariant, Low: c.outline }
+    };
   }
 
-  // Letter avatars take one of eight quiet hues from the name, so a person
-  // keeps their colour everywhere and it never follows the accent.
-  var AVATAR_HUES = [25, 70, 135, 175, 215, 255, 300, 345];
+  // Letter avatars all share the secondary container: a name tells people
+  // apart, a rainbow of circles only adds noise.
   function avatarColors(name, dark) {
-    var s = String(name || ''), hash = 0;
-    for (var i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) | 0;
-    var hue = AVATAR_HUES[Math.abs(hash) % AVATAR_HUES.length];
-    return dark
-      ? { bg: oklchToHex(0.34, 0.06, hue), color: oklchToHex(0.88, 0.07, hue) }
-      : { bg: oklchToHex(0.92, 0.045, hue), color: oklchToHex(0.38, 0.09, hue) };
+    var c = deriveColors(state.accent, !!dark);
+    return { bg: c.secondaryContainer, color: c.onSecondaryContainer };
   }
 
   var TAB_ORDER = ['all', 'todo', 'inprogress', 'review', 'done', 'overdue'];
@@ -335,7 +331,7 @@
   var LOCALE = LANG === 'ko' ? 'ko-KR' : 'en-US';
   function shortDate(d) { return d.toLocaleDateString(LOCALE, { month: 'short', day: 'numeric' }); }
   var CONTENT_OUT_MS = 90, CONTENT_IN_MS = 140, MODAL_CLOSE_MS = 160;
-  var ACCENT_PRESETS = ['#3451D1', '#0F766E', '#7C3AED', '#C2410C', '#BE185D'];
+  var ACCENT_PRESETS = ['#6750A4', '#006A6A', '#3A5BA9', '#8B5000', '#984061'];
   var ICON = {
     listView: '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 6h12M4 10h12M4 14h12"></path></svg>',
     gridView: '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="6" height="6" rx="1.3"></rect><rect x="11" y="3" width="6" height="6" rx="1.3"></rect><rect x="3" y="11" width="6" height="6" rx="1.3"></rect><rect x="11" y="11" width="6" height="6" rx="1.3"></rect></svg>',
@@ -417,7 +413,7 @@
     guideModalPhase: 'closed',
     displayNameDraft: '',
 
-    accent: '#3451D1',
+    accent: '#6750A4',
     accentPickerPhase: 'closed',
     themeMode: 'system',
     appName: 'Directive',
@@ -3070,8 +3066,8 @@
     var shown = t.overdue ? 'overdue' : t.status;
     var dot = (maps.statusStyle[t.status] || maps.statusStyle.todo).dot;
     var done = t.status === 'done';
-    var cell = 'display:flex; align-items:center; min-width:0; padding:0 12px; height:44px; border-bottom:1px solid ' + c.outlineVariant + ';';
-    var dept = t.deptId ? '<span style="display:inline-flex; align-items:center; gap:6px; max-width:100%; overflow:hidden; font-size:12px; font-weight:500; padding:2px 8px; border-radius:var(--r-xs); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';">' + deptDot(t.deptId, 7) + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span></span>' : '';
+    var cell = 'display:flex; align-items:center; min-width:0; padding:0 12px; height:48px;';
+    var dept = t.deptId ? '<span style="display:inline-flex; align-items:center; gap:6px; max-width:100%; overflow:hidden; font-size:12px; font-weight:500; padding:2px 8px; border-radius:var(--r-xs); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';"><span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span></span>' : '';
     // One row is one control: the cells sit on the table's own columns through
     // subgrid, so the whole row lights up under the pointer and takes a single
     // stop in the tab order, instead of six cells each reacting on their own.
@@ -3135,10 +3131,10 @@
     var dot = (maps.statusStyle[t.status] || maps.statusStyle.todo).dot;
     var done = t.status === 'done';
     var bits = [];
-    if (t.deptId) bits.push(deptDot(t.deptId, 7).replace('style="', 'style="display:inline-block; margin-right:5px; vertical-align:1px; ') + esc(nodeLabel(t.deptId).split(' · ').pop()));
+    if (t.deptId) bits.push(esc(nodeLabel(t.deptId).split(' · ').pop()));
     if (hasAssignee(t)) bits.push(esc(t.assignee));
     var due = t.dueDate ? '<span class="tnum" style="color:' + (t.overdue ? c.error : c.onSurfaceVariant) + '; font-weight:' + (t.overdue ? 500 : 400) + ';">' + esc(relativeDue(t.dueDate, t.overdue)) + '</span>' : '';
-    return '<div class="interactive task-row' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + '" data-action="openTask" data-id="' + t.id + '" style="display:flex; align-items:flex-start; gap:12px; padding:12px 4px; border-bottom:1px solid ' + c.outlineVariant + ';">'
+    return '<div class="interactive task-row' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + '" data-action="openTask" data-id="' + t.id + '" style="display:flex; align-items:flex-start; gap:12px; padding:12px 8px; border-radius:16px;">'
       + '<span style="padding-top:2px;">' + statusIconHtml(t.status, dot, 18) + '</span>'
       + '<div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">'
       +   '<div style="display:flex; align-items:center; gap:6px; min-width:0;">' + taskIconHtml(t, 16) + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:15px; font-weight:500; color:' + (done ? c.textMuted : c.onSurface) + ';">' + esc(t.title) + '</span></div>'
@@ -3391,9 +3387,9 @@
     var v = taskView(t, maps, c);
     var writable = canWriteDept(t.deptId);
     var cls = 'interactive board-card' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + '';
-    return '<div class="' + cls + '"' + (writable ? ' draggable="true"' : '') + ' data-action="openTask" data-id="' + t.id + '" style="background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e1); padding:12px; min-width:0; display:flex; flex-direction:column; gap:8px;">'
+    return '<div class="' + cls + '"' + (writable ? ' draggable="true"' : '') + ' data-action="openTask" data-id="' + t.id + '" style="background:' + c.surface + '; border-radius:var(--r-md); padding:12px; min-width:0; display:flex; flex-direction:column; gap:8px;">'
       + '<div style="display:flex; align-items:flex-start; gap:6px; font-size:14px; font-weight:500; line-height:1.4; color:' + (t.status === 'done' ? c.textMuted : c.onSurface) + ';">' + taskIconHtml(t, 16) + '<span style="min-width:0; overflow-wrap:anywhere;">' + esc(t.title) + '</span></div>'
-      + '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px; color:' + c.textMuted + ';">' + (t.deptId ? '<span style="display:inline-flex; align-items:center; gap:5px; font-weight:500; padding:1px 6px; border-radius:var(--r-xs); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';">' + deptDot(t.deptId, 6) + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span>' : '') + taskBadges(t, c) + '</div>'
+      + '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px; color:' + c.textMuted + ';">' + (t.deptId ? '<span style="display:inline-flex; align-items:center; gap:5px; font-weight:500; padding:1px 6px; border-radius:var(--r-xs); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';">' + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span>' : '') + taskBadges(t, c) + '</div>'
       + searchMatchHtml(t, c)
       + '<div style="display:flex; align-items:center; gap:6px;">'
       +   (hasAssignee(t) ? assigneeAvatarHtml(t, v, 20) : '') + '<span style="flex:1;"></span>'
@@ -3514,7 +3510,7 @@
     var item = function (action, label, color) {
       return '<div class="interactive" role="menuitem" data-action="' + action + '" style="padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + color + ';">' + T(label) + '</div>';
     };
-    return '<div class="' + dropdownClass('brand') + '" role="menu" style="' + dropdownStyle('brand') + 'transform-origin:top left; position:absolute; top:46px; left:0; width:220px; background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:60; display:flex; flex-direction:column; gap:2px;">'
+    return '<div class="' + dropdownClass('brand') + '" role="menu" style="' + dropdownStyle('brand') + 'transform-origin:top left; position:absolute; top:46px; left:0; width:220px; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:60; display:flex; flex-direction:column; gap:2px;">'
       + '<div style="padding:6px 10px 4px 10px; font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('App icon (also used as the favicon)') + '</div>'
       + item('pickAppIcon', 'Upload image', c.onSurface)
       + item('removeAppIcon', 'Use the default icon', c.onSurface)
@@ -3614,7 +3610,7 @@
     var alertsSupported = typeof window.Notification === 'function';
 
     var notifPanel = (state.notifOpen || state.dropdownClosing === 'notif')
-      ? '<div class="' + dropdownClass('notif') + ' bell-panel" style="' + dropdownStyle('notif') + 'position:absolute; top:46px; right:0; width:380px; max-height:520px; display:flex; flex-direction:column; background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e2); z-index:60;">'
+      ? '<div class="' + dropdownClass('notif') + ' bell-panel" style="' + dropdownStyle('notif') + 'position:absolute; top:46px; right:0; width:380px; max-height:520px; display:flex; flex-direction:column; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); z-index:60;">'
         + '<div style="display:flex; align-items:center; gap:18px; padding:4px 14px 0; border-bottom:1px solid ' + c.outlineVariant + ';" role="tablist" aria-label="' + T('Notifications') + '">'
         +   bellTabBtn('mine', T('For you'), bellCount) + bellTabBtn('activity', T('Activity'), 0)
         +   (canMarkRead ? '<span class="interactive" data-action="markAllNotifsRead" style="margin-left:auto; font-size:12px; color:' + c.primary + '; font-weight:500;">' + T('Mark all read') + '</span>' : '')
@@ -3630,7 +3626,7 @@
       : '';
 
     var accountPanel = (state.accountOpen || state.dropdownClosing === 'account')
-      ? '<div class="' + dropdownClass('account') + '" style="' + dropdownStyle('account') + 'position:absolute; top:46px; right:0; width:260px; background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:60; display:flex; flex-direction:column; gap:2px;">'
+      ? '<div class="' + dropdownClass('account') + '" style="' + dropdownStyle('account') + 'position:absolute; top:46px; right:0; width:260px; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:60; display:flex; flex-direction:column; gap:2px;">'
         + '<div style="padding:8px 10px 6px 10px; display:flex; align-items:center; gap:10px;">'
           +   avatarHtml(avatarColors(state.user.displayName, c.dark).bg, avatarColors(state.user.displayName, c.dark).color, 44)
           +   '<div style="min-width:0;"><div style="font-size:13px; font-weight:600;">' + esc(state.user.displayName) + '</div><div style="font-size:12px; color:' + c.onSurfaceVariant + ';">@' + esc(state.user.username) + ' · ' + esc(T(state.user.role)) + '</div></div>'
@@ -3806,7 +3802,7 @@
 
     var filterField = 'height:36px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:13px; background:' + c.surface + '; color:' + c.onSurface + ';';
     var filterPanel = (state.filterOpen || state.dropdownClosing === 'filter')
-      ? '<div class="' + dropdownClass('filter') + '" style="' + dropdownStyle('filter') + 'position:absolute; top:46px; right:0; width:240px; background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:14px; z-index:60; display:flex; flex-direction:column; gap:12px;">'
+      ? '<div class="' + dropdownClass('filter') + '" style="' + dropdownStyle('filter') + 'position:absolute; top:46px; right:0; width:240px; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:14px; z-index:60; display:flex; flex-direction:column; gap:12px;">'
         + '<div><div style="font-size:12px; font-weight:600; letter-spacing:.03em; color:' + c.onSurfaceVariant + '; margin-bottom:6px;">' + T('SORT BY') + '</div>'
         +   mSelectFrom('<select id="filterSortSelect" aria-label="' + T('Sort by') + '" style="' + filterField + '">'
               + TASK_SORTS.map(function (o) { return '<option value="' + o[0] + '"' + (state.taskSort === o[0] ? ' selected' : '') + '>' + T(o[1]) + '</option>'; }).join('')
@@ -3835,7 +3831,7 @@
     var bodyHtml;
     var loadingNow = !state.tasksLoaded;
     if (isNarrowScreen()) {
-      bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" style="flex:1; min-height:0; overflow:auto;"><div style="display:flex; flex-direction:column; border-top:1px solid ' + c.outlineVariant + ';">'
+      bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" style="flex:1; min-height:0; overflow:auto;"><div style="display:flex; flex-direction:column; gap:2px;">'
         + (loadingNow ? skeletonRows(c, 6) : (pageItems.length ? pageItems.map(function (t) { return taskMobileRow(t, maps, c); }).join('') : emptyStateHtml(c)))
         + '</div></div>';
     } else if (state.viewMode === 'calendar') {
@@ -3855,7 +3851,7 @@
               var key = h[2], on = key && state.taskSort === key;
               var arrow = on ? '<svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4v12M5 11l5 5 5-5"></path></svg>' : '';
               var name = h[0] || h[1];
-              return '<div role="columnheader"' + (key ? ' class="interactive" data-action="sortByColumn" data-id="' + key + '" aria-sort="' + (on ? 'ascending' : 'none') + '" title="' + esc(T(on ? 'Back to the default order' : 'Sort by {col}', { col: name })) + '"' : '') + (h[1] ? ' aria-label="' + esc(h[1]) + '"' : '') + ' style="position:sticky; top:0; z-index:1; display:flex; align-items:center; gap:4px; height:32px; padding:0 12px; background:' + c.surface + '; font-size:12px; font-weight:' + (on ? 600 : 500) + '; color:' + (on ? c.onSurface : c.textMuted) + '; border-bottom:1px solid ' + c.outlineVariant + ';' + (i === 0 || i === 5 ? ' justify-content:center;' : '') + '">' + (i === 5 && !on ? '' : h[0]) + arrow + (i === 5 && !arrow ? '<svg width="12" height="12" viewBox="0 0 20 18" aria-hidden="true"><rect x="3" y="11" width="3.5" height="4" rx="1" fill="currentColor"></rect><rect x="8" y="7" width="3.5" height="8" rx="1" fill="currentColor"></rect><rect x="13" y="3" width="3.5" height="12" rx="1" fill="currentColor"></rect></svg>' : '') + '</div>';
+              return '<div role="columnheader"' + (key ? ' class="interactive" data-action="sortByColumn" data-id="' + key + '" aria-sort="' + (on ? 'ascending' : 'none') + '" title="' + esc(T(on ? 'Back to the default order' : 'Sort by {col}', { col: name })) + '"' : '') + (h[1] ? ' aria-label="' + esc(h[1]) + '"' : '') + ' style="position:sticky; top:0; z-index:1; display:flex; align-items:center; gap:4px; height:32px; padding:0 12px; background:' + c.surface + '; font-size:12px; font-weight:' + (on ? 600 : 500) + '; color:' + (on ? c.onSurface : c.textMuted) + ';' + (i === 0 || i === 5 ? ' justify-content:center;' : '') + '">' + (i === 5 && !on ? '' : h[0]) + arrow + (i === 5 && !arrow ? '<svg width="12" height="12" viewBox="0 0 20 18" aria-hidden="true"><rect x="3" y="11" width="3.5" height="4" rx="1" fill="currentColor"></rect><rect x="8" y="7" width="3.5" height="8" rx="1" fill="currentColor"></rect><rect x="13" y="3" width="3.5" height="12" rx="1" fill="currentColor"></rect></svg>' : '') + '</div>';
             }).join('')
         +   rowsHtml + emptyHtml
         + '</div></div>';
@@ -4196,7 +4192,7 @@
         + (m.deptId ? '<span style="margin-left:auto; font-size:12px; color:' + c.onSurfaceVariant + ';">' + esc(nodeLabel(m.deptId)) + '</span>' : '')
         + '</div>';
     }).join('');
-    return '<div role="listbox" aria-label="' + T('People to mention') + '" style="position:absolute; left:0; bottom:calc(100% + 6px); width:260px; max-width:100%; background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:5px; z-index:5;">' + items + '</div>';
+    return '<div role="listbox" aria-label="' + T('People to mention') + '" style="position:absolute; left:0; bottom:calc(100% + 6px); width:260px; max-width:100%; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:5px; z-index:5;">' + items + '</div>';
   }
 
   // Comment stamps are stored UTC; show them in the reader's own time.
@@ -4803,6 +4799,7 @@
   // open their own dialogs, on top of this one.
   function openSettings() {
     closeDropdowns();
+    focusDialogOnNextRender();
     setState({ settingsPhase: 'open', settingsSection: state.settingsSection || 'profile', displayNameDraft: state.user.displayName, appNameDraft: state.appName });
   }
   function closeSettings() {
@@ -5324,6 +5321,12 @@
   }
   document.addEventListener('keydown', function (e) {
     if (!state.user) return;
+    // Escape is handled inside the app root; this covers focus that has
+    // fallen back to the page itself, e.g. after a menu that opened a dialog.
+    if (e.key === 'Escape' && !document.getElementById('root').contains(e.target)) {
+      if (dismissTopmost()) e.preventDefault();
+      return;
+    }
     if ((e.metaKey || e.ctrlKey) && !e.altKey && (e.key === 'k' || e.key === 'K')) {
       e.preventDefault();
       if (state.paletteOpen) closePalette(); else openPalette();

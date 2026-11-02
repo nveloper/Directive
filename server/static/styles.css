@@ -56,8 +56,8 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
 input, select, textarea { transition: border-color var(--m-fast) ease, box-shadow var(--m-fast) ease; }
 input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:focus {
   outline: none;
-  border-color: var(--primary, #3451D1);
-  box-shadow: 0 0 0 3px var(--primary-container, rgba(52, 81, 209, .16));
+  border-color: var(--primary, #6750A4);
+  box-shadow: 0 0 0 3px var(--primary-container, rgba(103, 80, 164, .16));
 }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: var(--r-sm); }
@@ -91,7 +91,7 @@ input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:f
    no idea where they are; :focus-visible keeps it off mouse clicks. */
 .interactive:focus { outline: none; }
 .interactive:focus-visible {
-  outline: 2px solid var(--primary, #3451D1);
+  outline: 2px solid var(--primary, #6750A4);
   outline-offset: 2px;
   border-radius: var(--r-sm);
 }
@@ -102,7 +102,7 @@ input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:f
   z-index: 200;
   padding: 10px 16px;
   border-radius: var(--r-sm);
-  background: var(--primary, #3451D1);
+  background: var(--primary, #6750A4);
   color: var(--on-primary, #fff);
   font-size: 13px;
   font-weight: 600;
@@ -677,7 +677,7 @@ input[type="checkbox"], input[type="radio"] {
 input[type="checkbox"] { border-radius: var(--r-xs); }
 input[type="radio"] { border-radius: 50%; width: 20px !important; height: 20px !important; }
 input[type="checkbox"]:checked {
-  background: var(--primary, #3451D1); border-color: var(--primary, #3451D1);
+  background: var(--primary, #6750A4); border-color: var(--primary, #6750A4);
 }
 input[type="checkbox"]:checked::after {
   content: ''; position: absolute; left: 4.5px; top: 0.5px; width: 5px; height: 10px;
@@ -685,19 +685,19 @@ input[type="checkbox"]:checked::after {
   box-sizing: border-box;
 }
 input[type="radio"]:checked {
-  border-color: var(--primary, #3451D1);
-  background: radial-gradient(circle, var(--primary, #3451D1) 0 4.5px, transparent 5px);
+  border-color: var(--primary, #6750A4);
+  background: radial-gradient(circle, var(--primary, #6750A4) 0 4.5px, transparent 5px);
 }
 /* The state layer: a 40px circle, as Material draws around a selection control. */
 input[type="checkbox"]:hover:not(:disabled), input[type="radio"]:hover:not(:disabled) {
   box-shadow: 0 0 0 11px color-mix(in srgb, var(--on-surface, #1B1B1A) 8%, transparent);
 }
 input[type="checkbox"]:checked:hover:not(:disabled), input[type="radio"]:checked:hover:not(:disabled) {
-  box-shadow: 0 0 0 11px color-mix(in srgb, var(--primary, #3451D1) 8%, transparent);
+  box-shadow: 0 0 0 11px color-mix(in srgb, var(--primary, #6750A4) 8%, transparent);
 }
 input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 11px color-mix(in srgb, var(--primary, #3451D1) 14%, transparent);
+  box-shadow: 0 0 0 11px color-mix(in srgb, var(--primary, #6750A4) 14%, transparent);
 }
 input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: .38; cursor: default; }
 
@@ -774,3 +774,7 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: .38; cu
 [data-action="saveAppName"], [data-action="closeTaskModal"], [data-action="closeMapping"],
 .fab-new-task { border-radius: var(--r-full) !important; }
 .view-toggle > * { width: 36px !important; }
+
+/* Rows have no dividers: the hover and selected states give each one its
+   own rounded shape instead. */
+#task-list .task-row { border-radius: 16px; }
