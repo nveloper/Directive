@@ -744,3 +744,13 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: .38; cu
 .board-card[draggable="true"] { cursor: grab; }
 .board-card.dragging { opacity: .4; }
 .board-col.drop-over { background: var(--primary-container) !important; outline: 2px dashed var(--primary); outline-offset: -2px; }
+
+/* Phones: the bar shows the page title where the app name and logo were. */
+.mobile-page-title { display: none; }
+@media (max-width: 860px) {
+  .top-bar .brand-icon, .top-bar [data-dropdown="brand"] { display: none !important; }
+  .mobile-page-title { display: block; flex: 1 1 auto; }
+  .page-title { display: none; }
+}
+.checklist-add input:hover { border-color: var(--outline-variant) !important; }
+.checklist-add input:focus { background: var(--surface) !important; }

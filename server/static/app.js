@@ -3379,6 +3379,7 @@
             : brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 36, 'guide'))
       +   '<div class="app-name-text" style="font-size:18px; font-weight:500; white-space:nowrap;">' + esc(state.appName) + '</div>'
       + '</div>'
+      + '<div class="mobile-page-title" style="min-width:0; font-size:17px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + esc(currentPageTitle()) + '</div>'
       + '<div class="topbar-center" style="flex:1; display:flex; justify-content:center;">'
       +   '<div class="desktop-search-bar" style="align-items:center; gap:8px; width:420px; max-width:100%; height:40px; padding:0 14px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">'
       +     ICON.search
@@ -3496,6 +3497,15 @@
       + '</nav>';
   }
 
+  // The heading of the list being shown, for the main header and, on a phone,
+  // the top bar.
+  function currentPageTitle() {
+    var q = state.searchQuery.trim();
+    if (q) return T('Search results for “{q}”', { q: q });
+    var fixed = state.selectedNode === 'all' || state.selectedNode === 'mine';
+    return fixed ? nodeLabel(state.selectedNode) : T('{name} Tasks', { name: nodeLabel(state.selectedNode).split(' · ').pop() });
+  }
+
   function mainContent(c) {
     var meta = state.taskMeta;
     var searching = state.searchQuery.trim().length > 0;
@@ -3563,8 +3573,13 @@
       var emptyHtml = loadingNow ? skeletonRows(c, 8) : (pageItems.length === 0 ? emptyStateHtml(c) : '');
       bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" style="flex:1; min-height:0; overflow:auto;">'
         + '<div role="table" style="display:grid; grid-template-columns:36px minmax(240px,1fr) 140px 168px 112px 52px; min-width:760px;">'
-        +   [['', T('Status')], [T('Task')], [T('Department')], [T('Assignee')], [T('Due Date')], ['', T('Priority')]].map(function (h, i) {
-              return '<div' + (h[1] ? ' aria-label="' + esc(h[1]) + '"' : '') + ' style="position:sticky; top:0; z-index:1; display:flex; align-items:center; height:32px; padding:0 12px; background:' + c.surface + '; font-size:12px; font-weight:500; color:' + c.textMuted + '; border-bottom:1px solid ' + c.outlineVariant + ';' + (i === 0 || i === 5 ? ' justify-content:center;' : '') + '">' + h[0] + '</div>';
+        +   [['', T('Status')], [T('Task'), '', 'title'], [T('Department')], [T('Assignee')], [T('Due Date'), '', 'due'], ['', T('Priority'), 'priority']].map(function (h, i) {
+              // Columns the server can sort by sort when their heading is
+              // clicked; clicking the active one goes back to the default order.
+              var key = h[2], on = key && state.taskSort === key;
+              var arrow = on ? '<svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4v12M5 11l5 5 5-5"></path></svg>' : '';
+              var name = h[0] || h[1];
+              return '<div role="columnheader"' + (key ? ' class="interactive" data-action="sortByColumn" data-id="' + key + '" aria-sort="' + (on ? 'ascending' : 'none') + '" title="' + esc(T(on ? 'Back to the default order' : 'Sort by {col}', { col: name })) + '"' : '') + (h[1] ? ' aria-label="' + esc(h[1]) + '"' : '') + ' style="position:sticky; top:0; z-index:1; display:flex; align-items:center; gap:4px; height:32px; padding:0 12px; background:' + c.surface + '; font-size:12px; font-weight:' + (on ? 600 : 500) + '; color:' + (on ? c.onSurface : c.textMuted) + '; border-bottom:1px solid ' + c.outlineVariant + ';' + (i === 0 || i === 5 ? ' justify-content:center;' : '') + '">' + (i === 5 && !on ? '' : h[0]) + arrow + (i === 5 && !arrow ? '<svg width="12" height="12" viewBox="0 0 20 18" aria-hidden="true"><rect x="3" y="11" width="3.5" height="4" rx="1" fill="currentColor"></rect><rect x="8" y="7" width="3.5" height="8" rx="1" fill="currentColor"></rect><rect x="13" y="3" width="3.5" height="12" rx="1" fill="currentColor"></rect></svg>' : '') + '</div>';
             }).join('')
         +   rowsHtml + emptyHtml
         + '</div></div>';
@@ -3596,7 +3611,7 @@
       + '<div role="tablist" aria-label="' + T('Filter by status') + '" data-scroll-key="tabs" style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; border-bottom:1px solid ' + c.outlineVariant + ';">' + tabsHtml + '</div>'
       + bodyHtml
       + '<div style="flex-shrink:0; display:flex; align-items:center; justify-content:space-between; font-size:13px; color:' + c.onSurfaceVariant + ';">'
-      +   '<span aria-live="polite">' + T('Showing {a}-{b} of {n}', { a: rangeStart, b: rangeEnd, n: meta.total }) + '</span>'
+      +   '<span aria-live="polite">' + (meta.total ? T('Showing {a}-{b} of {n}', { a: rangeStart, b: rangeEnd, n: meta.total }) : '') + '</span>'
       +   '<div style="display:' + (totalPages > 1 ? 'flex' : 'none') + '; align-items:center; gap:14px;"><span>' + T('Page {p} of {n}', { p: page, n: totalPages }) + '</span>'
       +     '<div style="display:flex; align-items:center; gap:4px;">'
       +       '<div class="interactive" data-action="prevPage" aria-label="' + T('Previous page') + '" aria-disabled="' + (page <= 1 ? 'true' : 'false') + '" style="width:28px; height:28px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; color:' + c.onSurfaceVariant + '; opacity:' + (page <= 1 ? '.4' : '1') + '; pointer-events:' + (page <= 1 ? 'none' : 'auto') + ';">' + ICON.chevronLeft + '</div>'
@@ -3814,9 +3829,12 @@
       + '</div>'
       + rows
       + (readOnly ? (items.length ? '' : '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T('No checklist.') + '</div>')
-        : '<div style="display:flex; gap:6px; margin-top:2px;">'
-          + '<input id="checklistDraftInput" data-field="checklistDraft" value="' + esc(state.checklistDraft || '') + '" maxlength="500" placeholder="' + T('Add a step and press Enter') + '" style="flex:1; min-width:0; height:34px; padding:0 11px; border-radius:var(--r-sm); border:1px dashed ' + c.outline + '; font-size:13px; background:' + c.surface + '; color:' + c.onSurface + ';"></input>'
-          + '<div class="interactive" data-action="addChecklistItem" style="display:flex; align-items:center; justify-content:center; height:34px; padding:0 12px; border-radius:var(--r-sm); background:' + c.secondaryContainer + '; color:' + c.onSecondaryContainer + '; font-size:13px; font-weight:600; flex-shrink:0;">' + T('Add') + '</div>'
+        // A quiet "+ Add item" line rather than a boxed field: it reads as the
+        // next row of the list, and takes a border only while typing in it.
+        : '<div class="checklist-add" style="display:flex; align-items:center; gap:4px; margin-top:2px;">'
+          + '<span aria-hidden="true" style="display:flex; color:' + c.textMuted + '; padding-left:2px;">' + ICON.plus + '</span>'
+          + '<input id="checklistDraftInput" data-field="checklistDraft" value="' + esc(state.checklistDraft || '') + '" maxlength="500" placeholder="' + T('Add item') + '" aria-label="' + T('Add a step and press Enter') + '" style="flex:1; min-width:0; height:32px; padding:0 8px; border-radius:var(--r-sm); border:1px solid transparent; font-size:14px; background:transparent; color:' + c.onSurface + ';"></input>'
+          + '<div class="interactive" data-action="addChecklistItem" style="display:flex; align-items:center; justify-content:center; height:28px; padding:0 10px; border-radius:var(--r-sm); color:' + c.primary + '; font-size:13px; font-weight:500; flex-shrink:0;">' + T('Add') + '</div>'
           + '</div>')
       + '</div>';
   }
@@ -4735,6 +4753,7 @@
 
   // ---- event delegation ----
   var ACTIONS = {
+    sortByColumn: function (el) { var k = el.getAttribute('data-id'); setTaskSort(state.taskSort === k ? 'created' : k); },
     openSettings: function () { openSettings(); },
     closeSettings: function () { closeSettings(); },
     setSettingsSection: function (el) { setState({ settingsSection: el.getAttribute('data-id') }); },
