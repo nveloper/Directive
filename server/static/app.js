@@ -474,7 +474,11 @@
     newTaskForm: blankTaskForm(''),
     newDeptForm: { name: '', parentId: '' },
     mappingForm: { deptId: '', name: '', calendarList: '', tag: '' },
-    justAddedTaskId: null
+    justAddedTaskId: null,
+    datePicker: null,
+    activityIncludeMine: false,
+    settingsPhase: 'closed',
+    settingsSection: 'profile'
   };
 
   var nav = { nodeTarget: state.selectedNode, nodeToken: 0, tabTarget: state.activeTab, tabToken: 0, taskToken: 0, addDeptToken: 0, mappingToken: 0, accentToken: 0, mobileNavToken: 0, mobileCalendarToken: 0 };
@@ -1138,6 +1142,129 @@
   }
 
   // The status can be changed straight from the detail, without the editor.
+  // Changes one or more properties of the open task straight from the detail
+  // panel, without the full editor. The server takes the whole task, so the
+  // rest is sent back as it is.
+  function patchDetailTask(changes) {
+    var t = detailTask();
+    if (!t) return;
+    var payload = {
+      title: t.title, description: t.description || '', deptId: t.deptId || '',
+      assignee: t.assignee || '', assigneeId: t.assigneeId || 0, priority: t.priority,
+      dueDate: t.dueDate || '', status: t.status, calendarVisible: !!t.calendarVisible,
+      recurrence: t.recurrence || ''
+    };
+    Object.keys(changes).forEach(function (k) { payload[k] = changes[k]; });
+    if (payload.recurrence && !payload.dueDate) payload.recurrence = '';
+    var id = t.id;
+    api('PUT', '/api/tasks/' + id, payload).then(function () {
+      return Promise.all([loadDetailTask(id), refreshTasks()]);
+    }).then(render).catch(function (e) { window.alert(TE(e.message)); });
+  }
+  function setDetailAssignee(value) {
+    if (value === '0') { patchDetailTask({ assignee: '', assigneeId: 0 }); return; }
+    var m = memberById(Number(value));
+    if (m) patchDetailTask({ assignee: m.displayName, assigneeId: m.id });
+  }
+  function toggleDetailCalendar() {
+    var t = detailTask();
+    if (t) patchDetailTask({ calendarVisible: !t.calendarVisible });
+  }
+
+  // ---- date picker ----
+  // One popover for every date field: quick choices first, then a month.
+  // state.datePicker = { field: 'newTask' | 'detail', month: 'YYYY-MM' }.
+  function isoOf(d) {
+    function p(n) { return (n < 10 ? '0' : '') + n; }
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+  function datePickerValue(field) {
+    if (field === 'newTask') return state.newTaskForm.due || '';
+    var t = detailTask();
+    return (t && t.dueDate) || '';
+  }
+  function toggleDatePicker(field) {
+    if (state.datePicker && state.datePicker.field === field) { setState({ datePicker: null }); return; }
+    var v = datePickerValue(field);
+    var base = /^\d{4}-\d{2}/.test(v) ? new Date(Number(v.slice(0, 4)), Number(v.slice(5, 7)) - 1, 1) : new Date();
+    setState({ datePicker: { field: field, month: isoOf(new Date(base.getFullYear(), base.getMonth(), 1)).slice(0, 7) } });
+  }
+  function shiftDatePickerMonth(delta) {
+    var dp = state.datePicker;
+    if (!dp) return;
+    var d = new Date(Number(dp.month.slice(0, 4)), Number(dp.month.slice(5, 7)) - 1 + delta, 1);
+    setState({ datePicker: { field: dp.field, month: isoOf(d).slice(0, 7) } });
+  }
+  function pickDate(iso) {
+    var dp = state.datePicker;
+    if (!dp) return;
+    state.datePicker = null;
+    if (dp.field === 'newTask') {
+      var f = Object.assign({}, state.newTaskForm, { due: iso });
+      if (!iso) f.recurrence = '';
+      setState({ newTaskForm: f });
+    } else {
+      render();
+      patchDetailTask({ dueDate: iso });
+    }
+  }
+  function quickDate(kind) {
+    var d = new Date(); d = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    if (kind === 'tomorrow') d.setDate(d.getDate() + 1);
+    if (kind === 'friday') d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7 || 7));
+    if (kind === 'monday') d.setDate(d.getDate() + ((1 - d.getDay() + 7) % 7 || 7));
+    pickDate(kind === 'none' ? '' : isoOf(d));
+  }
+  function dateTriggerHtml(field, value, c, lock) {
+    var cal = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="14" height="12" rx="2"></rect><path d="M3 8.5h14M7 2.5v4M13 2.5v4"></path></svg>';
+    var label = value ? formatDue(value) + ' · ' + relativeDue(value, false) : T('No due date');
+    if (value && relativeDue(value, false) === formatDue(value)) label = formatDue(value);
+    return '<div id="dp-trigger-' + field + '" class="' + (lock ? '' : 'interactive ') + 'date-trigger"' + (lock ? '' : ' data-action="toggleDatePicker" data-id="' + field + '"') + ' role="button" aria-haspopup="dialog" aria-label="' + T('Due Date') + '" style="display:flex; align-items:center; gap:8px; height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; background:' + c.surface + '; color:' + (value ? c.onSurface : c.textMuted) + '; font-size:14px;' + (lock ? ' opacity:.6;' : '') + '">'
+      + '<span style="display:flex; color:' + c.onSurfaceVariant + ';">' + cal + '</span><span class="tnum" style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + esc(label) + '</span></div>';
+  }
+  function datePickerPopover(c) {
+    var dp = state.datePicker;
+    if (!dp) return '';
+    var value = datePickerValue(dp.field);
+    var y = Number(dp.month.slice(0, 4)), mo = Number(dp.month.slice(5, 7)) - 1;
+    var first = new Date(y, mo, 1).getDay(), days = new Date(y, mo + 1, 0).getDate();
+    var today = isoOf(new Date());
+    var cells = '';
+    for (var i = 0; i < first; i++) cells += '<span></span>';
+    for (var d = 1; d <= days; d++) {
+      var iso = isoOf(new Date(y, mo, d));
+      var sel = iso === value, isToday = iso === today;
+      cells += '<span class="interactive tnum" data-action="pickDate" data-id="' + iso + '" style="display:flex; align-items:center; justify-content:center; height:32px; border-radius:var(--r-sm); font-size:13px;'
+        + (sel ? ' background:' + c.primary + '; color:' + c.onPrimary + '; font-weight:600;' : (isToday ? ' color:' + c.primary + '; font-weight:600; box-shadow:inset 0 0 0 1px ' + c.primary + ';' : ' color:' + c.onSurface + ';')) + '">' + d + '</span>';
+    }
+    var quick = [['today', 'Today'], ['tomorrow', 'Tomorrow'], ['friday', 'This Friday'], ['monday', 'Next Monday'], ['none', 'No due date']].map(function (q) {
+      return '<span class="interactive" data-action="quickDate" data-id="' + q[0] + '" style="display:flex; align-items:center; height:30px; padding:0 10px; border-radius:var(--r-sm); font-size:13px; color:' + (q[0] === 'none' ? c.onSurfaceVariant : c.onSurface) + ';">' + T(q[1]) + '</span>';
+    }).join('');
+    var nav = function (delta, icon, label) { return '<span class="interactive" data-action="shiftDatePickerMonth" data-id="' + delta + '" aria-label="' + T(label) + '" style="display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + icon + '</span>'; };
+    var week = (LANG === 'ko' ? ['일', '월', '화', '수', '목', '금', '토'] : ['S', 'M', 'T', 'W', 'T', 'F', 'S']).map(function (x) { return '<span style="text-align:center; font-size:12px; color:' + c.textMuted + ';">' + x + '</span>'; }).join('');
+    return '<div class="date-popover dropdown-in" data-for="dp-trigger-' + dp.field + '" role="dialog" aria-label="' + T('Due Date') + '" style="position:fixed; z-index:96; width:300px; padding:8px; border-radius:var(--r-md); background:' + c.surface + '; box-shadow:var(--e2); display:flex; flex-direction:column; gap:6px;">'
+      + '<div style="display:flex; flex-direction:column; gap:1px; padding-bottom:6px; border-bottom:1px solid ' + c.outlineVariant + ';">' + quick + '</div>'
+      + '<div style="display:flex; align-items:center; justify-content:space-between; padding:2px 2px 0;">'
+      +   nav(-1, ICON.chevronLeft, 'Previous month')
+      +   '<span style="font-size:14px; font-weight:600;">' + esc(new Date(y, mo, 1).toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</span>'
+      +   nav(1, ICON.chevronRight, 'Next month')
+      + '</div>'
+      + '<div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:2px;">' + week + cells + '</div>'
+      + '</div>';
+  }
+  function placeDatePicker(root) {
+    var pop = root.querySelector('.date-popover');
+    if (!pop) return;
+    var trigger = document.getElementById(pop.getAttribute('data-for'));
+    if (!trigger) { state.datePicker = null; pop.remove(); return; }
+    var r = trigger.getBoundingClientRect(), margin = 8;
+    var h = pop.offsetHeight;
+    var top = r.bottom + 4;
+    if (top + h > window.innerHeight - margin && r.top - h - 4 > margin) top = r.top - h - 4;
+    pop.style.top = Math.max(margin, top) + 'px';
+    pop.style.left = Math.max(margin, Math.min(r.left, window.innerWidth - pop.offsetWidth - margin)) + 'px';
+  }
+
   function setDetailStatus(status) {
     var t = detailTask();
     if (!t || t.status === status) return;
@@ -1755,6 +1882,7 @@
     }
     applyA11y(root);
     placeMSelectMenu(root);
+    placeDatePicker(root);
 
     // Giving focus back must not scroll: the region was just put back where
     // the reader had it, and a focus that scrolls it again (to reveal the
@@ -2271,6 +2399,7 @@
   // past a dialog to close a drawer behind it.
   function dismissTopmost() {
     if (state.openSelect) { closeMSelect(); return true; }
+    if (state.datePicker) { setState({ datePicker: null }); return true; }
     if (state.lightbox) { closeLightbox(); return true; }
     if (state.iconPickerOpen) { closeIconPicker(); return true; }
     if (state.mention) { setState({ mention: null }); return true; }
@@ -2285,6 +2414,7 @@
     if (state.mappingModalPhase === 'open') { closeMapping(); return true; }
     if (state.usersModalPhase === 'open') { closeUsers(); return true; }
     if (state.guideModalPhase === 'open') { closeGuide(); return true; }
+    if (state.settingsPhase === 'open') { closeSettings(); return true; }
     if (state.accentPickerPhase === 'open') { closeAccentPicker(); return true; }
     if (closeDropdowns()) return true;
     if (state.mobileNavOpen || state.mobileCalendarOpen) { closeMobileDrawers(); return true; }
@@ -2998,6 +3128,7 @@
       + '</div>'
       + taskDetailModal(c)
       + taskModal(c)
+      + settingsModal(c)
       + addDeptModal(c)
       + mappingModal(c)
       + usersModal(c)
@@ -3010,6 +3141,7 @@
       + snackbar(c)
       + lightbox(c)
       + mSelectMenu(c)
+      + datePickerPopover(c)
       + (canCreateTask()
         ? '<div class="interactive fab-new-task" data-action="openTaskModal" aria-label="' + T('New task') + '" style="position:fixed; right:18px; bottom:calc(18px + env(safe-area-inset-bottom, 0px)); z-index:45; align-items:center; justify-content:center; gap:8px; height:56px; padding:0 22px; border-radius:16px; background:' + c.primary + '; color:' + c.onPrimary + '; font-size:15px; font-weight:600; box-shadow:var(--e2);">' + ICON.plus + '<span>' + T('New Task') + '</span></div>'
         : '')
@@ -3061,45 +3193,74 @@
     var mineTab = state.bellTab === 'mine';
     var bellTabBtn = function (id, label, count) {
       var on = state.bellTab === id;
-      return '<span class="interactive" role="tab" aria-selected="' + (on ? 'true' : 'false') + '" data-action="setBellTab" data-id="' + id + '" style="display:inline-flex; align-items:center; gap:5px; padding:5px 11px; border-radius:var(--r-sm); font-size:12px; font-weight:600; background:' + (on ? c.primaryContainer : 'transparent') + '; color:' + (on ? c.onPrimaryContainer : c.onSurfaceVariant) + ';">' + label
-        + (count > 0 ? '<span style="font-size:12px; padding:0 6px; border-radius:var(--r-sm); background:' + c.error + '; color:#fff;">' + count + '</span>' : '') + '</span>';
+      return '<span class="interactive" role="tab" aria-selected="' + (on ? 'true' : 'false') + '" data-action="setBellTab" data-id="' + id + '" style="display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 2px; margin-bottom:-1px; font-size:13px; font-weight:' + (on ? 600 : 400) + '; color:' + (on ? c.onSurface : c.onSurfaceVariant) + '; border-bottom:2px solid ' + (on ? c.primary : 'transparent') + ';">' + label
+        + (count > 0 ? '<span class="tnum" style="font-size:12px; font-weight:600; min-width:18px; padding:0 5px; border-radius:9px; text-align:center; background:' + c.error + '; color:#fff;">' + count + '</span>' : '') + '</span>';
+    };
+    // Lists are grouped under Today, Yesterday and Earlier.
+    var dayGroup = function (iso) {
+      var d = new Date(iso); if (isNaN(d)) return T('Earlier');
+      var now = new Date();
+      var a = new Date(d.getFullYear(), d.getMonth(), d.getDate()), b = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      var diff = Math.round((b - a) / 86400000);
+      return diff <= 0 ? T('Today') : diff === 1 ? T('Yesterday') : T('Earlier');
+    };
+    var grouped = function (items, when, draw) {
+      var last = '', out = '';
+      items.forEach(function (x) {
+        var g = dayGroup(when(x));
+        if (g !== last) { out += '<div style="padding:10px 6px 4px; font-size:12px; font-weight:500; color:' + c.textMuted + ';">' + esc(g) + '</div>'; last = g; }
+        out += draw(x);
+      });
+      return out;
+    };
+    var unreadDot = function (on) { return '<span aria-hidden="true" style="width:6px; height:6px; margin-top:8px; border-radius:50%; flex-shrink:0; background:' + (on ? c.primary : 'transparent') + ';"></span>'; };
+    var personAvatar = function (name, size) {
+      var col = avatarColors(name, c.dark);
+      return '<span style="display:flex; align-items:center; justify-content:center; width:' + size + 'px; height:' + size + 'px; border-radius:50%; flex-shrink:0; background:' + col.bg + '; color:' + col.color + '; font-size:12px; font-weight:600;">' + esc(computeInitials(name)) + '</span>';
     };
     var notifKindIcon = function (kind) {
-      if (kind === 'assigned') return '<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="7" r="3"></circle><path d="M2.5 16a5.5 5.5 0 0 1 11 0M15 7v5M12.5 9.5h5"></path></svg>';
-      if (kind === 'dueToday' || kind === 'dueTomorrow') return '<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10.5" r="6.5"></circle><path d="M10 7v3.5l2.5 1.5"></path></svg>';
-      if (kind === 'mentioned') return '<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="3"></circle><path d="M13 7v4a2 2 0 0 0 4 0v-1a7 7 0 1 0-3 5.7"></path></svg>';
-      return '<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 5.5h12v8H8l-4 3v-11Z"></path></svg>';
+      if (kind === 'dueToday' || kind === 'dueTomorrow') return '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10.5" r="6.5"></circle><path d="M10 7v3.5l2.5 1.5"></path></svg>';
+      return '';
     };
     var mineList = state.notifications.length === 0
-      ? '<div style="padding:16px 6px; font-size:13px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('Nothing for you yet. You will hear here when someone assigns you a task, mentions you with @, or comments on your work, and on the morning a task of yours is due.') + '</div>'
-      : state.notifications.map(function (n) {
-          return '<div class="interactive" data-action="openNotification" data-id="' + n.id + '" style="display:flex; gap:9px; padding:8px 6px; border-radius:var(--r-sm); background:' + (n.read ? 'transparent' : c.surfaceContainerHigh) + '; opacity:' + (n.taskGone ? '.6' : '1') + ';">'
-            + '<span style="display:flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; flex-shrink:0; background:' + (n.read ? c.surfaceContainerHigh : c.primaryContainer) + '; color:' + (n.read ? c.onSurfaceVariant : c.onPrimaryContainer) + ';">' + notifKindIcon(n.kind) + '</span>'
+      ? '<div style="padding:28px 12px; text-align:center; font-size:13px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('Nothing for you yet. You will hear here when someone assigns you a task, mentions you with @, or comments on your work, and on the morning a task of yours is due.') + '</div>'
+      : grouped(state.notifications, function (n) { return n.createdAt; }, function (n) {
+          var lead = (n.kind === 'dueToday' || n.kind === 'dueTomorrow')
+            ? '<span style="display:flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; flex-shrink:0; background:' + c.warningContainer + '; color:' + c.onWarningContainer + ';">' + notifKindIcon(n.kind) + '</span>'
+            : personAvatar(n.actorName || '?', 24);
+          return '<div class="interactive" data-action="openNotification" data-id="' + n.id + '" style="display:flex; align-items:flex-start; gap:8px; padding:8px 6px; border-radius:var(--r-sm); opacity:' + (n.taskGone ? '.6' : '1') + ';">'
+            + unreadDot(!n.read) + lead
             + '<span style="display:flex; flex-direction:column; gap:2px; min-width:0;">'
-            +   '<span style="font-size:13px; line-height:1.45; color:' + c.onSurface + '; font-weight:' + (n.read ? 400 : 500) + ';">' + esc(notificationLine(n)) + '</span>'
-            +   '<span style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + esc(formatStamp(n.createdAt)) + (n.taskGone ? ' &middot; ' + T('deleted') : '') + '</span>'
+            +   '<span style="font-size:13px; line-height:1.45; color:' + (n.read ? c.onSurfaceVariant : c.onSurface) + ';">' + esc(notificationLine(n)) + '</span>'
+            +   '<span style="font-size:12px; color:' + c.textMuted + ';">' + esc(formatStamp(n.createdAt)) + (n.taskGone ? ' &middot; ' + T('deleted') : '') + '</span>'
             + '</span>'
             + '</div>';
-        }).join('');
-    var activityList = state.activity.length === 0
-      ? '<div style="padding:16px 6px; font-size:13px; color:' + c.onSurfaceVariant + ';">' + T('Nothing has happened yet.') + '</div>'
-      : state.activity.map(function (a) {
+        });
+    // Your own actions are left out unless asked for: you know what you did.
+    var activityItems = state.activity.filter(function (a) { return state.activityIncludeMine || !(state.user && a.actorId === state.user.id); });
+    var activityList = (activityItems.length === 0
+      ? '<div style="padding:28px 12px; text-align:center; font-size:13px; color:' + c.onSurfaceVariant + ';">' + T(state.activity.length ? 'Nobody else has done anything yet.' : 'Nothing has happened yet.') + '</div>'
+      : grouped(activityItems, function (a) { return a.at; }, function (a) {
           var fresh = !state.activitySeen || a.at > state.activitySeen;
-          return '<div style="display:flex; flex-direction:column; gap:2px; padding:8px 6px; border-radius:var(--r-sm); background:' + (fresh ? c.surfaceContainerHigh : 'transparent') + ';">'
-            + '<span style="font-size:13px; line-height:1.45; color:' + c.onSurface + ';">' + esc(activityLine(a)) + '</span>'
-            + '<span style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + esc(formatStamp(a.at)) + '</span>'
+          return '<div style="display:flex; align-items:flex-start; gap:8px; padding:8px 6px;">'
+            + unreadDot(fresh) + personAvatar(a.actorName || '?', 24)
+            + '<span style="display:flex; flex-direction:column; gap:2px; min-width:0;">'
+            +   '<span style="font-size:13px; line-height:1.45; color:' + c.onSurface + ';">' + esc(activityLine(a)) + '</span>'
+            +   '<span style="font-size:12px; color:' + c.textMuted + ';">' + esc(formatStamp(a.at)) + '</span>'
+            + '</span>'
             + '</div>';
-        }).join('');
+        }))
+      + '<label class="interactive" style="display:flex; align-items:center; gap:8px; margin:6px 0 2px; padding:6px; border-radius:var(--r-sm); font-size:12px; color:' + c.onSurfaceVariant + '; cursor:pointer;"><input type="checkbox" data-action="toggleActivityMine"' + (state.activityIncludeMine ? ' checked' : '') + '>' + T('Include my own actions') + '</label>';
     var canMarkRead = mineTab ? bellCount > 0 : unread > 0;
     var alertsSupported = typeof window.Notification === 'function';
 
     var notifPanel = (state.notifOpen || state.dropdownClosing === 'notif')
-      ? '<div class="' + dropdownClass('notif') + ' bell-panel" style="' + dropdownStyle('notif') + 'position:absolute; top:46px; right:0; width:340px; max-height:440px; display:flex; flex-direction:column; background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e2); z-index:60;">'
-        + '<div style="display:flex; align-items:center; gap:4px; padding:10px 10px 6px 10px;" role="tablist" aria-label="' + T('Notifications') + '">'
+      ? '<div class="' + dropdownClass('notif') + ' bell-panel" style="' + dropdownStyle('notif') + 'position:absolute; top:46px; right:0; width:380px; max-height:520px; display:flex; flex-direction:column; background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e2); z-index:60;">'
+        + '<div style="display:flex; align-items:center; gap:18px; padding:4px 14px 0; border-bottom:1px solid ' + c.outlineVariant + ';" role="tablist" aria-label="' + T('Notifications') + '">'
         +   bellTabBtn('mine', T('For you'), bellCount) + bellTabBtn('activity', T('Activity'), 0)
         +   (canMarkRead ? '<span class="interactive" data-action="markAllNotifsRead" style="margin-left:auto; font-size:12px; color:' + c.primary + '; font-weight:500;">' + T('Mark all read') + '</span>' : '')
         + '</div>'
-        + '<div data-scroll-key="' + (mineTab ? 'bell-mine' : 'activity') + '" style="flex:1; min-height:0; overflow-y:auto; padding:0 10px 8px 10px;">' + (mineTab ? mineList : activityList) + '</div>'
+        + '<div data-scroll-key="' + (mineTab ? 'bell-mine' : 'activity') + '" style="flex:1; min-height:0; overflow-y:auto; padding:0 8px 8px 8px;">' + (mineTab ? mineList : activityList) + '</div>'
         + (mineTab && alertsSupported
           ? '<div style="display:flex; align-items:center; gap:8px; padding:8px 14px; border-top:1px solid ' + c.outlineVariant + '; font-size:12px; color:' + c.onSurfaceVariant + ';">'
             + '<span style="flex:1;">' + T('Desktop alerts when this tab is in the background') + '</span>'
@@ -3110,52 +3271,16 @@
       : '';
 
     var accountPanel = (state.accountOpen || state.dropdownClosing === 'account')
-      ? '<div class="' + dropdownClass('account') + '" style="' + dropdownStyle('account') + 'position:absolute; top:46px; right:0; width:296px; background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:60; display:flex; flex-direction:column; gap:2px;">'
+      ? '<div class="' + dropdownClass('account') + '" style="' + dropdownStyle('account') + 'position:absolute; top:46px; right:0; width:260px; background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:60; display:flex; flex-direction:column; gap:2px;">'
         + '<div style="padding:8px 10px 6px 10px; display:flex; align-items:center; gap:10px;">'
           +   avatarHtml(avatarColors(state.user.displayName, c.dark).bg, avatarColors(state.user.displayName, c.dark).color, 44)
           +   '<div style="min-width:0;"><div style="font-size:13px; font-weight:600;">' + esc(state.user.displayName) + '</div><div style="font-size:12px; color:' + c.onSurfaceVariant + ';">@' + esc(state.user.username) + ' · ' + esc(T(state.user.role)) + '</div></div>'
         + '</div>'
-        + '<div style="padding:0 10px 6px 10px; display:flex; gap:10px;">'
-          +   '<span class="interactive" data-action="pickAvatar" style="font-size:12px; font-weight:500; color:' + c.primary + ';">' + T('Change photo') + '</span>'
-          +   '<span class="interactive" data-action="removeAvatar" style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Remove') + '</span>'
-        + '</div>'
-        + '<div style="padding:0 10px 8px 10px; display:flex; flex-direction:column; gap:6px;">'
-          +   '<label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Display name') + '</label>'
-          +   '<div style="display:flex; gap:6px;">'
-          +     '<input id="displayNameInput" data-field="displayNameDraft" value="' + esc(state.displayNameDraft) + '" maxlength="60" style="flex:1; min-width:0; height:32px; padding:0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:13px; background:' + c.surface + '; color:' + c.onSurface + ';"></input>'
-          +     '<div class="interactive" data-action="saveDisplayName" style="display:flex; align-items:center; justify-content:center; padding:0 10px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:12px; font-weight:600;">' + T('Save') + '</div>'
-          +   '</div>'
-        + '</div>'
+        + '<div style="padding:4px 10px 10px;">' + themeSegmented(c) + '</div>'
         + '<div style="height:1px; background:' + c.outlineVariant + '; margin:2px 0;"></div>'
-        + (state.user.role === 'admin'
-          ? '<div style="padding:6px 10px 8px 10px; display:flex; flex-direction:column; gap:6px;">'
-            + '<label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('App name') + '</label>'
-            + '<div style="display:flex; gap:6px;">'
-            +   '<input id="appNameInput" data-field="appNameDraft" value="' + esc(state.appNameDraft) + '" maxlength="60" style="flex:1; min-width:0; height:32px; padding:0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:13px; background:' + c.surface + '; color:' + c.onSurface + ';"></input>'
-            +   '<div class="interactive" data-action="saveAppName" style="display:flex; align-items:center; justify-content:center; padding:0 10px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:12px; font-weight:600;">' + T('Save') + '</div>'
-            + '</div>'
-            + '</div>'
-            + '<div style="height:1px; background:' + c.outlineVariant + '; margin:2px 0;"></div>'
-          : '')
-        + '<div class="appearance-in-menu" style="flex-direction:column; gap:8px; padding:6px 10px 10px 10px;">'
-        +   '<label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Appearance') + '</label>'
-        +   '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">'
-        +     accentControls(c)
-        +     '<span class="interactive" data-action="cycleThemeMode" title="' + T(state.themeMode === 'light' ? 'Theme: Light' : state.themeMode === 'dark' ? 'Theme: Dark' : 'Theme: System') + '" style="margin-left:auto; display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:50%; background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">'
-        +       (state.themeMode === 'light' ? ICON.themeLight : state.themeMode === 'dark' ? ICON.themeDark : ICON.themeSystem)
-        +     '</span>'
-        +   '</div>'
+        + '<div class="interactive" data-action="openSettings" style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + c.onSurface + ';"><span>' + T('Settings') + '</span>'
+        +   (isAdmin() && pendingUserCount() > 0 ? '<span class="tnum" style="font-size:12px; font-weight:600; min-width:18px; padding:0 5px; text-align:center; border-radius:9px; background:' + c.error + '; color:#fff;">' + pendingUserCount() + '</span>' : '')
         + '</div>'
-        + '<div class="appearance-in-menu" style="height:1px; background:' + c.outlineVariant + '; margin:2px 0;"></div>'
-        + (isAdmin()
-          ? '<div class="interactive" data-action="openUsers" style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + c.onSurface + ';"><span>' + T('Accounts') + '</span>'
-            + (pendingUserCount() > 0 ? '<span style="font-size:12px; font-weight:600; padding:1px 7px; border-radius:var(--r-sm); background:' + c.error + '; color:#fff;">' + pendingUserCount() + '</span>' : '')
-            + '</div>'
-          : '')
-        + '<div class="interactive" data-action="openPasswordModal" style="padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + c.onSurface + ';">' + T('Change password') + '</div>'
-        + '<div class="interactive" data-action="openAppPasswords" style="padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + c.onSurface + ';">' + T('Phone sync') + '</div>'
-        + (isAdmin() ? '<div class="interactive" data-action="openReminders" style="padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + c.onSurface + ';">' + T('Due-date reminders') + '</div>' : '')
-        + (isAdmin() ? '<div class="interactive" data-action="openBackups" style="padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + c.onSurface + ';">' + T('Backups') + '</div>' : '')
         + '<div class="interactive" data-action="openGuide" style="padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + c.onSurface + ';">' + T('Guide') + '</div>'
         + '<div class="interactive" data-action="logout" style="padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + c.error + ';">' + T('Log out') + '</div>'
         + '</div>'
@@ -3238,20 +3363,19 @@
       var childrenHtml = d.children.map(function (child) {
         var childSelected = state.selectedNode === child.id;
         var childCount = state.summary.byDept[child.id] || 0;
-        return '<div class="interactive' + (childSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="' + esc(child.id) + '"' + (childSelected ? ' aria-current="true"' : '') + ' style="display:flex; align-items:center; padding:7px 10px; font-size:13px; font-weight:' + (childSelected ? 600 : 400) + '; border-radius:var(--r-sm); background:' + (childSelected ? c.primaryContainer : 'transparent') + '; color:' + (childSelected ? c.onPrimaryContainer : c.onSurfaceVariant) + ';">'
+        return '<div class="interactive' + (childSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="' + esc(child.id) + '"' + (childSelected ? ' aria-current="true"' : '') + ' style="display:flex; align-items:center; padding:7px 10px; font-size:13px; font-weight:' + (childSelected ? 600 : 400) + '; border-radius:var(--r-sm); background:' + (childSelected ? c.surfaceContainerHigh : 'transparent') + '; color:' + (childSelected ? c.onSurface : c.onSurfaceVariant) + ';">'
           + '<span style="flex:1;">' + esc(child.name) + '</span>'
-          + '<span style="font-size:12px; padding:1px 7px; border-radius:var(--r-sm); background:' + (childSelected ? c.primary : c.surfaceContainerHigh) + '; color:' + (childSelected ? c.onPrimary : c.onSurfaceVariant) + ';">' + childCount + '</span>'
+          + '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + childCount + '</span>'
           + '</div>';
       }).join('');
 
-      return '<div class="' + (selected ? oneShotClass('node').trim() : '') + '" style="display:flex; align-items:center; gap:6px; padding:9px 10px; border-radius:var(--r-sm); background:' + (selected ? c.surfaceContainerHigh : 'transparent') + '; margin-top:6px;">'
+      return '<div class="' + (selected ? oneShotClass('node').trim() : '') + '" class="dept-row" style="display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:var(--r-sm); background:' + (selected ? c.surfaceContainerHigh : 'transparent') + '; margin-top:2px;">'
         + '<svg class="interactive tree-chevron' + (expanded ? ' expanded' : '') + (anim ? ' ' + anim : '') + '" data-action="toggleExpand" data-id="' + esc(d.id) + '" role="button" aria-expanded="' + (expanded ? 'true' : 'false') + '" aria-controls="subtree-' + esc(d.id) + '" aria-label="' + (expanded ? 'Collapse ' : 'Expand ') + esc(d.name) + '" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 5l6 5-6 5"></path></svg>'
         + '<span class="interactive" data-action="selectNode" data-id="' + esc(d.id) + '" style="display:flex; align-items:center; gap:6px; flex:1; min-width:0; border-radius:var(--r-sm);">'
-        +   '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M3 6a1 1 0 0 1 1-1h4l1.5 2H16a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6Z"></path></svg>'
         +   '<span style="font-size:14px; font-weight:' + (selected ? 600 : 400) + ';">' + esc(d.name) + '</span>'
         + '</span>'
-        + '<span style="font-size:12px; padding:1px 7px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">' + deptCount + '</span>'
-        + (isAdmin() ? '<span class="interactive" data-action="openMapping" data-id="' + esc(d.id) + '" title="' + T('Department settings') + '" style="display:flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:var(--r-sm); flex-shrink:0; color:' + c.onSurfaceVariant + ';">' + ICON.more + '</span>' : '')
+        + '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + deptCount + '</span>'
+        + (isAdmin() ? '<span class="interactive dept-more" data-action="openMapping" data-id="' + esc(d.id) + '" title="' + T('Department settings') + '" style="display:flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:var(--r-sm); flex-shrink:0; color:' + c.onSurfaceVariant + ';">' + ICON.more + '</span>' : '')
         + '</div>'
         + '<div class="tree-children' + (expanded ? ' expanded' : '') + (anim ? ' ' + anim : '') + '" id="subtree-' + esc(d.id) + '" style="padding-left:34px;">'
         +   '<div class="tree-children-inner" role="group" aria-label="' + esc(T('{name} sub-departments', { name: d.name })) + '">' + childrenHtml + '</div>'
@@ -3263,31 +3387,27 @@
     var hidden = !isWideScreen() && !state.mobileNavOpen && state.mobileNavAnim !== 'anim-close';
     return '<nav class="no-scrollbar ' + drawerClass('left-nav', state.mobileNavOpen, state.mobileNavAnim) + '" aria-label="' + T('Departments') + '" aria-hidden="' + (hidden ? 'true' : 'false') + '"' + (hidden ? ' inert' : '') + ' data-scroll-key="sidebar" style="min-height:0; background:' + c.surfaceContainerLow + '; overflow-y:auto; overflow-x:hidden; padding:18px 12px; display:flex; flex-direction:column; gap:2px;">'
       + '<div style="display:flex; align-items:center; justify-content:space-between; padding:0 8px 10px 8px;">'
-      +   '<span style="font-size:12px; font-weight:600; letter-spacing:.04em; color:' + c.onSurfaceVariant + ';">' + T('DEPARTMENTS') + '</span>'
+      +   '<span style="font-size:12px; font-weight:500; color:' + c.textMuted + ';">' + T('Departments') + '</span>'
+      +   (isAdmin() ? '<span class="interactive" data-action="openAddDept" title="' + T('Add Department') + '" aria-label="' + T('Add Department') + '" style="display:flex; align-items:center; justify-content:center; width:24px; height:24px; margin-left:auto; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.plus + '</span>' : '')
       +   '<span class="interactive drawer-close-btn" data-action="closeMobileNav" title="' + T('Close') + '" style="align-items:center; justify-content:center; width:26px; height:26px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
       + '</div>'
       + '<div class="interactive' + (allSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="all" style="display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:var(--r-sm); background:' + (allSelected ? c.surfaceContainerHigh : 'transparent') + '; color:' + c.onSurfaceVariant + ';">'
       +   '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l1-4h10l1 4"></path><path d="M3 8h14v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8Z"></path><path d="M8 11h4"></path></svg>'
       +   '<span style="flex:1; font-size:14px;">' + T('All Tasks') + '</span>'
-      +   '<span style="font-size:12px; padding:1px 7px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">' + allCount + '</span>'
+      +   '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + allCount + '</span>'
       + '</div>'
       + '<div class="interactive' + (mineSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="mine" style="display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:var(--r-sm); background:' + (mineSelected ? c.surfaceContainerHigh : 'transparent') + '; color:' + c.onSurfaceVariant + ';">'
       +   '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="3"></circle><path d="M4 16a6 6 0 0 1 12 0"></path></svg>'
       +   '<span style="flex:1; font-size:14px; font-weight:' + (mineSelected ? 600 : 400) + ';">' + T('My Tasks') + '</span>'
-      +   '<span style="font-size:12px; padding:1px 7px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">' + state.summary.mine + '</span>'
+      +   '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + state.summary.mine + '</span>'
       + '</div>'
       + deptsHtml
       + '<div style="flex:1;"></div>'
       + '<div class="interactive" data-action="openTrash" style="display:flex; align-items:center; gap:9px; padding:9px 10px; margin-top:10px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">'
       +   ICON.trash
       +   '<span style="flex:1; font-size:14px;">' + T('Trash') + '</span>'
-      +   (state.summary.trash ? '<span style="font-size:12px; padding:1px 7px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">' + state.summary.trash + '</span>' : '')
+      +   (state.summary.trash ? '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + state.summary.trash + '</span>' : '')
       + '</div>'
-      + (isAdmin()
-        ? '<div class="interactive" data-action="openAddDept" style="display:flex; align-items:center; gap:8px; padding:9px 10px; margin-top:10px; border-radius:var(--r-sm); border:1.5px dashed ' + c.outline + '; color:' + c.primary + '; font-size:13px; font-weight:500;">'
-          + ICON.plus + '<span>' + T('Add Department') + '</span>'
-        + '</div>'
-        : '')
       + '</nav>';
   }
 
@@ -3518,7 +3638,7 @@
     return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="closeTaskModal" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,' + (stacked ? '.25' : '.4') + '); display:flex; align-items:center; justify-content:center; z-index:55;">'
       + '<div role="dialog" data-scroll-key="' + esc('task:' + (state.editingTaskId || 'new')) + '" aria-modal="true" aria-label="' + esc(T(readOnly ? 'Task' : (editing ? 'Edit Task' : 'New Task'))) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:400px; max-width:92vw; max-height:88vh; overflow-y:auto; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:14px; box-shadow:var(--e3);">'
       +   '<span style="font-size:18px; font-weight:600;">' + T(readOnly ? 'Task' : (editing ? 'Edit Task' : 'New Task')) + '</span>'
-      +   (readOnly ? '<div style="font-size:12px; line-height:1.45; color:' + c.onSurfaceVariant + '; background:' + c.surfaceContainerHigh + '; padding:9px 11px; border-radius:var(--r-sm);">This task belongs to ' + esc(nodeLabel(editedTask.deptId)) + ', so it is read-only for you.</div>' : '')
+      +   (readOnly ? '<div style="font-size:12px; line-height:1.45; color:' + c.onSurfaceVariant + '; background:' + c.surfaceContainerHigh + '; padding:9px 11px; border-radius:var(--r-sm);">' + esc(T('This task belongs to {dept}, so it is read-only for you.', { dept: nodeLabel(editedTask.deptId) })) + '</div>' : '')
       +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Title') + '</label>'
       +     '<input' + lock + ' id="newTaskTitleInput" data-form="newTaskForm" data-field="title" value="' + esc(f.title) + '" placeholder="' + T('e.g. Update onboarding checklist') + '" style="height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>'
       +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Description') + '</label>'
@@ -3535,7 +3655,7 @@
       +   '</div>'
       +   '<div style="display:flex; gap:10px; flex-wrap:wrap;">'
       +     '<div style="flex:1; min-width:150px; display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Due Date') + '</label>'
-      +       '<input' + lock + ' id="newTaskDueInput" type="date" data-form="newTaskForm" data-field="due" value="' + esc(f.due) + '" style="height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>'
+      +       dateTriggerHtml('newTask', f.due, c, lock) + '</div>'
       +     '<div style="flex:1; min-width:150px; display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Repeat') + '</label>'
       +       repeatControl(f, c, lock) + '</div>'
       +   '</div>'
@@ -4019,7 +4139,7 @@
     var writable = canWriteDept(t.deptId);
     var maps = styleMaps(c);
     var v = taskView(t, maps, c);
-    var gear = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="' + GEAR_PATH + '"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+    var pencil = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 3.5l3 3L7 16l-3.5.5L4 13z"></path><path d="M11.5 5.5l3 3"></path></svg>';
 
     // With no icon yet, the same spot holds a faint placeholder that adds one.
     var smiley = '<svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="10" cy="10" r="7.5"></circle><path d="M7 12c.8 1 1.8 1.5 3 1.5s2.2-.5 3-1.5"></path><path d="M7.5 8h.01M12.5 8h.01" stroke-width="2.2"></path></svg>';
@@ -4029,38 +4149,64 @@
           : '<span class="detail-icon">' + taskIconHtml(t, 36) + '</span>')
       : (writable ? '<span class="interactive detail-add-icon" data-action="toggleIconPicker" title="' + T('Add icon') + '" aria-label="' + T('Add icon') + '" style="color:' + c.onSurfaceVariant + '; border-color:' + c.outlineVariant + ';">' + smiley + '</span>' : '');
 
-    var statusControl = writable
-      ? mSelectFrom('<select id="detailStatusSelect" aria-label="' + T('Status') + '" style="height:30px; padding:0 8px 0 13px; border-radius:var(--r-sm); border:none; font-size:13px; font-weight:600; background:' + v.statusBg + '; color:' + v.statusColor + ';">'
-        + EDITABLE_STATUSES.map(function (s) { return '<option value="' + s + '"' + (s === t.status ? ' selected' : '') + '>' + TAB_LABELS[s] + '</option>'; }).join('')
-        + '</select>', c, 'pill') + (t.overdue ? '<span style="font-size:12px; font-weight:600; color:' + c.error + ';">' + T('Overdue') + '</span>' : '')
-      : '<span style="display:inline-flex; align-items:center; padding:4px 10px; border-radius:var(--r-sm); background:' + v.statusBg + '; color:' + v.statusColor + '; font-size:12px; font-weight:600;">' + v.statusLabel + '</span>';
-
-    var chip = function (inner) { return '<span style="display:inline-flex; align-items:center; gap:6px; font-size:13px; color:' + c.onSurfaceVariant + ';">' + inner + '</span>'; };
-    var meta = [
-      statusControl,
-      chip('<span style="width:7px; height:7px; border-radius:50%; background:' + v.priorityColor + ';"></span>' + esc(T(t.priority))),
-      chip('<span style="color:' + v.dueColor + '; font-weight:' + v.dueWeight + ';">' + esc(t.dueDate ? T('Due {date}', { date: formatDue(t.dueDate) }) : T('No due date')) + '</span>' + (t.recurrence ? ICON.repeat + esc(describeRepeat(t.recurrence)) : '')),
-      chip(assigneeAvatarHtml(t, v, 20) + esc(t.assignee)),
-      t.deptId ? chip(esc(nodeLabel(t.deptId))) : '',
-      t.calendarVisible ? chip(v.syncIcon + T('In calendar')) : ''
-    ].filter(Boolean).join('<span style="width:1px; height:14px; background:' + c.outlineVariant + ';"></span>');
+    // Properties as a two-column list, each value changeable where it is shown.
+    var dot = (maps.statusStyle[t.status] || maps.statusStyle.todo).dot;
+    var fieldStyle = 'height:32px; padding:0 8px; border-radius:var(--r-sm); border:1px solid transparent; font-size:14px; background:transparent; color:' + c.onSurface + ';';
+    var plain = function (inner) { return '<span style="display:flex; align-items:center; gap:8px; min-height:32px; padding:0 8px; font-size:14px; color:' + c.onSurface + ';">' + inner + '</span>'; };
+    var statusValue = writable
+      ? mSelectFrom('<select id="detailStatusSelect" aria-label="' + T('Status') + '" style="' + fieldStyle + '">'
+        + EDITABLE_STATUSES.map(function (s) { return '<option value="' + s + '"' + (s === t.status ? ' selected' : '') + '>' + statusIconHtml(s, maps.statusStyle[s].dot, 14) + '<span style="margin-left:8px;">' + TAB_LABELS[s] + '</span>' + '</option>'; }).join('')
+        + '</select>', c)
+      : plain(statusIconHtml(t.status, dot) + esc(v.statusLabel));
+    var assigneeCur = Number(t.assigneeId) > 0 ? String(t.assigneeId) : (t.assignee ? '-1' : '0');
+    var assigneeValue = writable && assigneeCur !== '-1'
+      ? mSelectFrom('<select id="detailAssigneeSelect" aria-label="' + T('Assignee') + '" style="' + fieldStyle + '">'
+        + '<option value="0"' + (assigneeCur === '0' ? ' selected' : '') + '>' + T('Unassigned') + '</option>'
+        + state.members.map(function (m) { return '<option value="' + m.id + '"' + (assigneeCur === String(m.id) ? ' selected' : '') + '>' + esc(m.displayName) + '</option>'; }).join('')
+        + '</select>', c)
+      : plain(t.assignee ? assigneeAvatarHtml(t, v, 20) + esc(t.assignee) : '<span style="color:' + c.textMuted + ';">' + T('Unassigned') + '</span>');
+    var priorityValue = writable
+      ? mSelectFrom('<select id="detailPrioritySelect" aria-label="' + T('Priority') + '" style="' + fieldStyle + '">'
+        + ['High', 'Medium', 'Low'].map(function (p) { return '<option value="' + p + '"' + (p === t.priority ? ' selected' : '') + '>' + priorityIconHtml(p, maps.priorityColor[p], c.outlineVariant) + '<span style="margin-left:8px;">' + T(p) + '</span>' + '</option>'; }).join('')
+        + '</select>', c)
+      : plain(priorityIconHtml(t.priority, v.priorityColor, c.outlineVariant) + esc(T(t.priority)));
+    var dueValue = writable
+      ? '<div style="display:flex; align-items:center; gap:8px;">' + dateTriggerHtml('detail', t.dueDate, c, '').replace('border:1px solid ' + c.outline, 'border:1px solid transparent').replace('height:38px', 'height:32px; padding:0 8px') + (t.overdue ? '<span style="font-size:13px; font-weight:500; color:' + c.error + ';">' + esc(relativeDue(t.dueDate, true)) + '</span>' : '') + '</div>'
+      : plain('<span style="color:' + v.dueColor + ';">' + esc(t.dueDate ? formatDue(t.dueDate) : T('No due date')) + '</span>');
+    var repeatValue = plain(t.recurrence ? ICON.repeat + esc(describeRepeat(t.recurrence)) : '<span style="color:' + c.textMuted + ';">' + T('Does not repeat') + '</span>');
+    var deptValue = writable && isAdmin()
+      ? mSelectFrom('<select id="detailDeptSelect" aria-label="' + T('Department') + '" style="' + fieldStyle + '">'
+        + '<option value=""' + (!t.deptId ? ' selected' : '') + '>' + T('No department') + '</option>'
+        + flattenDeptOptions().map(function (o) { return '<option value="' + esc(o.id) + '"' + (o.id === t.deptId ? ' selected' : '') + '>' + esc(o.label) + '</option>'; }).join('')
+        + '</select>', c)
+      : plain(t.deptId ? esc(nodeLabel(t.deptId)) : '<span style="color:' + c.textMuted + ';">' + T('No department') + '</span>');
+    var calValue = writable
+      ? '<label class="interactive" style="display:flex; align-items:center; gap:8px; min-height:32px; padding:0 8px; border-radius:var(--r-sm); font-size:14px; cursor:pointer;"><input type="checkbox" data-action="toggleDetailCalendar"' + (t.calendarVisible ? ' checked' : '') + '>' + T('Show in the department calendar') + '</label>'
+      : plain(T(t.calendarVisible ? 'Shown in calendar' : 'Not in calendar'));
+    var row = function (label, value) {
+      return '<div style="display:grid; grid-template-columns:96px minmax(0,1fr); align-items:center; gap:8px;"><span style="font-size:13px; color:' + c.onSurfaceVariant + ';">' + T(label) + '</span><div style="min-width:0;">' + value + '</div></div>';
+    };
+    var meta = '<div class="detail-props" style="display:flex; flex-direction:column; gap:2px;">'
+      + row('Status', statusValue) + row('Assignee', assigneeValue) + row('Priority', priorityValue)
+      + row('Due Date', dueValue) + row('Repeat', repeatValue) + row('Department', deptValue) + row('Calendar', calValue)
+      + '</div>';
 
     var closing = state.detailPhase === 'closing';
     var mo = modalMotion('detail', closing);
-    return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="closeTaskDetail" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:50;">'
+    return '<div class="modal-overlay detail-overlay ' + mo.dim + '" data-backdrop="closeTaskDetail" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,.18); display:flex; align-items:stretch; justify-content:flex-end; z-index:50;">'
       + '<div role="dialog" id="taskDetailDialog" data-scroll-key="' + esc('detail:' + t.id) + '" aria-modal="true" aria-label="' + esc(t.title) + '" tabindex="-1" class="task-detail ' + mo.card + (state.dragOver ? ' drag-over' : '') + '" style="' + mo.cardStyle + 'background:' + c.surface + '; --drop:' + c.primary + ';">'
       +   '<div style="display:flex; align-items:center; gap:10px;">'
       +     '<div style="flex:1; min-width:0; display:flex; align-items:center; gap:10px; position:relative;">'
       +       iconBlock
       +       ((state.iconPickerOpen || state.iconPickerClosing) && writable ? iconPicker(c, t) : '')
-      +       '<h2 style="flex:1; min-width:0; margin:0; font-size:24px; line-height:1.3; font-weight:600; overflow-wrap:anywhere; color:' + v.titleColor + '; text-decoration:' + v.titleDeco + ';">' + esc(t.title) + '</h2>'
+      +       '<h2 style="flex:1; min-width:0; margin:0; font-size:18px; line-height:1.4; font-weight:600; overflow-wrap:anywhere; color:' + v.titleColor + '; text-decoration:' + v.titleDeco + ';">' + esc(t.title) + '</h2>'
       +     '</div>'
-      +     (writable ? '<span class="interactive" data-action="editFromDetail" title="' + T('Edit task') + '" style="display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; flex-shrink:0; color:' + c.onSurfaceVariant + '; background:' + c.surfaceContainerHigh + ';">' + gear + '</span>' : '')
-      +     '<span class="interactive" data-action="closeTaskDetail" title="' + T('Close') + '" style="display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; flex-shrink:0; color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
+      +     (writable ? '<span class="interactive" data-action="editFromDetail" title="' + T('Edit title, description and repeat') + '" aria-label="' + T('Edit task') + '" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--r-sm); flex-shrink:0; color:' + c.onSurfaceVariant + ';">' + pencil + '</span>' : '')
+      +     '<span class="interactive" data-action="closeTaskDetail" title="' + T('Close') + '" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--r-sm); flex-shrink:0; color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
       +   '</div>'
-      +   '<div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px;">' + meta + '</div>'
+      +   meta
       +   (writable ? '' : '<div style="font-size:12px; line-height:1.45; color:' + c.onSurfaceVariant + '; background:' + c.surfaceContainerHigh + '; padding:8px 11px; border-radius:var(--r-sm);">This task belongs to ' + esc(nodeLabel(t.deptId) || 'no department') + ', so you can read and comment on it but not change it.</div>')
-      +   '<div class="detail-body" style="color:' + (t.description ? c.onSurface : c.onSurfaceVariant) + ';">' + (t.description ? linkify(t.description) : T('No description.')) + '</div>'
+      +   '<div class="detail-body" style="color:' + (t.description ? c.onSurface : c.onSurfaceVariant) + ';">' + (t.description ? linkify(t.description) : (writable ? '<span class="interactive" data-action="editFromDetail" style="display:inline-block; padding:2px 0; color:' + c.textMuted + ';">' + T('Add a description…') + '</span>' : T('No description.'))) + '</div>'
       +   '<div style="height:1px; background:' + c.outlineVariant + ';"></div>'
       +   checklistSection(c, true, !writable)
       +   attachmentsSection(c, writable)
@@ -4200,7 +4346,7 @@
       + '</div></div>';
   }
 
-  var BACKDROP_CLOSERS = { trash: 'closeTrash', appPasswords: 'closeAppPasswords', backups: 'closeBackups', reminders: 'closeReminders', password: 'closePasswordModal' };
+  var BACKDROP_CLOSERS = { settings: 'closeSettings', trash: 'closeTrash', appPasswords: 'closeAppPasswords', backups: 'closeBackups', reminders: 'closeReminders', password: 'closePasswordModal' };
 
   function modalShell(name, phase, c, label, width, inner) {
     var mo = modalMotion(name, phase === 'closing');
@@ -4208,6 +4354,98 @@
       + '<div role="dialog" data-scroll-key="' + name + '" aria-modal="true" aria-label="' + esc(T(label)) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:' + width + 'px; max-width:94vw; max-height:88vh; overflow-y:auto; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:12px; box-shadow:var(--e3);">'
       + inner
       + '</div></div>';
+  }
+
+  // Light / Dark / System, as one segmented control.
+  function themeSegmented(c) {
+    var opts = [['light', 'Light', ICON.themeLight], ['dark', 'Dark', ICON.themeDark], ['system', 'System', ICON.themeSystem]];
+    return '<div role="radiogroup" aria-label="' + T('Theme') + '" style="display:flex; gap:2px; padding:3px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + ';">'
+      + opts.map(function (o) {
+          var on = state.themeMode === o[0];
+          return '<span class="interactive" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setThemeMode" data-id="' + o[0] + '" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; height:28px; border-radius:4px; font-size:12px; font-weight:' + (on ? 600 : 400) + '; color:' + (on ? c.onSurface : c.onSurfaceVariant) + '; background:' + (on ? c.surface : 'transparent') + ';' + (on ? ' box-shadow:var(--e1);' : '') + '">' + o[2] + T(o[1]) + '</span>';
+        }).join('')
+      + '</div>';
+  }
+  function setThemeMode(mode) {
+    if (THEME_MODE_ORDER.indexOf(mode) < 0 || mode === state.themeMode) return;
+    try { localStorage.setItem('directive_theme_mode', mode); } catch (e) {}
+    if (isDarkActive() !== computeDark(mode)) playOnce('palette', 'anim-palette', 420);
+    setState({ themeMode: mode });
+    refreshFavicon();
+  }
+
+  // ---- settings ----
+  // Everything that used to be spread over the account menu and its dialogs,
+  // in one place: personal settings for everyone, workspace ones for an
+  // administrator. The bigger tools (accounts, backups, phone sync) still
+  // open their own dialogs, on top of this one.
+  function openSettings() {
+    closeDropdowns();
+    setState({ settingsPhase: 'open', settingsSection: state.settingsSection || 'profile', displayNameDraft: state.user.displayName, appNameDraft: state.appName });
+  }
+  function closeSettings() {
+    if (state.settingsPhase !== 'open') return;
+    setState({ settingsPhase: 'closing' });
+    setTimeout(function () { if (state.settingsPhase === 'closing') setState({ settingsPhase: 'closed' }); }, MODAL_CLOSE_MS);
+  }
+  function settingsModal(c) {
+    if (state.settingsPhase === 'closed') return '';
+    var sec = state.settingsSection || 'profile';
+    var sections = [['profile', 'Profile'], ['appearance', 'Appearance'], ['security', 'Password and sync'], ['notifications', 'Notifications']];
+    if (isAdmin()) sections = sections.concat([['workspace', 'Workspace'], ['accounts', 'Accounts'], ['maintenance', 'Reminders and backups']]);
+    var navItem = function (x) {
+      var on = sec === x[0];
+      return '<span class="interactive" data-action="setSettingsSection" data-id="' + x[0] + '" style="display:flex; align-items:center; height:32px; padding:0 10px; border-radius:var(--r-sm); font-size:13px; white-space:nowrap; font-weight:' + (on ? 600 : 400) + '; color:' + (on ? c.onSurface : c.onSurfaceVariant) + '; background:' + (on ? c.surfaceContainerHigh : 'transparent') + ';">' + T(x[1]) + '</span>';
+    };
+    var label = function (t) { return '<div style="font-size:13px; font-weight:500; color:' + c.onSurface + '; margin-bottom:6px;">' + T(t) + '</div>'; };
+    var help = function (t) { return '<div style="font-size:13px; line-height:1.5; color:' + c.onSurfaceVariant + '; margin:-2px 0 10px;">' + T(t) + '</div>'; };
+    var field = 'flex:1; min-width:0; height:36px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';';
+    var btn = function (action, text, primary) { return '<span class="interactive" data-action="' + action + '" style="display:inline-flex; align-items:center; justify-content:center; height:36px; padding:0 14px; border-radius:var(--r-sm); font-size:13px; font-weight:500; white-space:nowrap;' + (primary ? ' background:' + c.primary + '; color:' + c.onPrimary + ';' : ' border:1px solid ' + c.outline + '; color:' + c.onSurface + ';') + '">' + T(text) + '</span>'; };
+    var row = function (title, desc, control) {
+      return '<div style="display:flex; align-items:center; gap:16px; padding:14px 0; border-bottom:1px solid ' + c.outlineVariant + ';"><div style="flex:1; min-width:0;"><div style="font-size:14px; font-weight:500;">' + T(title) + '</div>' + (desc ? '<div style="font-size:13px; line-height:1.45; color:' + c.onSurfaceVariant + '; margin-top:2px;">' + T(desc) + '</div>' : '') + '</div>' + control + '</div>';
+    };
+    var body = '';
+    if (sec === 'profile') {
+      var col = avatarColors(state.user.displayName, c.dark);
+      body = '<div style="display:flex; align-items:center; gap:14px; margin-bottom:20px;">' + avatarHtml(col.bg, col.color, 56)
+        + '<div style="display:flex; gap:8px;">' + btn('pickAvatar', 'Change photo') + btn('removeAvatar', 'Remove') + '</div></div>'
+        + label('Display name')
+        + '<div style="display:flex; gap:8px;"><input id="displayNameInput" data-field="displayNameDraft" value="' + esc(state.displayNameDraft) + '" maxlength="60" style="' + field + '">' + btn('saveDisplayName', 'Save', true) + '</div>'
+        + '<div style="font-size:13px; color:' + c.onSurfaceVariant + '; margin-top:14px;">@' + esc(state.user.username) + ' · ' + esc(T(state.user.role)) + '</div>';
+    } else if (sec === 'appearance') {
+      body = label('Theme') + '<div style="max-width:360px; margin-bottom:22px;">' + themeSegmented(c) + '</div>'
+        + label('Accent colour') + help('Used for the main button, the selected item and focus rings.')
+        + '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">' + accentControls(c) + '</div>';
+    } else if (sec === 'security') {
+      body = row('Password', 'Change the password you sign in with.', btn('openPasswordModal', 'Change password'))
+        + row('Phone sync', 'App passwords for Apple Reminders and other CalDAV clients.', btn('openAppPasswords', 'Manage'));
+    } else if (sec === 'notifications') {
+      body = row('Desktop alerts', typeof window.Notification === 'function' ? 'Alerts when this tab is in the background.' : 'This browser cannot show desktop alerts here (they need HTTPS).',
+        typeof window.Notification === 'function' ? '<label class="interactive" style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;"><input type="checkbox" data-action="toggleDesktopAlerts"' + (state.desktopAlerts ? ' checked' : '') + '>' + T('On') + '</label>' : '');
+    } else if (sec === 'workspace') {
+      body = label('App name')
+        + '<div style="display:flex; gap:8px; margin-bottom:22px;"><input id="appNameInput" data-field="appNameDraft" value="' + esc(state.appNameDraft) + '" maxlength="60" style="' + field + '">' + btn('saveAppName', 'Save', true) + '</div>'
+        + label('App icon') + help('Also used as the browser tab icon.')
+        + '<div style="display:flex; align-items:center; gap:14px;">' + brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 48, false) + '<div style="display:flex; gap:8px;">' + btn('pickAppIcon', 'Upload image') + btn('removeAppIcon', 'Use the default icon') + '</div></div>';
+    } else if (sec === 'accounts') {
+      var pending = pendingUserCount();
+      body = row('Accounts', pending ? T('{n} waiting for approval', { n: pending }) : 'Approve sign-ups, change roles and departments, reset passwords.', btn('openUsers', 'Open'));
+    } else if (sec === 'maintenance') {
+      body = row('Due-date reminders', 'When the daily due-today and due-tomorrow notices go out.', btn('openReminders', 'Set up'))
+        + row('Backups', 'Daily backups of the database and attachments, and downloads.', btn('openBackups', 'Set up'));
+    }
+    var current = sections.filter(function (x) { return x[0] === sec; })[0] || sections[0];
+    return modalShell('settings', state.settingsPhase, c, 'Settings', 760,
+      '<div class="settings-layout" style="display:flex; gap:24px; min-height:420px;">'
+      + '<div class="settings-nav" style="width:180px; flex-shrink:0; display:flex; flex-direction:column; gap:2px; padding-right:16px; border-right:1px solid ' + c.outlineVariant + ';">'
+      +   '<div style="font-size:18px; font-weight:600; padding:2px 10px 12px;">' + T('Settings') + '</div>'
+      +   sections.map(navItem).join('')
+      + '</div>'
+      + '<div style="flex:1; min-width:0;">'
+      +   '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;"><h2 style="margin:0; font-size:18px; font-weight:600;">' + T(current[1]) + '</h2>'
+      +     '<span class="interactive" data-action="closeSettings" aria-label="' + T('Close') + '" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span></div>'
+      +   body
+      + '</div></div>');
   }
 
   function pillButton(action, label, c, primary, extra) {
@@ -4409,6 +4647,16 @@
 
   // ---- event delegation ----
   var ACTIONS = {
+    openSettings: function () { openSettings(); },
+    closeSettings: function () { closeSettings(); },
+    setSettingsSection: function (el) { setState({ settingsSection: el.getAttribute('data-id') }); },
+    setThemeMode: function (el) { setThemeMode(el.getAttribute('data-id')); },
+    toggleActivityMine: function () { setState({ activityIncludeMine: !state.activityIncludeMine }); },
+    toggleDatePicker: function (el) { toggleDatePicker(el.getAttribute('data-id')); },
+    shiftDatePickerMonth: function (el) { shiftDatePickerMonth(Number(el.getAttribute('data-id'))); },
+    pickDate: function (el) { pickDate(el.getAttribute('data-id')); },
+    quickDate: function (el) { quickDate(el.getAttribute('data-id')); },
+    toggleDetailCalendar: function () { toggleDetailCalendar(); },
     switchAuthView: function (el) { switchAuthView(el.getAttribute('data-id')); },
     submitLogin: function () { submitLogin(); },
     submitRegister: function () { submitRegister(); },
@@ -4556,6 +4804,7 @@
     }
     var insideDropdown = e.target.closest('[data-dropdown]');
     if (state.openSelect && !e.target.closest('.mselect-menu') && !e.target.closest('[data-action="toggleMSelect"]')) closeMSelect();
+    if (state.datePicker && !e.target.closest('.date-popover') && !e.target.closest('[data-action="toggleDatePicker"]') && !(el && /^(pickDate|quickDate)$/.test(el.getAttribute('data-action')))) setState({ datePicker: null });
     if (state.iconPickerOpen && !e.target.closest('[data-dropdown="icon"]') && !e.target.closest('[data-action="toggleIconPicker"]')) {
       closeIconPicker();
     }
@@ -4595,6 +4844,9 @@
     if (el.id === 'accentColorInput') { applyAccent(el.value, false); return; }
     if (el.id === 'newTaskRepeatSelect') { setRepeatFreq(el.value); return; }
     if (el.id === 'detailStatusSelect') { setDetailStatus(el.value); return; }
+    if (el.id === 'detailAssigneeSelect') { setDetailAssignee(el.value); return; }
+    if (el.id === 'detailPrioritySelect') { patchDetailTask({ priority: el.value }); return; }
+    if (el.id === 'detailDeptSelect') { patchDetailTask({ deptId: el.value }); return; }
     if (el.id === 'filterSortSelect') { setTaskSort(el.value); return; }
     if (el.id === 'filterAssigneeSelect') { setFilterAssignee(el.value); return; }
     if (el.id === 'newTaskRepeatInterval') { setRepeatInterval(el.value); return; }
