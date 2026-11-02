@@ -481,6 +481,7 @@
     datePicker: null,
     activityIncludeMine: false,
     settingsPhase: 'closed',
+    taskActivity: [],
     settingsSection: 'profile'
   };
 
@@ -1090,6 +1091,7 @@
   // The detail always reads the task fresh, so it shows what the server has
   // rather than whichever copy a list happened to load.
   function loadDetailTask(id) {
+    loadTaskActivity(id).then(render);
     return api('GET', '/api/tasks/' + id).then(function (t) {
       if (state.detailTaskId === id) state.detailTask = t;
       state.extraTasks[id] = t;
@@ -1254,6 +1256,11 @@
       + '</div>'
       + '<div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:2px;">' + week + cells + '</div>'
       + '</div>';
+  }
+  // Text boxes that grow with what is typed, up to their max-height.
+  function fitTextarea(el) {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 2 + 'px';
   }
   function placeDatePicker(root) {
     var pop = root.querySelector('.date-popover');
@@ -1887,6 +1894,7 @@
     applyA11y(root);
     placeMSelectMenu(root);
     placeDatePicker(root);
+    Array.prototype.forEach.call(root.querySelectorAll('textarea.autosize, #commentDraftInput'), fitTextarea);
 
     // Giving focus back must not scroll: the region was just put back where
     // the reader had it, and a focus that scrolls it again (to reveal the
@@ -2611,6 +2619,8 @@
     focusDialogOnNextRender();
     nav.taskToken++;
     var dept = state.selectedNode === 'all' || state.selectedNode === 'mine' ? '' : state.selectedNode;
+    // From All or My tasks, a member's own department is the likely home.
+    if (!dept && state.user && state.user.deptId && !isAdmin()) dept = state.user.deptId;
     var form = blankTaskForm(dept);
     taskFormAtOpen = JSON.stringify(form);
     setState({
@@ -2637,7 +2647,15 @@
     setState({ newTaskModalPhase: 'open', editingTaskId: id, newTaskForm: form });
   }
 
+  // The task's own history for the timeline: who created, changed, finished
+  // or attached what, newest first from the server.
+  function loadTaskActivity(taskId) {
+    return api('GET', '/api/activity?task=' + taskId + '&limit=100').then(function (list) {
+      if (currentTaskId() === taskId) state.taskActivity = list || [];
+    }).catch(function () { state.taskActivity = []; });
+  }
   function loadComments(taskId) {
+    loadTaskActivity(taskId).then(render);
     return api('GET', '/api/tasks/' + taskId + '/comments').then(function (list) {
       state.comments = list || [];
     }).catch(function () { state.comments = []; });
@@ -3721,6 +3739,9 @@
       + '</div>';
   }
 
+  // Title first, as large as a heading; a description under it; then every
+  // property as a compact chip on one row, the way they read back in the
+  // detail panel. The same form edits an existing task.
   function taskModal(c) {
     if (state.newTaskModalPhase === 'closed') return '';
     var closing = state.newTaskModalPhase === 'closing';
@@ -3729,57 +3750,58 @@
     var f = state.newTaskForm;
     var editedTask = editing ? findLoadedTask(state.editingTaskId) : null;
     var readOnly = editing && !!editedTask && !canWriteDept(editedTask.deptId);
-    var deptOptions = flattenDeptOptions().map(function (o) {
-      return '<option value="' + esc(o.id) + '"' + (o.id === f.deptId ? ' selected' : '') + '>' + esc(o.label) + '</option>';
-    }).join('');
-    var statusOptions = editing ? EDITABLE_STATUSES.map(function (id) {
-      return '<option value="' + id + '"' + (id === f.status ? ' selected' : '') + '>' + TAB_LABELS[id] + '</option>';
-    }).join('') : '';
-
     var lock = readOnly ? ' disabled' : '';
     var stacked = state.detailPhase === 'open' && !!state.detailTaskId;
-    return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="closeTaskModal" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,' + (stacked ? '.25' : '.4') + '); display:flex; align-items:center; justify-content:center; z-index:55;">'
-      + '<div role="dialog" data-scroll-key="' + esc('task:' + (state.editingTaskId || 'new')) + '" aria-modal="true" aria-label="' + esc(T(readOnly ? 'Task' : (editing ? 'Edit Task' : 'New Task'))) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:400px; max-width:92vw; max-height:88vh; overflow-y:auto; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:14px; box-shadow:var(--e3);">'
-      +   '<span style="font-size:18px; font-weight:600;">' + T(readOnly ? 'Task' : (editing ? 'Edit Task' : 'New Task')) + '</span>'
-      +   (readOnly ? '<div style="font-size:12px; line-height:1.45; color:' + c.onSurfaceVariant + '; background:' + c.surfaceContainerHigh + '; padding:9px 11px; border-radius:var(--r-sm);">' + esc(T('This task belongs to {dept}, so it is read-only for you.', { dept: nodeLabel(editedTask.deptId) })) + '</div>' : '')
-      +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Title') + '</label>'
-      +     '<input' + lock + ' id="newTaskTitleInput" data-form="newTaskForm" data-field="title" value="' + esc(f.title) + '" placeholder="' + T('e.g. Update onboarding checklist') + '" style="height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>'
-      +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Description') + '</label>'
-      +     '<textarea' + lock + ' id="newTaskDescInput" data-form="newTaskForm" data-field="description" rows="3" placeholder="' + T('What does done look like? Anything the next person needs to know.') + '" style="padding:9px 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:13px; line-height:1.5; font-family:inherit; resize:vertical; background:' + c.surface + '; color:' + c.onSurface + ';">' + esc(f.description || '') + '</textarea></div>'
-      +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Department') + '</label>'
-      +     mSelectFrom('<select' + lock + ' id="newTaskDeptSelect" data-form="newTaskForm" data-field="deptId" style="height:38px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"><option value="">' + T('— None —') + '</option>' + deptOptions + '</select>', c) + '</div>'
-      +   '<div style="display:flex; gap:10px;">'
-      +     '<div style="flex:1; display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Assignee') + '</label>'
-      +       assigneeControl(f, c, lock) + '</div>'
-      +     '<div style="width:120px; display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Priority') + '</label>'
-      +       mSelectFrom('<select' + lock + ' id="newTaskPrioritySelect" data-form="newTaskForm" data-field="priority" style="height:38px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';">'
-      +         ['High', 'Medium', 'Low'].map(function (p) { return '<option value="' + p + '"' + (p === f.priority ? ' selected' : '') + '>' + T(p) + '</option>'; }).join('')
-      +       '</select>', c) + '</div>'
+    var maps = styleMaps(c);
+    var chip = 'height:32px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outlineVariant + '; font-size:13px; background:' + c.surface + '; color:' + c.onSurface + ';';
+    var withIcon = function (icon, text) { return icon + '<span style="margin-left:6px;">' + text + '</span>'; };
+    var personIcon = '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="7" r="3"></circle><path d="M4 16a6 6 0 0 1 12 0"></path></svg>';
+    var deptIcon = '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 6a1 1 0 0 1 1-1h4l1.5 2H16a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6Z"></path></svg>';
+
+    var statusChip = editing ? mSelectFrom('<select' + lock + ' id="newTaskStatusSelect" data-form="newTaskForm" data-field="status" aria-label="' + T('Status') + '" style="' + chip + '">'
+      + EDITABLE_STATUSES.map(function (id) { return '<option value="' + id + '"' + (id === f.status ? ' selected' : '') + '>' + withIcon(statusIconHtml(id, maps.statusStyle[id].dot, 14), TAB_LABELS[id]) + '</option>'; }).join('')
+      + '</select>', c, 'pill') : '';
+    var current = assigneeSelectValue(f);
+    var assigneeChip = mSelectFrom('<select' + lock + ' id="newTaskAssigneeSelect" data-form="newTaskForm" data-field="assigneeId" aria-label="' + T('Assignee') + '" style="' + chip + '">'
+      + '<option value="0"' + (current === '0' ? ' selected' : '') + '>' + withIcon(personIcon, T('Unassigned')) + '</option>'
+      + state.members.map(function (m) { return '<option value="' + m.id + '"' + (current === String(m.id) ? ' selected' : '') + '>' + withIcon(personIcon, esc(m.displayName)) + '</option>'; }).join('')
+      + '<option value="-1"' + (current === '-1' ? ' selected' : '') + '>' + withIcon(personIcon, T('Someone else')) + '</option>'
+      + '</select>', c, 'pill');
+    var priorityChip = mSelectFrom('<select' + lock + ' id="newTaskPrioritySelect" data-form="newTaskForm" data-field="priority" aria-label="' + T('Priority') + '" style="' + chip + '">'
+      + ['High', 'Medium', 'Low'].map(function (p) { return '<option value="' + p + '"' + (p === f.priority ? ' selected' : '') + '>' + withIcon(priorityIconHtml(p, maps.priorityColor[p], c.outlineVariant), T(p)) + '</option>'; }).join('')
+      + '</select>', c, 'pill');
+    var dueChip = dateTriggerHtml('newTask', f.due, c, lock).replace('height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline, 'height:32px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outlineVariant).replace('font-size:14px;', 'font-size:13px; display:inline-flex !important;');
+    var deptChip = mSelectFrom('<select' + lock + ' id="newTaskDeptSelect" data-form="newTaskForm" data-field="deptId" aria-label="' + T('Department') + '" style="' + chip + '">'
+      + '<option value="">' + withIcon(deptIcon, T('No department')) + '</option>'
+      + flattenDeptOptions().map(function (o) { return '<option value="' + esc(o.id) + '"' + (o.id === f.deptId ? ' selected' : '') + '>' + withIcon(deptIcon, esc(o.label)) + '</option>'; }).join('')
+      + '</select>', c, 'pill');
+    var repeatChip = repeatControl(f, c, lock).split('height:38px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px;').join(chip.replace(/background:[^;]*;\s*color:[^;]*;/, ''));
+    var calChip = '<label class="interactive" title="' + T('Include this task in the department calendar feed') + '" style="display:inline-flex; align-items:center; gap:8px; ' + chip + ' cursor:pointer;"><input type="checkbox"' + lock + ' data-action="toggleTaskCalendar"' + (f.calendarVisible ? ' checked' : '') + '>' + T('In calendar') + '</label>';
+
+    var title = T(readOnly ? 'Task' : (editing ? 'Edit Task' : 'New Task'));
+    return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="closeTaskModal" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,' + (stacked ? '.25' : '.4') + '); display:flex; align-items:flex-start; justify-content:center; padding-top:12vh; z-index:55;">'
+      + '<div role="dialog" class="task-form ' + mo.card + '" data-scroll-key="' + esc('task:' + (state.editingTaskId || 'new')) + '" aria-modal="true" aria-label="' + esc(title) + '" tabindex="-1" style="' + mo.cardStyle + 'width:600px; max-width:94vw; max-height:80vh; overflow-y:auto; background:' + c.surface + '; border-radius:var(--r-lg); padding:20px 24px; display:flex; flex-direction:column; gap:12px; box-shadow:var(--e3);">'
+      +   '<div style="display:flex; align-items:center; gap:8px; font-size:12px; color:' + c.textMuted + ';"><span>' + esc(title) + '</span>'
+      +     '<span class="interactive" data-action="closeTaskModal" aria-label="' + T('Close') + '" style="margin-left:auto; display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span></div>'
+      +   (readOnly ? '<div style="font-size:13px; line-height:1.45; color:' + c.onSurfaceVariant + '; background:' + c.surfaceContainerHigh + '; padding:9px 11px; border-radius:var(--r-sm);">' + esc(T('This task belongs to {dept}, so it is read-only for you.', { dept: nodeLabel(editedTask.deptId) })) + '</div>' : '')
+      +   '<input' + lock + ' id="newTaskTitleInput" class="bare-field" data-form="newTaskForm" data-field="title" value="' + esc(f.title) + '" placeholder="' + T('Task title') + '" aria-label="' + T('Title') + '" style="height:40px; padding:0; border:none; font-size:20px; font-weight:600; letter-spacing:-0.01em; background:transparent; color:' + c.onSurface + ';"></input>'
+      +   '<textarea' + lock + ' id="newTaskDescInput" class="bare-field autosize" data-form="newTaskForm" data-field="description" rows="2" placeholder="' + T('Add a description…') + '" aria-label="' + T('Description') + '" style="min-height:44px; max-height:240px; padding:0; border:none; font-size:14px; line-height:1.6; font-family:inherit; resize:none; background:transparent; color:' + c.onSurface + ';">' + esc(f.description || '') + '</textarea>'
+      +   '<div class="task-form-chips" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">'
+      +     statusChip + assigneeChip + priorityChip + dueChip + repeatChip + deptChip + (editing ? calChip : '')
       +   '</div>'
-      +   '<div style="display:flex; gap:10px; flex-wrap:wrap;">'
-      +     '<div style="flex:1; min-width:150px; display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Due Date') + '</label>'
-      +       dateTriggerHtml('newTask', f.due, c, lock) + '</div>'
-      +     '<div style="flex:1; min-width:150px; display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Repeat') + '</label>'
-      +       repeatControl(f, c, lock) + '</div>'
-      +   '</div>'
-      +   (f.recurrence ? '<div style="font-size:12px; line-height:1.45; color:' + c.onSurfaceVariant + '; margin-top:-6px;">' + esc(T('{rule}, counting from the due date. Finishing it files the next one.', { rule: describeRepeat(f.recurrence) })) + '</div>' : '')
-      +   (editing
-          ? ('<div style="display:flex; gap:10px; align-items:flex-end;">'
-              + '<div style="flex:1; display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Status') + '</label>'
-              +   mSelectFrom('<select' + lock + ' id="newTaskStatusSelect" data-form="newTaskForm" data-field="status" style="height:38px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';">' + statusOptions + '</select>', c) + '</div>'
-              + '<label class="interactive" style="display:flex; align-items:center; gap:8px; height:38px; font-size:13px; cursor:pointer;" title="' + T('Include this task in the department calendar feed') + '"><input type="checkbox"' + lock + ' data-action="toggleTaskCalendar" ' + (f.calendarVisible ? 'checked' : '') + '></input>' + T('In calendar') + '</label>'
-              + '</div>')
-          : '')
-      +   (editing ? '' : checklistSection(c, false, false))
-      +   '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px;">'
-      +     (editing && !readOnly ? '<div class="interactive" data-action="deleteTask" style="font-size:14px; font-weight:500; color:' + c.error + '; padding:8px 6px;">' + T('Delete') + '</div>' : '<span></span>')
-      +     '<div style="display:flex; gap:10px;">'
-      +       '<div class="interactive" data-action="closeTaskModal" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 18px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + '; font-size:14px; font-weight:500;">' + T(readOnly ? 'Close' : 'Cancel') + '</div>'
-      +       (readOnly ? '' : '<div class="interactive" data-action="saveTask" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 20px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; font-weight:600;">' + (editing ? T('Save Changes') : T('Create Task')) + '</div>')
+      +   (current === '-1' ? '<input' + lock + ' id="newTaskAssigneeInput" data-form="newTaskForm" data-field="assignee" value="' + esc(f.assignee) + '" placeholder="' + T('Name') + '" aria-label="' + T('Assignee') + '" style="height:36px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"></input>' : '')
+      +   (f.recurrence ? '<div style="font-size:12px; line-height:1.45; color:' + c.onSurfaceVariant + ';">' + esc(T('{rule}, counting from the due date. Finishing it files the next one.', { rule: describeRepeat(f.recurrence) })) + '</div>' : '')
+      +   (editing ? '' : '<div style="padding-top:4px;">' + checklistSection(c, false, false) + '</div>')
+      +   '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:4px; padding-top:12px; border-top:1px solid ' + c.outlineVariant + ';">'
+      +     (editing && !readOnly ? '<div class="interactive" data-action="deleteTask" style="font-size:13px; font-weight:500; color:' + c.error + '; padding:6px 8px; border-radius:var(--r-sm);">' + T('Delete') + '</div>' : '<span style="font-size:12px; color:' + c.textMuted + ';">' + (readOnly ? '' : T(/Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘ Enter to save' : 'Ctrl Enter to save')) + '</span>')
+      +     '<div style="display:flex; gap:8px;">'
+      +       '<div class="interactive" data-action="closeTaskModal" style="display:flex; align-items:center; justify-content:center; height:36px; padding:0 14px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + '; font-size:13px; font-weight:500;">' + T(readOnly ? 'Close' : 'Cancel') + '</div>'
+      +       (readOnly ? '' : '<div class="interactive" data-action="saveTask" style="display:flex; align-items:center; justify-content:center; height:36px; padding:0 16px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:13px; font-weight:600;">' + (editing ? T('Save Changes') : T('Create Task')) + '</div>')
       +     '</div>'
       +   '</div>'
       + '</div></div>';
   }
+
 
   function repeatControl(f, c, lock) {
     var r = parseRepeat(f.recurrence);
@@ -3842,28 +3864,63 @@
   // Comments are open to every approved member: reading tasks already is, and
   // a comment does not change the work - asking another team about their task
   // is the point. Removing one is limited to its author (or an administrator).
-  function commentThread(c) {
-    var items = state.comments.map(function (cm) {
-      return '<div class="' + oneShotClass('comment:' + cm.id).trim() + '" style="display:flex; flex-direction:column; gap:3px; padding:9px 0; border-bottom:1px solid ' + c.outlineVariant + ';">'
-        + '<div style="display:flex; align-items:center; gap:8px;">'
-        +   '<span style="font-size:12px; font-weight:600;">' + esc(cm.authorName) + '</span>'
-        +   '<span style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + esc(formatStamp(cm.createdAt)) + '</span>'
-        +   ((cm.mine || isAdmin()) ? '<span class="interactive" data-action="deleteComment" data-id="' + cm.id + '" title="' + T('Delete comment') + '" style="margin-left:auto; display:flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>' : '')
-        + '</div>'
-        + '<div style="font-size:13px; line-height:1.55; white-space:pre-wrap; color:' + c.onSurface + ';">' + renderCommentBody(cm.body, c) + '</div>'
-        + '</div>';
-    }).join('');
+  // A short line for one change to this task, in the task's own timeline -
+  // the title is already at the top of the panel, so it is left out.
+  function taskEventText(a) {
+    // Korean puts the particle on the name ("민지님이", "내가"); English just names.
+    var mine = state.user && a.actorId === state.user.id;
+    var who = LANG === 'ko' ? (mine ? '내가' : (a.actorName || '누군가') + '님이') : (mine ? 'You' : (a.actorName || 'Someone'));
+    var fm = /^(attached|removed) (.+) (to|from)$/.exec(a.verb);
+    if (fm) return T(fm[1] === 'attached' ? '{who} attached {file}' : '{who} removed {file}', { who: who, file: fm[2] });
+    var key = { created: '{who} created this task', updated: '{who} edited this task', completed: '{who} marked it done', reopened: '{who} reopened it', restored: '{who} restored it from the trash', 'moved to the trash': '{who} moved it to the trash' }[a.verb];
+    return key ? T(key, { who: who }) : who + ' ' + a.verb;
+  }
 
-    return '<div style="display:flex; flex-direction:column; gap:6px; margin-top:8px; padding-top:14px; border-top:1px solid ' + c.outlineVariant + ';">'
-      + '<span style="font-size:13px; font-weight:600;">' + T('Comments') + (state.comments.length ? ' (' + state.comments.length + ')' : '') + '</span>'
-      + (state.comments.length ? items : '<div style="font-size:12px; color:' + c.onSurfaceVariant + '; padding:4px 0 8px 0;">' + T('No comments yet.') + '</div>')
-      + '<div style="position:relative; display:flex; gap:8px; align-items:flex-end; margin-top:6px;">'
-      +   '<textarea id="commentDraftInput" data-field="commentDraft" rows="2" placeholder="' + T('Add a comment - type @ to notify someone') + '" aria-autocomplete="list" style="flex:1; padding:8px 11px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:13px; line-height:1.5; font-family:inherit; resize:vertical; background:' + c.surface + '; color:' + c.onSurface + ';">' + esc(state.commentDraft || '') + '</textarea>'
-      +   '<div class="interactive" data-action="postComment" style="display:flex; align-items:center; justify-content:center; height:36px; padding:0 16px; border-radius:var(--r-sm); background:' + c.secondaryContainer + '; color:' + c.onSecondaryContainer + '; font-size:13px; font-weight:600; flex-shrink:0;">' + T('Post') + '</div>'
-      +   mentionPicker(c)
+  // Comments and changes in one timeline, oldest first, with the box for a
+  // new comment pinned to the bottom of the panel.
+  function commentThread(c) {
+    var events = (state.taskActivity || []).filter(function (a) { return a.verb !== 'commented on'; })
+      .map(function (a) { return { at: a.at, kind: 'event', a: a }; });
+    var comments = state.comments.map(function (cm) { return { at: cm.createdAt, kind: 'comment', cm: cm }; });
+    var all = events.concat(comments).sort(function (x, y) { return new Date(x.at) - new Date(y.at); });
+    var avatar = function (name, size) {
+      var col = avatarColors(name, c.dark);
+      return '<span style="display:flex; align-items:center; justify-content:center; width:' + size + 'px; height:' + size + 'px; border-radius:50%; flex-shrink:0; background:' + col.bg + '; color:' + col.color + '; font-size:12px; font-weight:600;">' + esc(computeInitials(name)) + '</span>';
+    };
+    var items = all.map(function (x) {
+      if (x.kind === 'event') {
+        return '<div style="display:flex; align-items:center; gap:10px; padding:4px 0 4px 8px; font-size:12px; color:' + c.textMuted + ';">'
+          + '<span aria-hidden="true" style="width:8px; height:8px; border-radius:50%; flex-shrink:0; background:' + c.outline + ';"></span>'
+          + '<span style="min-width:0;">' + esc(taskEventText(x.a)) + ' · ' + esc(formatStamp(x.at)) + '</span></div>';
+      }
+      var cm = x.cm;
+      return '<div class="' + oneShotClass('comment:' + cm.id).trim() + '" style="display:flex; gap:10px; padding:8px 0;">'
+        + avatar(cm.authorName || '?', 24)
+        + '<div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">'
+        +   '<div style="display:flex; align-items:center; gap:8px;">'
+        +     '<span style="font-size:13px; font-weight:600;">' + esc(cm.authorName) + '</span>'
+        +     '<span style="font-size:12px; color:' + c.textMuted + ';">' + esc(formatStamp(cm.createdAt)) + '</span>'
+        +     ((cm.mine || isAdmin()) ? '<span class="interactive" data-action="deleteComment" data-id="' + cm.id + '" title="' + T('Delete comment') + '" style="margin-left:auto; display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:var(--r-sm); color:' + c.textMuted + ';">' + ICON.close + '</span>' : '')
+        +   '</div>'
+        +   '<div style="font-size:14px; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; color:' + c.onSurface + ';">' + renderCommentBody(cm.body, c) + '</div>'
+        + '</div></div>';
+    }).join('');
+    var me = state.user ? state.user.displayName : '';
+    return '<div style="display:flex; flex-direction:column; gap:2px; padding-top:16px; border-top:1px solid ' + c.outlineVariant + ';">'
+      + '<span style="font-size:14px; font-weight:600; margin-bottom:6px;">' + T('Activity') + (state.comments.length ? ' <span class="tnum" style="font-weight:400; color:' + c.textMuted + ';">· ' + T(state.comments.length === 1 ? '{n} comment' : '{n} comments', { n: state.comments.length }) + '</span>' : '') + '</span>'
+      + (all.length ? items : '<div style="font-size:13px; color:' + c.textMuted + '; padding:4px 0 8px 0;">' + T('No comments yet.') + '</div>')
       + '</div>'
+      + '<div class="comment-composer" style="position:sticky; bottom:-28px; margin:8px -24px -28px; padding:12px 24px 20px; background:' + c.surface + '; border-top:1px solid ' + c.outlineVariant + '; display:flex; gap:10px; align-items:flex-start;">'
+      +   avatar(me || '?', 28)
+      +   '<div style="position:relative; flex:1; min-width:0; display:flex; flex-direction:column; gap:6px;">'
+      +     '<textarea id="commentDraftInput" data-field="commentDraft" rows="2" placeholder="' + T('Add a comment - type @ to notify someone') + '" aria-autocomplete="list" style="width:100%; min-height:40px; max-height:160px; padding:9px 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:1.5; font-family:inherit; resize:none; background:' + c.surface + '; color:' + c.onSurface + ';">' + esc(state.commentDraft || '') + '</textarea>'
+      +     '<div style="display:flex; align-items:center; justify-content:flex-end; gap:10px;"><span style="font-size:12px; color:' + c.textMuted + ';">' + T(/Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘ Enter to post' : 'Ctrl Enter to post') + '</span>'
+      +       '<div class="interactive" data-action="postComment" style="display:flex; align-items:center; justify-content:center; height:32px; padding:0 14px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:13px; font-weight:500; flex-shrink:0;">' + T('Post') + '</div></div>'
+      +     mentionPicker(c)
+      +   '</div>'
       + '</div>';
   }
+
 
   // Suggestions for the name being typed after "@". It opens upward, since
   // the comment box is at the bottom of the dialog.
@@ -4316,8 +4373,8 @@
       +   '<div style="height:1px; background:' + c.outlineVariant + ';"></div>'
       +   checklistSection(c, true, !writable)
       +   attachmentsSection(c, writable)
+      // Who made it and when it last changed are in the timeline now.
       +   commentThread(c)
-      +   '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + (t.createdByName ? esc(T('Created by {name}', { name: t.createdByName })) + ' &middot; ' : '') + esc(T('updated {when}', { when: formatStamp(t.updatedAt) })) + '</div>'
       + '</div></div>';
   }
 
@@ -4922,6 +4979,7 @@
 
   document.getElementById('root').addEventListener('input', function (e) {
     var el = e.target;
+    if (el.tagName === 'TEXTAREA' && (el.classList.contains('autosize') || el.id === 'commentDraftInput')) fitTextarea(el);
     // Checked before the data-field gate below, which this input does not have.
     if (el.id === 'accentHexInput') { setAccentHex(el.value); return; }
     var form = el.getAttribute('data-form');
@@ -4991,6 +5049,17 @@
     } else if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && e.target.getAttribute && e.target.getAttribute('data-action') === 'toggleMSelect') {
       e.preventDefault();
       openMSelect(e.target.getAttribute('data-id'));
+      return;
+    }
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && e.target.closest && e.target.closest('.task-form')) {
+      e.preventDefault();
+      ACTIONS.saveTask(e.target);
+      return;
+    }
+    if (e.target.id === 'commentDraftInput' && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      state.commentDraft = e.target.value;
+      ACTIONS.postComment(e.target);
       return;
     }
     // The @ picker takes the arrow keys, Enter and Tab while it is open.

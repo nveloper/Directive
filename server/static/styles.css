@@ -754,3 +754,8 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: .38; cu
 }
 .checklist-add input:hover { border-color: var(--outline-variant) !important; }
 .checklist-add input:focus { background: var(--surface) !important; }
+
+/* New-task form: the title and description are bare text, with no box. */
+.task-form .bare-field:focus { box-shadow: none !important; outline: none; }
+.task-form .bare-field::placeholder { color: var(--text-muted); }
+.task-form-chips .mselect-trigger:hover, .task-form-chips .date-trigger:hover { border-color: var(--outline) !important; }

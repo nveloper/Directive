@@ -65,11 +65,24 @@ func handleListActivity(db *sql.DB) http.HandlerFunc {
 				limit = n
 			}
 		}
+		// ?task=<id> narrows the feed to one task's history, for the
+		// timeline in its detail panel.
+		where, args := "", []interface{}{}
+		if v := r.URL.Query().Get("task"); v != "" {
+			if _, err := strconv.ParseInt(v, 10, 64); err != nil {
+				writeJSONError(w, http.StatusBadRequest, "invalid task id")
+				return
+			}
+			where = `WHERE a.subject = 'task' AND a.subject_id = ?`
+			args = append(args, v)
+		}
+		args = append(args, limit)
 		rows, err := db.Query(`SELECT a.id, a.at, COALESCE(a.user_id, 0),
 				COALESCE(NULLIF(u.display_name, ''), a.actor_name),
 				a.verb, a.subject, a.subject_id, a.summary
 			FROM activity a LEFT JOIN users u ON u.id = a.user_id
-			ORDER BY a.id DESC LIMIT ?`, limit)
+			`+where+`
+			ORDER BY a.id DESC LIMIT ?`, args...)
 		if err != nil {
 			writeJSONError(w, http.StatusInternalServerError, "could not load activity")
 			return

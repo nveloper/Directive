@@ -552,3 +552,28 @@ func TestAttachmentFilesOnDisk(t *testing.T) {
 		t.Fatalf("migrated file: %d %q", st, out)
 	}
 }
+
+// The detail panel's timeline asks for one task's history only.
+func TestActivityForOneTask(t *testing.T) {
+	_, client := newTestServer(t)
+	admin, _, _ := setupTeam(t, client)
+	var a, b struct{ ID int64 }
+	expect(t, "create a", admin.json("POST", "/api/tasks", map[string]interface{}{"title": "A", "priority": "Low"}, &a), http.StatusCreated)
+	expect(t, "create b", admin.json("POST", "/api/tasks", map[string]interface{}{"title": "B", "priority": "Low"}, &b), http.StatusCreated)
+	expect(t, "complete a", admin.json("PUT", "/api/tasks/"+itoa(a.ID)+"/status", map[string]string{"status": "done"}, nil), http.StatusOK)
+
+	var list []Activity
+	expect(t, "activity for a", admin.json("GET", "/api/activity?task="+itoa(a.ID), nil, &list), http.StatusOK)
+	if len(list) != 2 {
+		t.Fatalf("want 2 entries for task a, got %d: %+v", len(list), list)
+	}
+	for _, x := range list {
+		if x.Subject != "task" || x.SubjectID != itoa(a.ID) {
+			t.Fatalf("entry for another subject: %+v", x)
+		}
+	}
+	if list[0].Verb != "completed" {
+		t.Fatalf("newest first: got %q", list[0].Verb)
+	}
+	expect(t, "bad id", admin.json("GET", "/api/activity?task=x", nil, nil), http.StatusBadRequest)
+}
