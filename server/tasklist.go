@@ -22,6 +22,8 @@ type taskQuery struct {
 	priorities []string
 	calendar   string // all | shown | hidden
 	assignee   string // "" for anyone, "none" for unassigned, or an account id
+	dueFrom    string // YYYY-MM-DD, inclusive; "" for no lower bound
+	dueTo      string // YYYY-MM-DD, inclusive; "" for no upper bound
 	sort       string // a key of taskOrders
 	page       int
 	pageSize   int
@@ -46,6 +48,14 @@ func parseTaskQuery(r *http.Request) taskQuery {
 	}
 	if tq.calendar != "shown" && tq.calendar != "hidden" {
 		tq.calendar = "all"
+	}
+	// dueFrom/dueTo bound the due date, for the month the calendar view
+	// shows. A value that is not a date is ignored rather than refused.
+	if v := q.Get("dueFrom"); dueDateRe.MatchString(v) {
+		tq.dueFrom = v
+	}
+	if v := q.Get("dueTo"); dueDateRe.MatchString(v) {
+		tq.dueTo = v
 	}
 	if s := q.Get("status"); s != "" && s != "all" {
 		tq.statuses = strings.Split(s, ",")
@@ -183,6 +193,15 @@ func (tq taskQuery) where(u *User, todayStr string) (string, []interface{}) {
 		} else {
 			clauses = append(clauses, "1 = 0")
 		}
+	}
+
+	if tq.dueFrom != "" {
+		clauses = append(clauses, "t.due_date <> '' AND t.due_date >= ?")
+		args = append(args, tq.dueFrom)
+	}
+	if tq.dueTo != "" {
+		clauses = append(clauses, "t.due_date <> '' AND t.due_date <= ?")
+		args = append(args, tq.dueTo)
 	}
 
 	switch tq.calendar {

@@ -417,7 +417,10 @@ type Department struct {
 	CalendarList string `json:"calendarList"`
 	CalendarTag  string `json:"tag"`
 	FeedToken    string `json:"feedToken"`
+	Color        string `json:"color"`
 }
+
+var deptColorRe = regexp.MustCompile(`^(#[0-9a-fA-F]{6})?$`)
 
 var slugRe = regexp.MustCompile(`[^a-z0-9]+`)
 
@@ -465,7 +468,7 @@ func deptDepth(id string) int { return strings.Count(id, "/") + 1 }
 const maxDeptDepth = 2
 
 func listDepartments(db *sql.DB) ([]Department, error) {
-	rows, err := db.Query(`SELECT id, name, COALESCE(parent_id, ''), calendar_list, calendar_tag, feed_token FROM departments ORDER BY rowid`)
+	rows, err := db.Query(`SELECT id, name, COALESCE(parent_id, ''), calendar_list, calendar_tag, feed_token, color FROM departments ORDER BY rowid`)
 	if err != nil {
 		return nil, err
 	}
@@ -473,7 +476,7 @@ func listDepartments(db *sql.DB) ([]Department, error) {
 	out := []Department{}
 	for rows.Next() {
 		var d Department
-		if err := rows.Scan(&d.ID, &d.Name, &d.ParentID, &d.CalendarList, &d.CalendarTag, &d.FeedToken); err != nil {
+		if err := rows.Scan(&d.ID, &d.Name, &d.ParentID, &d.CalendarList, &d.CalendarTag, &d.FeedToken, &d.Color); err != nil {
 			return nil, err
 		}
 		out = append(out, d)
@@ -546,6 +549,7 @@ type updateDeptReq struct {
 	Name         *string `json:"name"`
 	CalendarList *string `json:"calendarList"`
 	CalendarTag  *string `json:"tag"`
+	Color        *string `json:"color"`
 }
 
 func handleUpdateDepartment(db *sql.DB) http.HandlerFunc {
@@ -568,6 +572,13 @@ func handleUpdateDepartment(db *sql.DB) http.HandlerFunc {
 				return
 			}
 			db.Exec(`UPDATE departments SET name = ? WHERE id = ?`, name, id)
+		}
+		if req.Color != nil {
+			if !deptColorRe.MatchString(*req.Color) {
+				writeJSONError(w, http.StatusBadRequest, "a department colour is #rrggbb or empty")
+				return
+			}
+			db.Exec(`UPDATE departments SET color = ? WHERE id = ?`, strings.ToUpper(*req.Color), id)
 		}
 		if req.CalendarList != nil {
 			db.Exec(`UPDATE departments SET calendar_list = ? WHERE id = ?`, *req.CalendarList, id)

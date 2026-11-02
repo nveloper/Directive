@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -177,7 +178,7 @@ func newMux(db *sql.DB) *http.ServeMux {
 	// order a method-specific catch-all against the all-method /caldav/ subtree
 	// below. The file server answers anything that is not GET or HEAD with 405
 	// by itself.
-	mux.Handle("/", http.FileServer(http.FS(sub)))
+	mux.Handle("/", staticHandler(http.FileServer(http.FS(sub))))
 
 	// auth
 	mux.HandleFunc("POST /api/register", rateLimited(authLimiter, handleRegister(db)))
@@ -297,4 +298,19 @@ func newMux(db *sql.DB) *http.ServeMux {
 		http.Redirect(w, r, caldavPrefix+"/", http.StatusMovedPermanently)
 	})
 	return mux
+}
+
+// staticHandler serves the embedded frontend. Font files carry their version
+// in their name, so they never change under the same URL and can be cached
+// for good - the Korean-capable font is about 2 MB, which should not be
+// fetched again on every page load. Go's MIME table has no entry for woff2,
+// so the type is set here rather than left to sniffing.
+func staticHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/fonts/") && strings.HasSuffix(r.URL.Path, ".woff2") {
+			w.Header().Set("Content-Type", "font/woff2")
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		}
+		next.ServeHTTP(w, r)
+	})
 }
