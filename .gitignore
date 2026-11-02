@@ -1,0 +1,29 @@
+# databases (runtime state — back these up, don't commit them)
+*.db
+*.db-shm
+*.db-wal
+# attachment files and backups beside a database
+attachments/
+backups/
+
+# build output
+/server/directive
+/server/directive.exe
+/server/directive-linux-amd64
+
+# legacy / prototype files at root
+/admin-task-dashboard.html
+/dashboard.html
+/Main.dc.html
+/canvas.json
+/Generic.ttf
+/task-control-center-source.tar.gz
+
+# logs
+*.log
+
+# editor / OS
+.claude/
+.DS_Store
+Thumbs.db
+*.exe~

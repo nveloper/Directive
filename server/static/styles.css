@@ -1,0 +1,632 @@
+@font-face {
+  font-family: 'Generic';
+  src: url('generic.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: swap;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  height: 100%;
+  font-family: 'Generic', system-ui, sans-serif;
+  overflow: hidden;          /* the app scrolls its own regions, never the page */
+  overscroll-behavior: none; /* and no rubber-banding past them */
+}
+#root { height: 100%; }
+a { text-decoration: none; }
+button, input, select { font-family: inherit; font-size: inherit; }
+input, select { transition: border-color 0.225s ease, box-shadow 0.225s ease; }
+input:not([type="checkbox"]):not([type="radio"]):focus, select:focus {
+  outline: none;
+  border-color: var(--primary, #6750A4);
+  box-shadow: 0 0 0 3px var(--primary-container, rgba(103, 80, 164, .18));
+}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+@keyframes overlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes overlayFadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes modalPopIn { from { opacity: 0; transform: scale(.88) translateY(18px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes modalPopOut { from { opacity: 1; transform: scale(1) translateY(0); } to { opacity: 0; transform: scale(.94) translateY(12px); } }
+@keyframes contentSlideOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(18px); } }
+@keyframes contentSlideIn { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes rowHighlight { from { opacity: 0; transform: translateY(6px); background: var(--primary-container); } to { opacity: 1; transform: translateY(0); background: transparent; } }
+@keyframes dropdownIn {
+  from { opacity: 0; transform: translateY(-10px) scale(.92); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes dropdownOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(-8px) scale(.95); }
+}
+@keyframes authFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toggleSlideRight { from { transform: translateX(0); } to { transform: translateX(32px); } }
+@keyframes toggleSlideLeft { from { transform: translateX(32px); } to { transform: translateX(0); } }
+@keyframes accentPillOpen { from { width: 36px; opacity: 0; } to { width: 264px; opacity: 1; } }
+@keyframes accentPillClose { from { width: 264px; opacity: 1; } to { width: 36px; opacity: 0; } }
+
+@media (prefers-color-scheme: dark) { html, body { background: #141218; } }
+
+/* Every custom control is a div, so it gets tabindex and role="button" after
+   each render (applyA11y in app.js). Without a focus ring a keyboard user has
+   no idea where they are; :focus-visible keeps it off mouse clicks. */
+.interactive:focus { outline: none; }
+.interactive:focus-visible {
+  outline: 2px solid var(--primary, #6750A4);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 8px;
+  z-index: 200;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--primary, #6750A4);
+  color: var(--on-primary, #fff);
+  font-size: 13px;
+  font-weight: 700;
+}
+.skip-link:focus { left: 8px; }
+
+.interactive {
+  cursor: pointer;
+  /* :hover and :active do not re-render, so a transition is the right tool
+     here - unlike anything driven by state. */
+  transition: transform 0.165s ease, filter 0.165s ease, background-color 0.165s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.interactive:hover { filter: brightness(0.96); }
+.interactive:active { transform: scale(0.92); filter: brightness(0.86); }
+
+.content-out { animation: contentSlideOut 270ms ease forwards; }
+.content-in { animation: contentSlideIn 330ms ease forwards; }
+
+.overlay-in { animation: overlayFadeIn 300ms ease forwards; }
+.overlay-out { animation: overlayFadeOut 240ms ease forwards; }
+.card-in { animation: modalPopIn 390ms cubic-bezier(.22,1.15,.36,1) forwards; }
+.card-out { animation: modalPopOut 240ms ease forwards; }
+.row-highlight { animation: rowHighlight 1350ms ease; }
+.dropdown-panel { transform-origin: top right; }
+/* The entrance is its own class so it can be dropped once it has played -
+   see motion() in app.js. */
+.dropdown-in { animation: dropdownIn 285ms cubic-bezier(.2,.9,.3,1.1); }
+.dropdown-out { animation: dropdownOut 225ms ease forwards; pointer-events: none; }
+.auth-card { animation: authFadeIn 390ms ease; }
+
+.view-toggle-thumb { position: absolute; top: 3px; left: 3px; width: 30px; height: 30px; border-radius: 8px; }
+.view-toggle-thumb.slide-right { animation: toggleSlideRight 0.3s cubic-bezier(.2,.8,.2,1) forwards; }
+.view-toggle-thumb.slide-left { animation: toggleSlideLeft 0.3s cubic-bezier(.2,.8,.2,1) forwards; }
+
+/* The subtree used to animate a max-height clamp, which clipped a department
+   with more children than the clamp allowed. Animating grid-template-rows
+   from 0fr to 1fr expands to whatever the content actually measures, so the
+   list grows the sidebar's scroll area instead of being cut off.
+
+   It has to be an `animation`, not a `transition`: render() replaces the whole
+   tree, so the subtree is born already open or already closed and a transition
+   has no previous frame to move from - it just snaps. Keyframes play on mount,
+   which is the same reason the mobile drawers below use anim-open/anim-close. */
+@keyframes treeExpand {
+  from { grid-template-rows: 0fr; opacity: 0; }
+  to   { grid-template-rows: 1fr; opacity: 1; }
+}
+@keyframes treeCollapse {
+  from { grid-template-rows: 1fr; opacity: 1; }
+  to   { grid-template-rows: 0fr; opacity: 0; }
+}
+@keyframes chevronOpen  { from { transform: rotate(0deg); }  to { transform: rotate(90deg); } }
+@keyframes chevronClose { from { transform: rotate(90deg); } to { transform: rotate(0deg); } }
+
+.tree-children {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+.tree-children.expanded { grid-template-rows: 1fr; opacity: 1; }
+.tree-children.anim-expand   { animation: treeExpand 0.36s cubic-bezier(.2,.8,.2,1) forwards; }
+.tree-children.anim-collapse { animation: treeCollapse 0.3s ease forwards; }
+
+/* The disclosure triangle turns with the subtree, and for the same reason it
+   cannot use a transition. */
+.tree-chevron { transform: rotate(0deg); flex-shrink: 0; border-radius: 6px; }
+.tree-chevron.expanded { transform: rotate(90deg); }
+.tree-chevron.anim-expand   { animation: chevronOpen 0.36s cubic-bezier(.2,.8,.2,1) forwards; }
+.tree-chevron.anim-collapse { animation: chevronClose 0.3s ease forwards; }
+.tree-children > .tree-children-inner {
+  min-height: 0;          /* lets the 0fr row actually collapse */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* A column flex container shrinks its children before it overflows, so a long
+   department list was squeezed thinner and thinner instead of scrolling.
+   Pinning the children to their natural height makes the container scroll. */
+.left-nav > * { flex-shrink: 0; }
+
+/* The sidebar scrolls, but showing a scrollbar inside a 272px column next to
+   the page's own one is noise. Keyboard and wheel scrolling are unaffected. */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { width: 0; height: 0; display: none; }
+.swatch { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color 0.18s ease, transform 0.18s ease; flex-shrink: 0; }
+.swatch:hover { transform: scale(1.1); }
+.swatch.active { border-color: var(--on-surface); }
+
+/* The sixth slot is a real colour input, so the system palette - with its own
+   hex field and eyedropper - opens on click. It is dressed as a swatch. */
+.swatch-custom {
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 0;
+  background: none;
+  /* A bare colour input shows nothing useful when empty, so the rainbow says
+     what it is before anything has been picked. */
+  background-image: conic-gradient(#f44, #fd0, #4d4, #0cf, #55f, #d4d, #f44);
+}
+.swatch-custom::-webkit-color-swatch-wrapper { padding: 0; }
+.swatch-custom::-webkit-color-swatch { border: none; border-radius: 50%; }
+.swatch-custom::-moz-color-swatch { border: none; border-radius: 50%; }
+
+.accent-pill { width: 264px; }
+.accent-pill-open { animation: accentPillOpen 0.27s cubic-bezier(.2,.8,.2,1) forwards; }
+.accent-pill-close { animation: accentPillClose 0.24s ease forwards; }
+
+/* Below the breakpoint, the department list and the calendar panel stop
+   being permanent columns (which just squeezed the task list into a sliver,
+   and clipped the icon cluster off the right edge entirely) and become
+   off-canvas drawers that slide in over it instead. Desktop never matches
+   this query, so .left-nav/.right-panel keep their normal in-flow sizing
+   and every mobile-only control below stays hidden. */
+/* The bar sits above the scrolling region and owns the safe area over it, so
+   the status bar never scrolls away with the content. */
+.top-bar {
+  height: calc(64px + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) calc(20px + env(safe-area-inset-right, 0px)) 0 calc(20px + env(safe-area-inset-left, 0px));
+}
+
+.calendar-drawer-btn, .drawer-close-btn, .drawer-header-row,
+.mobile-search-btn { display: none; }
+/* The menu button is on every screen, and so is the drawer it opens. */
+.hamburger-btn { display: flex; }
+/* Accent and theme live in the bar on desktop and in the account menu on a
+   phone, where there is room for them. */
+.appearance-in-menu { display: none; }
+/* ---- guide ---- */
+.guide-card {
+  width: 640px;
+  max-width: 94vw;
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 24px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.25);
+  overflow: hidden;
+}
+.guide-card > * { flex-shrink: 0; }
+/* The section chips scroll sideways rather than wrapping into a block. */
+.guide-index {
+  display: flex;
+  gap: 6px;
+  padding: 4px 24px 12px 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.guide-index::-webkit-scrollbar { display: none; }
+.guide-chip {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 14px;
+  white-space: nowrap;
+}
+/* Only the body scrolls; the title and the chips stay put above it. */
+.guide-card > .guide-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 24px 26px 24px;
+  border-top: 1px solid var(--guide-rule);
+}
+.guide-section { padding-top: 18px; scroll-margin-top: 8px; }
+.guide-section h3 { margin: 0 0 8px 0; font-size: 15px; font-weight: 700; }
+.guide-section p, .guide-section li { font-size: 13.5px; line-height: 1.65; margin: 0 0 8px 0; }
+.guide-section ul { margin: 0; padding-left: 18px; }
+.guide-section strong { font-weight: 700; color: var(--on-surface, inherit); }
+.guide-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--guide-code-bg);
+  word-break: break-all;
+}
+.guide-table { border-collapse: collapse; margin: 4px 0 10px 0; width: 100%; }
+.guide-table th, .guide-table td { text-align: left; font-size: 13px; padding: 7px 8px; border-bottom: 1px solid var(--guide-rule); vertical-align: top; }
+.guide-table th { font-weight: 700; white-space: nowrap; width: 1%; }
+
+/* Rendered always, shown only where the header has no room for it. */
+.fab-new-task { display: none; }
+
+/* A dialog is a scrolling column: without this it shrinks its own fields to
+   fit instead of scrolling, which is how a 46px input ended up 40px tall on a
+   phone. Same trap as the department list in the sidebar. */
+[role="dialog"] > * { flex-shrink: 0; }
+.mobile-scrim { display: none; }
+.desktop-search-bar { display: flex; }
+
+/* render() replaces the whole app tree on every state change, so a plain
+   CSS `transition` on these never has a "before" frame to animate from - the
+   element is simply born already in its new state. `animation` (keyframes)
+   plays on mount regardless, which is what makes the slide actually visible
+   instead of just snapping open/closed (see the mobile drawer functions and
+   drawerClass() in app.js for how 'open' vs 'anim-open'/'anim-close' are
+   assigned). */
+@keyframes drawerSlideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+@keyframes drawerSlideOutLeft { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+@keyframes drawerSlideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes drawerSlideOutRight { from { transform: translateX(0); } to { transform: translateX(100%); } }
+
+.left-nav {
+  position: fixed;
+  top: env(safe-area-inset-top, 0px);
+  bottom: env(safe-area-inset-bottom, 0px);
+  left: 0;
+  z-index: 90;
+  width: min(82vw, 320px);
+  box-shadow: 0 12px 32px rgba(0,0,0,.28);
+  border-radius: 0 20px 20px 0;
+  transform: translateX(-100%);
+}
+.left-nav.open { transform: translateX(0); }
+.left-nav.anim-open { animation: drawerSlideInLeft 0.33s cubic-bezier(.2,.8,.2,1) forwards; }
+.left-nav.anim-close { animation: drawerSlideOutLeft 0.3s ease forwards; }
+.left-nav .drawer-close-btn { display: flex; }
+/* A drawer slides over the page without darkening it. The layer stays so a
+   click outside still closes the drawer, but it paints nothing - the panel's
+   own shadow is what separates it from what is behind. */
+.mobile-scrim.open, .mobile-scrim.closing {
+  display: block;
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  z-index: 85;
+}
+
+@media (max-width: 860px) {
+  .hamburger-btn, .calendar-drawer-btn, .drawer-close-btn, .mobile-search-btn { display: flex; }
+  .drawer-header-row { display: flex; margin-bottom: -4px; }
+  .desktop-search-bar { display: none; }
+
+  /* Everything that was optional comes out of the bar: the app name, the
+     accent and theme buttons, the divider, and the name and role beside the
+     avatar. What is left - menu, brand, search, alerts, calendar, account -
+     fits a 360px screen, which is what was pushing the calendar button off
+     the right edge. */
+  .app-name-text,
+  .appearance-controls,
+  .topbar-divider,
+  .account-meta { display: none !important; }
+  .appearance-in-menu { display: flex; }
+
+  .top-bar {
+    height: calc(60px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) calc(8px + env(safe-area-inset-right, 0px)) 0 calc(8px + env(safe-area-inset-left, 0px));
+    gap: 2px;
+  }
+
+  /* A finger is not a mouse pointer: every control in the bar and the panels
+     gets a 44px target, and the text that labels them comes up to size. */
+  .top-bar .interactive:not(.brand-icon) { width: 44px !important; height: 44px !important; }
+  .top-bar .interactive:not(.brand-icon) svg { width: 22px; height: 22px; }
+  /* Centred on the same line as the buttons beside it. */
+  .top-bar .brand-icon { align-self: center; }
+
+  /* The search button belongs with the other icons on the right; centring it
+     in the leftover space left it floating at no particular place. */
+  .topbar-center { flex: 1 1 auto; justify-content: flex-end !important; min-width: 0; }
+
+  /* New Task leaves the header for a thumb-reachable button, and Filter drops
+     its label. Between them the heading gets the width it needs to stop
+     breaking mid-phrase. */
+  .new-task-inline { display: none !important; }
+  .fab-new-task { display: flex !important; }
+  .btn-label { display: none; }
+  .filter-btn { width: 44px; padding: 0 !important; justify-content: center; }
+  .view-toggle { display: none !important; }
+
+  /* Room under the list so the floating button never sits on the footer. */
+  main#task-list { padding: 16px 14px calc(84px + env(safe-area-inset-bottom, 0px)) 14px !important; gap: 12px !important; }
+  .page-title { font-size: 20px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Tabs are scrolled sideways rather than wrapped onto three lines. */
+  [role="tablist"] {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  [role="tablist"]::-webkit-scrollbar { display: none; }
+  [role="tablist"] > * { flex-shrink: 0; min-height: 40px; font-size: 14px !important; }
+
+  .dropdown-panel { max-width: calc(100vw - 24px); }
+
+  /* iOS zooms the page when it focuses a field whose text is under 16px, and
+     every field here was 12-14px. Raising them is the fix; blocking zoom with
+     user-scalable=no would also take away pinch-zoom from anyone who needs
+     it. The fields are sized inline, so this has to outrank that. */
+  input, select, textarea { font-size: 16px !important; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not(#accentHexInput),
+  select { min-height: 46px !important; }
+  /* Kept at a tappable size without becoming a full-width field. */
+  #accentHexInput { width: 104px !important; height: 40px !important; }
+  textarea { min-height: 76px !important; line-height: 1.5 !important; }
+  /* Tick boxes get a finger-sized target of their own. */
+  /* The box stays Material size; the row it sits in is the finger target. */
+
+  .right-panel {
+    position: fixed;
+    top: env(safe-area-inset-top, 0px);
+    bottom: env(safe-area-inset-bottom, 0px);
+    z-index: 90;
+    width: 82vw;
+    max-width: 320px;
+    box-shadow: 0 12px 32px rgba(0,0,0,.28);
+  }
+  /* Nothing of ours paints the status bar or the home indicator: the panels
+     and the layer behind them both stop at the insets. */
+
+  .right-panel { right: 0; transform: translateX(100%); }
+  .right-panel.open { transform: translateX(0); }
+  .right-panel.anim-open { animation: drawerSlideInRight 0.33s cubic-bezier(.2,.8,.2,1) forwards; }
+  .right-panel.anim-close { animation: drawerSlideOutRight 0.3s ease forwards; }
+
+}
+
+/* Same rule as the drawer scrim: the dim covers the page, never the status
+   bar or the home indicator. */
+.modal-overlay {
+  top: env(safe-area-inset-top, 0px);
+  right: 0;
+  bottom: env(safe-area-inset-bottom, 0px);
+  left: 0;
+}
+
+/* Search grows out of the button it replaced and folds back into it, instead
+   of the bar being swapped out in a single frame. */
+@keyframes searchBarIn {
+  from { opacity: 0; transform: scaleX(.86); }
+  to   { opacity: 1; transform: scaleX(1); }
+}
+@keyframes searchBarOut {
+  from { opacity: 1; transform: scaleX(1); }
+  to   { opacity: 0; transform: scaleX(.9); }
+}
+.mobile-search-bar-open { transform-origin: right center; animation: searchBarIn 300ms cubic-bezier(.2,.9,.3,1.05); }
+.mobile-search-bar-close { transform-origin: right center; animation: searchBarOut 255ms ease forwards; pointer-events: none; }
+
+/* ---- motion ----------------------------------------------------------
+   Everything here is an `animation`, never a `transition`, for the reason
+   spelled out above the tree keyframes: render() rebuilds the whole tree, so
+   a state-driven element is born in its new state and a transition has no
+   previous frame to move from. Each of these is applied through a one-shot
+   class that clears itself (playOnce in app.js), so it animates the thing
+   that just changed and does not replay on every later render. */
+
+@keyframes themeIconIn { from { transform: rotate(-120deg) scale(.5); opacity: 0; } to { transform: rotate(0) scale(1); opacity: 1; } }
+@keyframes paletteSettle { from { opacity: .72; } to { opacity: 1; } }
+@keyframes selectIn { from { transform: scale(.96); opacity: .55; } to { transform: scale(1); opacity: 1; } }
+@keyframes checkPop { 0% { transform: scale(.6); } 55% { transform: scale(1.18); } 100% { transform: scale(1); } }
+@keyframes itemIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes swatchPick { 0% { transform: scale(1); } 45% { transform: scale(1.28); } 100% { transform: scale(1); } }
+@keyframes copiedPop { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes badgeIn { from { transform: scale(0); } to { transform: scale(1); } }
+
+.anim-theme-icon { animation: themeIconIn 0.48s cubic-bezier(.2,.8,.2,1); }
+/* A palette change repaints every surface at once; a short settle keeps that
+   from reading as a flash. */
+.anim-palette { animation: paletteSettle 0.39s ease; }
+.anim-select { animation: selectIn 0.3s cubic-bezier(.2,.8,.2,1); }
+.anim-check { animation: checkPop 0.39s cubic-bezier(.2,.8,.2,1); }
+.anim-item-in { animation: itemIn 0.33s ease both; }
+@keyframes itemOut { to { opacity: 0; transform: translateX(14px); } }
+.anim-item-out { animation: itemOut 0.36s ease forwards; pointer-events: none; }
+.anim-swatch { animation: swatchPick 0.45s cubic-bezier(.2,.8,.2,1); }
+.anim-copied { animation: copiedPop 0.39s cubic-bezier(.2,.8,.2,1); }
+.anim-badge { animation: badgeIn 0.33s cubic-bezier(.2,.8,.2,1); }
+
+/* Staggered entrance for a freshly loaded page of rows. The delay is capped
+   so a full page never feels slow to arrive. */
+.anim-row-in { animation: itemIn 0.36s ease both; }
+
+/* Undo bar. It sits above the phone's floating New Task button rather than
+   on top of it. */
+.snackbar {
+  position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 80; display: flex; align-items: center; gap: 10px;
+  width: max-content; max-width: min(560px, calc(100vw - 32px));
+  padding: 10px 10px 10px 16px; border-radius: 14px;
+  font-size: 13px; line-height: 1.4; box-shadow: 0 10px 30px rgba(0,0,0,.28);
+}
+@keyframes snackIn { from { opacity: 0; transform: translate(-50%, 16px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes snackOut { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, 12px); } }
+.snack-in { animation: snackIn 0.3s cubic-bezier(.2,.8,.2,1) both; }
+.snack-out { animation: snackOut 0.22s ease both; }
+@media (max-width: 860px) {
+  .snackbar { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
+  /* Hung off the bell, the panel ran past the left edge of a phone screen;
+     there it spans the screen under the top bar instead. */
+  .bell-panel {
+    position: fixed !important; top: 64px !important; left: 12px !important; right: 12px !important;
+    width: auto !important; max-height: min(440px, 70vh) !important;
+  }
+}
+
+/* Checklist row tools stay quiet until the row is pointed at, except on a
+   touch screen, where there is no pointing. */
+.checklist-tool {
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0; opacity: .55;
+}
+.checklist-row:hover .checklist-tool, .checklist-tool:focus-visible { opacity: 1; }
+@media (hover: none) { .checklist-tool { opacity: 1; } }
+
+.mention { border-radius: 5px; padding: 0 2px; font-weight: 600; }
+
+/* Task detail: the reading view a task opens into. */
+.task-detail {
+  width: 680px; max-width: 94vw; max-height: 90vh; overflow-y: auto;
+  border-radius: 24px; padding: 24px 26px; display: flex; flex-direction: column; gap: 16px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.25); outline: 2px dashed transparent; outline-offset: -8px;
+  transition: outline-color .15s;
+}
+/* Files dragged over an open task land in it. */
+.task-detail.drag-over { outline-color: var(--drop); }
+.detail-body { font-size: 14px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.detail-body a { color: var(--primary); }
+.detail-icon { display: inline-flex; flex-shrink: 0; padding: 2px; border-radius: 10px; }
+.detail-icon.interactive:hover { background: var(--surface-container-high); }
+.detail-add-icon {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 40px; height: 40px; border-radius: 10px; border: 1.5px dashed; opacity: .55;
+}
+.detail-add-icon:hover, .detail-add-icon:focus-visible { background: var(--surface-container-high); opacity: 1; }
+@media (max-width: 860px) {
+  .task-detail { max-width: calc(100vw - 20px); max-height: calc(100dvh - 20px); padding: 18px 16px; border-radius: 20px; }
+}
+
+.icon-picker {
+  transform-origin: top left;
+  position: absolute; top: 46px; left: 0; z-index: 10; width: 360px; max-width: calc(100vw - 60px);
+  padding: 10px; border-radius: 14px; box-shadow: 0 10px 28px rgba(0,0,0,.22);
+}
+.emoji-tabs { display: flex; gap: 2px; padding: 0 2px 6px; margin-bottom: 4px; }
+.emoji-tab { display: flex; align-items: center; justify-content: center; flex: 1; height: 30px; border-radius: 8px; font-size: 17px; }
+.emoji-tab:hover, .emoji-tab:focus-visible { background: var(--surface-container-high); }
+.emoji-grid { position: relative; display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; max-height: 280px; overflow-y: auto; }
+.emoji-group-head { grid-column: 1 / -1; font-size: 11px; font-weight: 700; letter-spacing: .03em; padding: 8px 4px 2px; }
+.emoji-cell.selected { background: var(--primary-container); }
+.emoji-cell { display: flex; align-items: center; justify-content: center; height: 34px; border-radius: 8px; font-size: 20px; }
+.emoji-cell:hover, .emoji-cell:focus-visible { background: var(--surface-container-high); }
+
+/* Attachments: pictures as tiles, everything else as rows. */
+.att-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; }
+.att-tile { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; }
+.att-tile img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: zoom-in; }
+.att-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 12px; }
+.att-remove {
+  display: flex; align-items: center; justify-content: center; width: 24px; height: 24px;
+  border-radius: 50%; flex-shrink: 0; opacity: .85; box-shadow: 0 1px 4px rgba(0,0,0,.2);
+}
+.att-tile .att-remove { position: absolute; top: 6px; right: 6px; }
+
+.lightbox {
+  position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.86);
+  display: flex; align-items: center; justify-content: center; padding: 56px 16px 16px; animation: overlayFadeIn .2s ease;
+}
+.lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; cursor: zoom-out; }
+.lightbox-bar {
+  position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 14px;
+  padding: 12px 16px; color: #fff; font-size: 13px;
+}
+
+/* Someone who has asked their system for less motion gets none of this. The
+   interface still works; it just stops moving. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Material 3 menus that replace the native selects. The field keeps the
+   look it had; the list is a surface-container card with a tonal selected
+   row and a check. */
+.mselect-trigger {
+  display: flex; align-items: center; gap: 6px; box-sizing: border-box;
+  user-select: none; -webkit-user-select: none; min-width: 0;
+}
+.mselect-trigger[aria-disabled="true"] { opacity: .6; cursor: default; }
+.mselect-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mselect-pill { display: inline-flex; }
+.mselect-pill .mselect-label { flex: none; }
+.mselect-chevron { flex-shrink: 0; opacity: .8; }
+.mselect-trigger.open .mselect-chevron { transform: rotate(180deg); }
+.mselect-menu {
+  position: fixed; z-index: 95; overflow-y: auto; padding: 6px;
+  border-radius: 14px; box-shadow: 0 4px 10px rgba(0,0,0,.14), 0 12px 32px rgba(0,0,0,.16);
+  transform-origin: top left;
+}
+.mselect-menu.up { transform-origin: bottom left; }
+.mselect-item {
+  display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 14px 0 10px;
+  border-radius: 10px; font-size: 13.5px; white-space: nowrap;
+}
+.mselect-item + .mselect-item { margin-top: 2px; }
+.mselect-item:not(.selected):hover, .mselect-item:not(.selected).active { background: var(--item-hover); }
+.mselect-item.selected.active { box-shadow: inset 0 0 0 2px var(--primary); }
+.mselect-check { display: flex; width: 18px; flex-shrink: 0; }
+@keyframes mselectIn { from { opacity: 0; transform: scaleY(.85) translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes mselectOut { from { opacity: 1; } to { opacity: 0; } }
+.mselect-in { animation: mselectIn .2s cubic-bezier(.2,.9,.3,1) both; }
+.mselect-out { animation: mselectOut .15s ease both; pointer-events: none; }
+
+/* Material 3 checkboxes and radios in place of the browser's own. They stay
+   real inputs - keyboard, labels and screen readers work as before - and
+   only their drawing changes: an outlined box that fills with the primary
+   colour and a check, an outlined ring with a primary dot, and a round state
+   layer behind either on hover and focus. */
+input[type="checkbox"], input[type="radio"] {
+  -webkit-appearance: none; appearance: none;
+  position: relative; flex-shrink: 0; margin: 0; cursor: pointer;
+  width: 18px !important; height: 18px !important;
+  border: 2px solid var(--on-surface-variant, #49454F);
+  background: transparent; box-sizing: border-box;
+  transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+input[type="checkbox"] { border-radius: 3px; }
+input[type="radio"] { border-radius: 50%; width: 20px !important; height: 20px !important; }
+input[type="checkbox"]:checked {
+  background: var(--primary, #6750A4); border-color: var(--primary, #6750A4);
+}
+input[type="checkbox"]:checked::after {
+  content: ''; position: absolute; left: 4.5px; top: 0.5px; width: 5px; height: 10px;
+  border: solid var(--on-primary, #fff); border-width: 0 2px 2px 0; transform: rotate(45deg);
+  box-sizing: border-box;
+}
+input[type="radio"]:checked {
+  border-color: var(--primary, #6750A4);
+  background: radial-gradient(circle, var(--primary, #6750A4) 0 4.5px, transparent 5px);
+}
+/* The state layer: a 40px circle, as Material draws around a selection control. */
+input[type="checkbox"]:hover:not(:disabled), input[type="radio"]:hover:not(:disabled) {
+  box-shadow: 0 0 0 11px color-mix(in srgb, var(--on-surface, #1D1B20) 8%, transparent);
+}
+input[type="checkbox"]:checked:hover:not(:disabled), input[type="radio"]:checked:hover:not(:disabled) {
+  box-shadow: 0 0 0 11px color-mix(in srgb, var(--primary, #6750A4) 8%, transparent);
+}
+input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 11px color-mix(in srgb, var(--primary, #6750A4) 14%, transparent);
+}
+input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: .38; cursor: default; }
+
+/* Pop-ups scroll without a visible bar: dialogs, dropdown panels, menus and
+   the emoji grid. Wheel, touch and keyboard scrolling are untouched. */
+[role="dialog"], [role="dialog"] *, .dropdown-panel, .dropdown-panel *,
+.mselect-menu, .emoji-grid {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+[role="dialog"]::-webkit-scrollbar, [role="dialog"] *::-webkit-scrollbar,
+.dropdown-panel::-webkit-scrollbar, .dropdown-panel *::-webkit-scrollbar,
+.mselect-menu::-webkit-scrollbar, .emoji-grid::-webkit-scrollbar {
+  width: 0; height: 0; display: none;
+}
