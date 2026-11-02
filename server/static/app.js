@@ -451,7 +451,14 @@
     // list starts folded on every screen.
     feedsOpen: false,
     searchQuery: '',
-    viewMode: 'list',
+    viewMode: (function () { try { var v = localStorage.getItem('directive_view'); return /^(list|grid|calendar)$/.test(v || '') ? v : 'list'; } catch (e) { return 'list'; } })(),
+    calMonth: '',
+    selected: {},
+    bulkBusy: false,
+    paletteOpen: false,
+    paletteQuery: '',
+    paletteIndex: 0,
+    paletteTasks: [],
     viewToggleAnim: null,
     page: 1,
     pageSize: 50,
@@ -1639,6 +1646,22 @@
   function isAdmin() { return !!state.user && state.user.role === 'admin'; }
   function canCreateTask() { return isAdmin() || !!(state.user && state.user.deptId); }
 
+  // Department colours an administrator can pick from: distinct hues that
+  // read on light and dark surfaces alike.
+  var DEPT_COLORS = ['#E5484D', '#F76B15', '#E0A400', '#30A46C', '#12A594', '#0090FF', '#6E56CF', '#D6409F', '#8D8D86'];
+  // A sub-department without a colour of its own takes its parent's.
+  function deptColor(id) {
+    var d = id ? findDept(id) : null;
+    if (!d) return '';
+    if (d.color) return d.color;
+    var p = d.parentId ? findDept(d.parentId) : null;
+    return (p && p.color) || '';
+  }
+  function deptDot(id, size) {
+    var col = deptColor(id);
+    return col ? '<span aria-hidden="true" style="width:' + (size || 8) + 'px; height:' + (size || 8) + 'px; border-radius:50%; flex-shrink:0; background:' + col + ';"></span>' : '';
+  }
+
   function nodeLabel(id) {
     if (!id) return '';
     if (id === 'all') return T('All Tasks');
@@ -1720,6 +1743,11 @@
     if (priorities.length < 3) params.push('priority=' + encodeURIComponent(priorities.join(',')));
     if (state.filterCalendar !== 'all') params.push('calendar=' + encodeURIComponent(state.filterCalendar));
     if (state.filterAssignee) params.push('assignee=' + encodeURIComponent(state.filterAssignee));
+    if (state.viewMode === 'calendar' && !isNarrowScreen()) {
+      var r = calendarRange();
+      params.push('dueFrom=' + r.from, 'dueTo=' + r.to, 'sort=due', 'page=1', 'pageSize=100');
+      return params.join('&');
+    }
     if (state.taskSort !== 'created') params.push('sort=' + encodeURIComponent(state.taskSort));
     params.push('page=' + state.page);
     params.push('pageSize=' + state.pageSize);
@@ -2259,6 +2287,11 @@
   function clearSearch() { setState({ searchQuery: '', page: 1 }); fetchTasks().then(render); }
   function setViewMode(mode) {
     if (state.viewMode === mode) return;
+    // The calendar asks the server for one month by due date; the list and
+    // board go back to paging through everything.
+    var refetch = mode === 'calendar' || state.viewMode === 'calendar';
+    try { localStorage.setItem('directive_view', mode); } catch (e) {}
+    if (refetch) { state.viewMode = mode; state.page = 1; state.tasksLoaded = false; render(); fetchTasks().then(render); return; }
     // A full re-render always mounts a fresh thumb node, so a CSS `transition`
     // on it never has a "before" state to animate from — it would just snap.
     // A CSS `animation` (keyframes) plays on mount regardless, so we drive
@@ -2412,6 +2445,7 @@
   function dismissTopmost() {
     if (state.openSelect) { closeMSelect(); return true; }
     if (state.datePicker) { setState({ datePicker: null }); return true; }
+    if (state.paletteOpen) { closePalette(); return true; }
     if (state.lightbox) { closeLightbox(); return true; }
     if (state.iconPickerOpen) { closeIconPicker(); return true; }
     if (state.mention) { setState({ mention: null }); return true; }
@@ -2429,6 +2463,7 @@
     if (state.settingsPhase === 'open') { closeSettings(); return true; }
     if (state.accentPickerPhase === 'open') { closeAccentPicker(); return true; }
     if (closeDropdowns()) return true;
+    if (selectedIds().length) { clearSelection(); return true; }
     if (state.mobileNavOpen || state.mobileCalendarOpen) { closeMobileDrawers(); return true; }
     return false;
   }
@@ -2864,13 +2899,13 @@
     var pre = prefillId ? findDept(prefillId) : null;
     setState({
       mappingModalPhase: 'open',
-      mappingForm: { deptId: prefillId || '', name: pre ? pre.name : '', calendarList: pre ? (pre.calendarList || '') : '', tag: pre ? (pre.tag || '') : '' }
+      mappingForm: { deptId: prefillId || '', name: pre ? pre.name : '', calendarList: pre ? (pre.calendarList || '') : '', tag: pre ? (pre.tag || '') : '', color: pre ? (pre.color || '') : '' }
     });
   }
 
   function selectMappingDept(id) {
     var d = id ? findDept(id) : null;
-    setState({ mappingForm: { deptId: id, name: d ? d.name : '', calendarList: d ? (d.calendarList || '') : '', tag: d ? (d.tag || '') : '' } });
+    setState({ mappingForm: { deptId: id, name: d ? d.name : '', calendarList: d ? (d.calendarList || '') : '', tag: d ? (d.tag || '') : '', color: d ? (d.color || '') : '' } });
   }
 
   // Deleting a department keeps its tasks - the server clears
@@ -2923,7 +2958,7 @@
   function saveMapping() {
     var f = state.mappingForm;
     if (!f.deptId) return;
-    var body = { calendarList: f.calendarList.trim(), tag: f.tag.trim() };
+    var body = { calendarList: f.calendarList.trim(), tag: f.tag.trim(), color: f.color || '' };
     if (f.name && f.name.trim()) body.name = f.name.trim();
     api('PUT', '/api/departments/' + f.deptId, body).then(function () {
       return api('GET', '/api/departments');
@@ -3017,6 +3052,9 @@
 
   // Status as a small ring that fills as work moves on: empty to do, half in
   // progress, three quarters in review, full with a check when done.
+  // The server stores "Unassigned" as text for tasks made without anyone.
+  function hasAssignee(t) { return !!t.assignee && t.assignee !== 'Unassigned'; }
+
   function statusIconHtml(status, color, size) {
     size = size || 16;
     var ring = '<circle cx="10" cy="10" r="7.5" fill="none" stroke="' + color + '" stroke-width="2"></circle>';
@@ -3042,12 +3080,14 @@
     var dot = (maps.statusStyle[t.status] || maps.statusStyle.todo).dot;
     var done = t.status === 'done';
     var cell = 'display:flex; align-items:center; min-width:0; padding:0 12px; height:44px; border-bottom:1px solid ' + c.outlineVariant + ';';
-    var dept = t.deptId ? '<span style="max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:500; padding:2px 8px; border-radius:var(--r-xs); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';">' + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span>' : '';
+    var dept = t.deptId ? '<span style="display:inline-flex; align-items:center; gap:6px; max-width:100%; overflow:hidden; font-size:12px; font-weight:500; padding:2px 8px; border-radius:var(--r-xs); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';">' + deptDot(t.deptId, 7) + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span></span>' : '';
     // One row is one control: the cells sit on the table's own columns through
     // subgrid, so the whole row lights up under the pointer and takes a single
     // stop in the tab order, instead of six cells each reacting on their own.
-    return '<div class="interactive task-row' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + '" data-action="openTask" data-id="' + t.id + '" style="grid-column:1 / -1; display:grid; grid-template-columns:subgrid;">'
-      + '<div title="' + esc(v.statusLabel) + '" style="' + cell + ' justify-content:center; padding:0 0 0 8px;">' + statusIconHtml(t.status, dot) + '<span style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0);">' + esc((STATUS_META[shown] || STATUS_META.todo).label) + '</span></div>'
+    return '<div class="interactive task-row' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + (state.selected[t.id] ? ' is-selected' : '') + '" data-action="openTask" data-id="' + t.id + '" style="grid-column:1 / -1; display:grid; grid-template-columns:subgrid;' + (state.selected[t.id] ? ' background:' + c.primaryContainer + ';' : '') + '">'
+      + '<div title="' + esc(v.statusLabel) + '" style="' + cell + ' justify-content:center; padding:0 0 0 8px;">'
+      +   (canWriteDept(t.deptId) ? '<span class="sel-box' + (state.selected[t.id] ? ' on' : '') + '" data-action="toggleSelect" data-id="' + t.id + '" role="checkbox" aria-checked="' + (state.selected[t.id] ? 'true' : 'false') + '" aria-label="' + esc(T('Select {task}', { task: t.title })) + '"></span>' : '')
+      +   '<span class="status-ring">' + statusIconHtml(t.status, dot) + '</span><span style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0);">' + esc((STATUS_META[shown] || STATUS_META.todo).label) + '</span></div>'
       + '<div style="' + cell + ' gap:8px;">'
       +   taskIconHtml(t, 16)
       +   '<span style="flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; font-weight:500; color:' + (done ? c.textMuted : c.onSurface) + ';">' + esc(t.title) + '</span>'
@@ -3055,7 +3095,7 @@
       +   (t.match ? '<span style="flex:1; min-width:0;">' + searchMatchHtml(t, c) + '</span>' : '')
       + '</div>'
       + '<div style="' + cell + '">' + dept + '</div>'
-      + '<div style="' + cell + ' gap:8px;">' + (t.assignee ? assigneeAvatarHtml(t, v, 20) + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; color:' + c.onSurfaceVariant + ';">' + esc(t.assignee) + '</span>' : '<span style="font-size:13px; color:' + c.textMuted + ';">' + T('Unassigned') + '</span>') + '</div>'
+      + '<div style="' + cell + ' gap:8px;">' + (hasAssignee(t) ? assigneeAvatarHtml(t, v, 20) + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; color:' + c.onSurfaceVariant + ';">' + esc(t.assignee) + '</span>' : '<span style="font-size:13px; color:' + c.textMuted + ';">' + T('Unassigned') + '</span>') + '</div>'
       + '<div class="tnum" style="' + cell + ' font-size:13px; white-space:nowrap; color:' + (t.overdue ? c.error : (t.dueDate ? c.onSurfaceVariant : c.textMuted)) + '; font-weight:' + (t.overdue ? 500 : 400) + ';">' + esc(t.dueDate ? relativeDue(t.dueDate, t.overdue) : '—') + '</div>'
       + '<div title="' + esc(T(t.priority)) + '" style="' + cell + ' justify-content:center;">' + priorityIconHtml(t.priority, v.priorityColor, c.outlineVariant) + '</div>'
       + '</div>';
@@ -3104,8 +3144,8 @@
     var dot = (maps.statusStyle[t.status] || maps.statusStyle.todo).dot;
     var done = t.status === 'done';
     var bits = [];
-    if (t.deptId) bits.push(esc(nodeLabel(t.deptId).split(' · ').pop()));
-    if (t.assignee) bits.push(esc(t.assignee));
+    if (t.deptId) bits.push(deptDot(t.deptId, 7).replace('style="', 'style="display:inline-block; margin-right:5px; vertical-align:1px; ') + esc(nodeLabel(t.deptId).split(' · ').pop()));
+    if (hasAssignee(t)) bits.push(esc(t.assignee));
     var due = t.dueDate ? '<span class="tnum" style="color:' + (t.overdue ? c.error : c.onSurfaceVariant) + '; font-weight:' + (t.overdue ? 500 : 400) + ';">' + esc(relativeDue(t.dueDate, t.overdue)) + '</span>' : '';
     return '<div class="interactive task-row' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + '" data-action="openTask" data-id="' + t.id + '" style="display:flex; align-items:flex-start; gap:12px; padding:12px 4px; border-bottom:1px solid ' + c.outlineVariant + ';">'
       + '<span style="padding-top:2px;">' + statusIconHtml(t.status, dot, 18) + '</span>'
@@ -3115,6 +3155,229 @@
       +   searchMatchHtml(t, c)
       + '</div>'
       + '<span style="padding-top:3px;">' + priorityIconHtml(t.priority, maps.priorityColor[t.priority], c.outlineVariant) + '</span>'
+      + '</div>';
+  }
+
+  // ---- command palette (Cmd/Ctrl+K) ----
+  // One box to jump anywhere or do anything: commands and departments match
+  // as you type, and tasks are searched on the server like the search bar.
+  var paletteSearchTimer = null, paletteToken = 0;
+  function openPalette() {
+    closeDropdowns();
+    setState({ paletteOpen: true, paletteQuery: '', paletteIndex: 0, paletteTasks: [] });
+    focusLater('paletteInput');
+  }
+  function closePalette() { if (state.paletteOpen) setState({ paletteOpen: false }); }
+  function paletteCommands() {
+    var cmds = [];
+    var add = function (label, hint, run, icon) { cmds.push({ label: label, hint: hint || '', run: run, icon: icon || '' }); };
+    if (canCreateTask()) add(T('New task'), 'C', function () { openTaskModal(); }, ICON.plus);
+    add(T('All Tasks'), '', function () { selectNode('all'); });
+    add(T('My Tasks'), '', function () { selectNode('mine'); });
+    flattenDeptOptions().forEach(function (o) { add(o.label, T('Department'), function () { selectNode(o.id); }); });
+    add(T('List view'), '1', function () { setViewMode('list'); }, ICON.listView);
+    add(T('Board view'), '2', function () { setViewMode('grid'); }, ICON.gridView);
+    if (!isNarrowScreen()) add(T('Calendar view'), '3', function () { setViewMode('calendar'); });
+    add(T('Search tasks'), '/', function () { focusSearch(); }, ICON.search);
+    add(T('Schedule'), '', function () { toggleMobileCalendar(); });
+    add(T('Theme: Light'), '', function () { setThemeMode('light'); }, ICON.themeLight);
+    add(T('Theme: Dark'), '', function () { setThemeMode('dark'); }, ICON.themeDark);
+    add(T('Theme: System'), '', function () { setThemeMode('system'); }, ICON.themeSystem);
+    add(T('Settings'), '', function () { openSettings(); });
+    add(T('Trash'), '', function () { openTrash(); }, ICON.trash);
+    add(T('Guide'), '?', function () { openGuide(); });
+    return cmds;
+  }
+  function paletteItems() {
+    var q = state.paletteQuery.trim().toLowerCase();
+    var cmds = paletteCommands().filter(function (x) { return !q || x.label.toLowerCase().indexOf(q) !== -1; });
+    var tasks = (q ? state.paletteTasks : []).map(function (t) {
+      return { label: t.title, hint: t.deptId ? nodeLabel(t.deptId).split(' · ').pop() : '', task: t, run: function () { openTaskDetail(t.id); } };
+    });
+    return { cmds: cmds.slice(0, q ? 6 : 12), tasks: tasks.slice(0, 8) };
+  }
+  function setPaletteQuery(v) {
+    state.paletteQuery = v;
+    state.paletteIndex = 0;
+    clearTimeout(paletteSearchTimer);
+    var q = v.trim();
+    if (!q) { state.paletteTasks = []; render(); return; }
+    render();
+    var token = ++paletteToken;
+    paletteSearchTimer = setTimeout(function () {
+      api('GET', '/api/tasks?scope=all&pageSize=8&q=' + encodeURIComponent(q)).then(function (res) {
+        if (token !== paletteToken || !state.paletteOpen) return;
+        setState({ paletteTasks: (res && res.tasks) || [] });
+      }).catch(function () {});
+    }, 180);
+  }
+  function runPaletteItem(i) {
+    var items = paletteItems(), all = items.cmds.concat(items.tasks);
+    var item = all[i];
+    if (!item) return;
+    setState({ paletteOpen: false });
+    item.run();
+  }
+  function palette(c) {
+    if (!state.paletteOpen) return '';
+    var items = paletteItems(), all = items.cmds.concat(items.tasks);
+    var idx = Math.min(state.paletteIndex, Math.max(0, all.length - 1));
+    var maps = styleMaps(c);
+    var row = function (x, i) {
+      var on = i === idx;
+      var lead = x.task ? statusIconHtml(x.task.status, (maps.statusStyle[x.task.status] || maps.statusStyle.todo).dot, 14) : '<span style="display:flex; width:16px; justify-content:center; color:' + c.onSurfaceVariant + ';">' + (x.icon ? x.icon.replace(/width="\d+" height="\d+"/, 'width="15" height="15"') : '') + '</span>';
+      return '<div class="interactive" role="option" id="palette-opt-' + i + '" aria-selected="' + (on ? 'true' : 'false') + '" data-action="runPaletteItem" data-id="' + i + '" style="display:flex; align-items:center; gap:10px; height:38px; padding:0 10px; border-radius:var(--r-sm); font-size:14px; background:' + (on ? c.surfaceContainerHigh : 'transparent') + ';">'
+        + lead + '<span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(x.label) + '</span>'
+        + (x.hint ? '<span style="font-size:12px; color:' + c.textMuted + ';' + (x.hint.length <= 2 ? ' min-width:20px; text-align:center; padding:1px 5px; border-radius:var(--r-xs); border:1px solid ' + c.outlineVariant + ';' : '') + '">' + esc(x.hint) + '</span>' : '')
+        + '</div>';
+    };
+    var section = function (title, list, offset) { return list.length ? '<div style="padding:8px 10px 4px; font-size:12px; font-weight:500; color:' + c.textMuted + ';">' + T(title) + '</div>' + list.map(function (x, i) { return row(x, i + offset); }).join('') : ''; };
+    var empty = !all.length ? '<div style="padding:24px; text-align:center; font-size:13px; color:' + c.textMuted + ';">' + T('Nothing matches.') + '</div>' : '';
+    return '<div class="modal-overlay overlay-in" data-backdrop="closePalette" style="position:fixed; background:rgba(0,0,0,.25); display:flex; align-items:flex-start; justify-content:center; padding-top:14vh; z-index:97;">'
+      + '<div role="dialog" aria-modal="true" aria-label="' + T('Command menu') + '" class="card-in" style="width:560px; max-width:94vw; max-height:64vh; display:flex; flex-direction:column; background:' + c.surface + '; border-radius:var(--r-lg); box-shadow:var(--e3); overflow:hidden;">'
+      +   '<div style="display:flex; align-items:center; gap:10px; padding:0 16px; border-bottom:1px solid ' + c.outlineVariant + ';"><span style="display:flex; color:' + c.textMuted + ';">' + ICON.search + '</span>'
+      +     '<input id="paletteInput" role="combobox" aria-expanded="true" aria-controls="paletteList" aria-activedescendant="palette-opt-' + idx + '" autocomplete="off" value="' + esc(state.paletteQuery) + '" placeholder="' + T('Type a command or search tasks…') + '" style="flex:1; height:52px; border:none; outline:none; box-shadow:none !important; font-size:15px; background:transparent; color:' + c.onSurface + ';"></div>'
+      +   '<div id="paletteList" role="listbox" style="flex:1; min-height:0; overflow-y:auto; padding:4px 8px 8px;">'
+      +     section('Commands', items.cmds, 0) + section('Tasks', items.tasks, items.cmds.length) + empty
+      +   '</div>'
+      +   '<div style="display:flex; gap:14px; padding:8px 16px; border-top:1px solid ' + c.outlineVariant + '; font-size:12px; color:' + c.textMuted + ';"><span>↑↓ ' + T('move') + '</span><span>Enter ' + T('open') + '</span><span>Esc ' + T('close') + '</span><span style="margin-left:auto;">' + T('Shortcuts: C new · / search · J K move · X select · 1 2 3 views') + '</span></div>'
+      + '</div></div>';
+  }
+  function focusSearch() {
+    if (isNarrowScreen()) { openMobileSearch(); return; }
+    var el = document.getElementById('searchInput');
+    if (el) { el.focus(); el.select(); }
+  }
+  // J and K walk the rows of the list; the focused row opens on Enter, as
+  // any control does, and X ticks it.
+  function moveRowFocus(delta) {
+    var rows = Array.prototype.slice.call(document.querySelectorAll('#task-list .task-row, #task-list .board-card'));
+    if (!rows.length) return;
+    var at = rows.indexOf(document.activeElement && document.activeElement.closest ? document.activeElement.closest('.task-row, .board-card') : null);
+    var next = rows[at < 0 ? (delta > 0 ? 0 : rows.length - 1) : Math.max(0, Math.min(rows.length - 1, at + delta))];
+    next.focus();
+    if (next.scrollIntoView) next.scrollIntoView({ block: 'nearest' });
+  }
+
+  // ---- selecting several tasks ----
+  // Rows can be ticked (hover the status ring, or press x on a focused row);
+  // a bar at the bottom then changes or removes them all at once.
+  function selectedIds() { return Object.keys(state.selected).map(Number).filter(function (id) { return state.selected[id]; }); }
+  function toggleSelect(id) {
+    var next = Object.assign({}, state.selected);
+    if (next[id]) delete next[id]; else next[id] = true;
+    setState({ selected: next });
+  }
+  function clearSelection() { if (selectedIds().length) setState({ selected: {} }); }
+  function selectAllShown() {
+    var next = {};
+    state.tasks.forEach(function (t) { if (canWriteDept(t.deptId)) next[t.id] = true; });
+    setState({ selected: next });
+  }
+  function bulkRun(label, each) {
+    var ids = selectedIds();
+    if (!ids.length || state.bulkBusy) return;
+    setState({ bulkBusy: true });
+    var failed = 0;
+    ids.reduce(function (p, id) {
+      return p.then(function () { return each(id, findLoadedTask(id)); }).catch(function () { failed++; });
+    }, Promise.resolve()).then(function () {
+      setState({ bulkBusy: false, selected: {} });
+      showSnackbar(failed ? T('{n} could not be changed', { n: failed }) : T(label, { n: ids.length }));
+      return refreshTasks();
+    }).then(render);
+  }
+  function bulkSetStatus(status) {
+    bulkRun('Changed {n} tasks', function (id) { return api('PUT', '/api/tasks/' + id + '/status', { status: status }); });
+  }
+  function bulkPatch(changes) {
+    bulkRun('Changed {n} tasks', function (id, t) {
+      if (!t) return Promise.reject(new Error('not loaded'));
+      var payload = { title: t.title, description: t.description || '', deptId: t.deptId || '', assignee: t.assignee || '', assigneeId: t.assigneeId || 0, priority: t.priority, dueDate: t.dueDate || '', status: t.status, calendarVisible: !!t.calendarVisible, recurrence: t.recurrence || '' };
+      Object.keys(changes).forEach(function (k) { payload[k] = changes[k]; });
+      return api('PUT', '/api/tasks/' + id, payload);
+    });
+  }
+  function bulkDelete() {
+    bulkRun('Moved {n} tasks to the trash', function (id) { return api('DELETE', '/api/tasks/' + id); });
+  }
+  function bulkBar(c) {
+    var ids = selectedIds();
+    if (!ids.length) return '';
+    var chip = 'height:32px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:13px; background:' + c.surface + '; color:' + c.onSurface + ';';
+    var maps = styleMaps(c);
+    var sel = function (id, label, opts) {
+      return mSelectFrom('<select id="' + id + '" aria-label="' + T(label) + '" style="' + chip + '"><option value="" selected>' + T(label) + '</option>' + opts + '</select>', c, 'pill');
+    };
+    return '<div class="bulk-bar" role="toolbar" aria-label="' + T('Selected tasks') + '" style="position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:70; display:flex; align-items:center; gap:8px; padding:8px 8px 8px 14px; border-radius:var(--r-md); background:' + c.surface + '; box-shadow:var(--e3);' + (state.bulkBusy ? ' opacity:.6; pointer-events:none;' : '') + '">'
+      + '<span class="tnum" style="font-size:13px; font-weight:600; margin-right:4px; white-space:nowrap;">' + T('{n} selected', { n: ids.length }) + '</span>'
+      + sel('bulkStatusSelect', 'Status', EDITABLE_STATUSES.map(function (st) { return '<option value="' + st + '">' + statusIconHtml(st, maps.statusStyle[st].dot, 14) + '<span style="margin-left:8px;">' + TAB_LABELS[st] + '</span></option>'; }).join(''))
+      + sel('bulkPrioritySelect', 'Priority', ['High', 'Medium', 'Low'].map(function (p) { return '<option value="' + p + '">' + priorityIconHtml(p, maps.priorityColor[p], c.outlineVariant) + '<span style="margin-left:8px;">' + T(p) + '</span></option>'; }).join(''))
+      + sel('bulkAssigneeSelect', 'Assignee', '<option value="0">' + T('Unassigned') + '</option>' + state.members.map(function (m) { return '<option value="' + m.id + '">' + esc(m.displayName) + '</option>'; }).join(''))
+      + '<span class="interactive" data-action="bulkDelete" title="' + T('Move to the trash') + '" aria-label="' + T('Move to the trash') + '" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--r-sm); color:' + c.error + ';">' + ICON.trash + '</span>'
+      + '<span style="width:1px; height:20px; background:' + c.outlineVariant + ';"></span>'
+      + '<span class="interactive" data-action="selectAllShown" style="height:32px; padding:0 8px; display:flex; align-items:center; border-radius:var(--r-sm); font-size:13px; color:' + c.onSurfaceVariant + '; white-space:nowrap;">' + T('Select all') + '</span>'
+      + '<span class="interactive" data-action="clearSelection" title="' + T('Clear selection') + ' (Esc)" aria-label="' + T('Clear selection') + '" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
+      + '</div>';
+  }
+
+  // ---- calendar view ----
+  // Six weeks starting on the Sunday before the 1st, so every day of the
+  // month is in the grid; tasks are fetched by due date for that span.
+  function calendarMonth() {
+    if (/^\d{4}-\d{2}$/.test(state.calMonth)) return state.calMonth;
+    return isoOf(new Date()).slice(0, 7);
+  }
+  function calendarRange() {
+    var m = calendarMonth();
+    var first = new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1);
+    var start = new Date(first); start.setDate(1 - first.getDay());
+    var end = new Date(start); end.setDate(start.getDate() + 41);
+    return { first: first, start: start, from: isoOf(start), to: isoOf(end) };
+  }
+  function shiftCalendar(delta) {
+    var m = calendarMonth();
+    var d = delta === 0 ? new Date() : new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1 + delta, 1);
+    state.calMonth = isoOf(d).slice(0, 7);
+    render();
+    fetchTasks().then(render);
+  }
+  function calendarHtml(items, maps, c) {
+    var r = calendarRange();
+    var byDay = {};
+    items.forEach(function (t) { if (t.dueDate) (byDay[t.dueDate] = byDay[t.dueDate] || []).push(t); });
+    var today = isoOf(new Date());
+    var month = r.first.getMonth();
+    var head = (LANG === 'ko' ? ['일', '월', '화', '수', '목', '금', '토'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']).map(function (x, i) {
+      return '<div style="padding:6px 8px; font-size:12px; font-weight:500; color:' + (i === 0 ? c.error : c.textMuted) + ';">' + x + '</div>';
+    }).join('');
+    var cells = '';
+    for (var i = 0; i < 42; i++) {
+      var d = new Date(r.start); d.setDate(r.start.getDate() + i);
+      var iso = isoOf(d), inMonth = d.getMonth() === month, list = byDay[iso] || [];
+      var shown = list.slice(0, 4);
+      cells += '<div class="cal-cell" style="min-width:0; min-height:112px; padding:6px; display:flex; flex-direction:column; gap:3px; border-right:1px solid ' + c.outlineVariant + '; border-bottom:1px solid ' + c.outlineVariant + '; background:' + (inMonth ? c.surface : c.surfaceContainerLow) + ';">'
+        + '<span class="tnum" style="align-self:flex-start; min-width:22px; height:22px; padding:0 6px; display:inline-flex; align-items:center; justify-content:center; border-radius:11px; font-size:12px; font-weight:' + (iso === today ? 600 : 400) + '; ' + (iso === today ? 'background:' + c.primary + '; color:' + c.onPrimary + ';' : 'color:' + (inMonth ? c.onSurfaceVariant : c.textMuted) + ';') + '">' + d.getDate() + '</span>'
+        + shown.map(function (t) {
+            var col = deptColor(t.deptId) || c.outline;
+            var done = t.status === 'done';
+            return '<div class="interactive" data-action="openTask" data-id="' + t.id + '" title="' + esc(t.title) + '" style="display:flex; align-items:center; gap:5px; min-width:0; height:22px; padding:0 6px; border-radius:4px; font-size:12px; background:' + c.surfaceContainer + '; box-shadow:inset 3px 0 0 ' + col + '; color:' + (done ? c.textMuted : (t.overdue ? c.error : c.onSurface)) + ';">'
+              + statusIconHtml(t.status, (maps.statusStyle[t.status] || maps.statusStyle.todo).dot, 11)
+              + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;' + (done ? ' text-decoration:line-through;' : '') + '">' + esc(t.title) + '</span></div>';
+          }).join('')
+        + (list.length > shown.length ? '<span title="' + esc(list.slice(shown.length).map(function (t) { return t.title; }).join('\n')) + '" style="font-size:12px; color:' + c.textMuted + '; padding-left:6px;">' + T('+{n} more', { n: list.length - shown.length }) + '</span>' : '')
+        + '</div>';
+    }
+    var nav = function (delta, label, inner) { return '<span class="interactive" data-action="shiftCalendar" data-id="' + delta + '" aria-label="' + T(label) + '" style="display:inline-flex; align-items:center; justify-content:center; height:30px; min-width:30px; padding:0 8px; border-radius:var(--r-sm); font-size:13px; color:' + c.onSurfaceVariant + ';">' + inner + '</span>'; };
+    var undated = state.taskMeta.total >= 100 ? '<span style="font-size:12px; color:' + c.textMuted + ';">' + T('Showing the first 100 tasks due this month.') + '</span>' : '';
+    return '<div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">'
+      +   '<span style="font-size:15px; font-weight:600; margin-right:6px;">' + esc(r.first.toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</span>'
+      +   nav(-1, 'Previous month', ICON.chevronLeft) + nav(0, 'Today', T('Today')) + nav(1, 'Next month', ICON.chevronRight)
+      +   '<span style="flex:1;"></span>' + undated
+      + '</div>'
+      + '<div role="grid" aria-label="' + T('Calendar') + '" style="display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); border-top:1px solid ' + c.outlineVariant + '; border-left:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); overflow:hidden;">'
+      +   head.replace(/<div style="/g, '<div style="border-right:1px solid ' + c.outlineVariant + '; border-bottom:1px solid ' + c.outlineVariant + '; background:' + c.surfaceContainerLow + '; ')
+      +   cells
       + '</div>';
   }
 
@@ -3139,10 +3402,10 @@
     var cls = 'interactive board-card' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + '';
     return '<div class="' + cls + '"' + (writable ? ' draggable="true"' : '') + ' data-action="openTask" data-id="' + t.id + '" style="background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e1); padding:12px; min-width:0; display:flex; flex-direction:column; gap:8px;">'
       + '<div style="display:flex; align-items:flex-start; gap:6px; font-size:14px; font-weight:500; line-height:1.4; color:' + (t.status === 'done' ? c.textMuted : c.onSurface) + ';">' + taskIconHtml(t, 16) + '<span style="min-width:0; overflow-wrap:anywhere;">' + esc(t.title) + '</span></div>'
-      + '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px; color:' + c.textMuted + ';">' + (t.deptId ? '<span style="font-weight:500; padding:1px 6px; border-radius:var(--r-xs); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';">' + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span>' : '') + taskBadges(t, c) + '</div>'
+      + '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px; color:' + c.textMuted + ';">' + (t.deptId ? '<span style="display:inline-flex; align-items:center; gap:5px; font-weight:500; padding:1px 6px; border-radius:var(--r-xs); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';">' + deptDot(t.deptId, 6) + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span>' : '') + taskBadges(t, c) + '</div>'
       + searchMatchHtml(t, c)
       + '<div style="display:flex; align-items:center; gap:6px;">'
-      +   (t.assignee ? assigneeAvatarHtml(t, v, 20) : '') + '<span style="flex:1;"></span>'
+      +   (hasAssignee(t) ? assigneeAvatarHtml(t, v, 20) : '') + '<span style="flex:1;"></span>'
       +   (t.dueDate ? '<span class="tnum" style="font-size:12px; color:' + (t.overdue ? c.error : c.onSurfaceVariant) + '; font-weight:' + (t.overdue ? 500 : 400) + ';">' + esc(relativeDue(t.dueDate, t.overdue)) + '</span>' : '')
       +   priorityIconHtml(t.priority, v.priorityColor, c.outlineVariant)
       + '</div>'
@@ -3241,6 +3504,8 @@
       + backupsModal(c)
       + remindersModal(c)
       + passwordModal(c)
+      + bulkBar(c)
+      + palette(c)
       + snackbar(c)
       + lightbox(c)
       + mSelectMenu(c)
@@ -3402,6 +3667,7 @@
       +   '<div class="desktop-search-bar" style="align-items:center; gap:8px; width:420px; max-width:100%; height:40px; padding:0 14px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">'
       +     ICON.search
       +     '<input id="searchInput" data-field="searchQuery" value="' + esc(state.searchQuery) + '" placeholder="' + T('Search tasks, comments, files') + '" style="border:none; outline:none; background:transparent; flex:1; font-size:14px; color:inherit;"></input>'
+      +     (state.searchQuery ? '' : '<span class="interactive" data-action="openPalette" title="' + T('Command menu') + '" style="flex-shrink:0; font-size:12px; padding:1px 6px; border-radius:var(--r-xs); border:1px solid ' + c.outlineVariant + '; color:' + c.textMuted + ';">' + (/Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘K' : 'Ctrl K') + '</span>')
       +     searchClear
       +   '</div>'
       +   '<div class="interactive mobile-search-btn" data-action="openMobileSearch" title="' + T('Search') + '" style="align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; color:' + c.onSurfaceVariant + ';">' + ICON.search + '</div>'
@@ -3468,15 +3734,15 @@
         var childSelected = state.selectedNode === child.id;
         var childCount = state.summary.byDept[child.id] || 0;
         return '<div class="interactive' + (childSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="' + esc(child.id) + '"' + (childSelected ? ' aria-current="true"' : '') + ' style="display:flex; align-items:center; padding:7px 10px; font-size:13px; font-weight:' + (childSelected ? 600 : 400) + '; border-radius:var(--r-sm); background:' + (childSelected ? c.surfaceContainerHigh : 'transparent') + '; color:' + (childSelected ? c.onSurface : c.onSurfaceVariant) + ';">'
-          + '<span style="flex:1;">' + esc(child.name) + '</span>'
+          + (child.color ? '<span style="margin-right:8px; display:flex;">' + deptDot(child.id, 8) + '</span>' : '') + '<span style="flex:1;">' + esc(child.name) + '</span>'
           + '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + childCount + '</span>'
           + '</div>';
       }).join('');
 
-      return '<div class="' + (selected ? oneShotClass('node').trim() : '') + '" class="dept-row" style="display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:var(--r-sm); background:' + (selected ? c.surfaceContainerHigh : 'transparent') + '; margin-top:2px;">'
+      return '<div class="dept-row' + (selected ? oneShotClass('node') : '') + '" style="display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:var(--r-sm); background:' + (selected ? c.surfaceContainerHigh : 'transparent') + '; margin-top:2px;">'
         + '<svg class="interactive tree-chevron' + (expanded ? ' expanded' : '') + (anim ? ' ' + anim : '') + '" data-action="toggleExpand" data-id="' + esc(d.id) + '" role="button" aria-expanded="' + (expanded ? 'true' : 'false') + '" aria-controls="subtree-' + esc(d.id) + '" aria-label="' + (expanded ? 'Collapse ' : 'Expand ') + esc(d.name) + '" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 5l6 5-6 5"></path></svg>'
         + '<span class="interactive" data-action="selectNode" data-id="' + esc(d.id) + '" style="display:flex; align-items:center; gap:6px; flex:1; min-width:0; border-radius:var(--r-sm);">'
-        +   '<span style="font-size:14px; font-weight:' + (selected ? 600 : 400) + ';">' + esc(d.name) + '</span>'
+        +   deptDot(d.id, 8) + '<span style="font-size:14px; font-weight:' + (selected ? 600 : 400) + ';">' + esc(d.name) + '</span>'
         + '</span>'
         + '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + deptCount + '</span>'
         + (isAdmin() ? '<span class="interactive dept-more" data-action="openMapping" data-id="' + esc(d.id) + '" title="' + T('Department settings') + '" style="display:flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:var(--r-sm); flex-shrink:0; color:' + c.onSurfaceVariant + ';">' + ICON.more + '</span>' : '')
@@ -3582,6 +3848,8 @@
       bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" style="flex:1; min-height:0; overflow:auto;"><div style="display:flex; flex-direction:column; border-top:1px solid ' + c.outlineVariant + ';">'
         + (loadingNow ? skeletonRows(c, 6) : (pageItems.length ? pageItems.map(function (t) { return taskMobileRow(t, maps, c); }).join('') : emptyStateHtml(c)))
         + '</div></div>';
+    } else if (state.viewMode === 'calendar') {
+      bodyHtml = '<div data-scroll-key="calendar" style="flex:1; min-height:0; overflow:auto;">' + calendarHtml(loadingNow ? [] : pageItems, maps, c) + '</div>';
     } else if (state.viewMode === 'grid') {
       bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" style="flex:1; min-height:0; overflow:auto;">'
         + (loadingNow ? '<div style="display:grid;">' + skeletonRows(c, 6) + '</div>' : (pageItems.length ? boardHtml(pageItems, maps, c) : '<div style="display:grid;">' + emptyStateHtml(c) + '</div>'))
@@ -3589,7 +3857,7 @@
     } else {
       var rowsHtml = pageItems.map(function (t) { return taskRow(t, maps, c); }).join('');
       var emptyHtml = loadingNow ? skeletonRows(c, 8) : (pageItems.length === 0 ? emptyStateHtml(c) : '');
-      bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" style="flex:1; min-height:0; overflow:auto;">'
+      bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" class="' + (selectedIds().length ? 'selecting' : '') + '" style="flex:1; min-height:0; overflow:auto;">'
         + '<div role="table" style="display:grid; grid-template-columns:36px minmax(240px,1fr) 140px 168px 112px 52px; min-width:760px;">'
         +   [['', T('Status')], [T('Task'), '', 'title'], [T('Department')], [T('Assignee')], [T('Due Date'), '', 'due'], ['', T('Priority'), 'priority']].map(function (h, i) {
               // Columns the server can sort by sort when their heading is
@@ -3611,10 +3879,11 @@
       + '<div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px;">'
       +   '<div style="min-width:0; flex:1;"><div style="font-size:12px; color:' + c.onSurfaceVariant + '; margin-bottom:3px;">' + esc(pathLabel) + '</div><div class="page-title" title="' + esc(titleLabel) + '" style="font-size:24px; font-weight:600;">' + esc(titleLabel) + '</div></div>'
       +   '<div style="display:flex; align-items:center; gap:8px;">'
-      +     '<div class="view-toggle" style="position:relative; display:flex; align-items:center; gap:2px; padding:3px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + ';">'
-      +       '<div class="view-toggle-thumb' + (state.viewToggleAnim ? ' ' + state.viewToggleAnim : '') + '" style="background:' + c.surface + '; box-shadow:var(--e1); transform:translateX(' + (state.viewMode === 'grid' ? 32 : 0) + 'px);"></div>'
-      +       '<div class="interactive" data-action="setViewMode" data-id="list" title="' + T('List') + '" aria-label="' + T('List') + '" style="position:relative; z-index:1; width:30px; height:30px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; color:' + (state.viewMode === 'list' ? c.onSurface : c.onSurfaceVariant) + ';">' + ICON.listView + '</div>'
-      +       '<div class="interactive" data-action="setViewMode" data-id="grid" title="' + T('Board') + '" aria-label="' + T('Board') + '" style="position:relative; z-index:1; width:30px; height:30px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; color:' + (state.viewMode === 'grid' ? c.onSurface : c.onSurfaceVariant) + ';">' + ICON.gridView + '</div>'
+      +     '<div class="view-toggle" role="radiogroup" aria-label="' + T('View') + '" style="display:flex; align-items:center; gap:2px; padding:3px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + ';">'
+      +       [['list', 'List', ICON.listView], ['grid', 'Board', ICON.gridView], ['calendar', 'Calendar', ICON.calendarView.replace('width="19" height="19"', 'width="16" height="16"')]].map(function (v) {
+                var on = state.viewMode === v[0];
+                return '<div class="interactive" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setViewMode" data-id="' + v[0] + '" title="' + T(v[1]) + '" aria-label="' + T(v[1]) + '" style="width:30px; height:30px; border-radius:4px; display:flex; align-items:center; justify-content:center; color:' + (on ? c.onSurface : c.onSurfaceVariant) + '; background:' + (on ? c.surface : 'transparent') + ';' + (on ? ' box-shadow:var(--e1);' : '') + '">' + v[2] + '</div>';
+              }).join('')
       +     '</div>'
       +     '<div data-dropdown="filter" style="position:relative;">'
       +       '<div class="interactive filter-btn" data-action="toggleFilterOpen" title="' + T('Filter') + '" style="position:relative; display:flex; align-items:center; gap:6px; height:40px; padding:0 16px; border-radius:var(--r-sm); border:1px solid ' + (filtersActive() ? c.primary : c.outline) + '; color:' + (filtersActive() ? c.primary : c.onSurfaceVariant) + '; font-size:14px; font-weight:500;">' + ICON.filter + '<span class="btn-label">' + T('Filter') + '</span>'
@@ -4327,7 +4596,7 @@
         + '<option value="0"' + (assigneeCur === '0' ? ' selected' : '') + '>' + T('Unassigned') + '</option>'
         + state.members.map(function (m) { return '<option value="' + m.id + '"' + (assigneeCur === String(m.id) ? ' selected' : '') + '>' + esc(m.displayName) + '</option>'; }).join('')
         + '</select>', c)
-      : plain(t.assignee ? assigneeAvatarHtml(t, v, 20) + esc(t.assignee) : '<span style="color:' + c.textMuted + ';">' + T('Unassigned') + '</span>');
+      : plain(hasAssignee(t) ? assigneeAvatarHtml(t, v, 20) + esc(t.assignee) : '<span style="color:' + c.textMuted + ';">' + T('Unassigned') + '</span>');
     var priorityValue = writable
       ? mSelectFrom('<select id="detailPrioritySelect" aria-label="' + T('Priority') + '" style="' + fieldStyle + '">'
         + ['High', 'Medium', 'Low'].map(function (p) { return '<option value="' + p + '"' + (p === t.priority ? ' selected' : '') + '>' + priorityIconHtml(p, maps.priorityColor[p], c.outlineVariant) + '<span style="margin-left:8px;">' + T(p) + '</span>' + '</option>'; }).join('')
@@ -4509,7 +4778,7 @@
       + '</div></div>';
   }
 
-  var BACKDROP_CLOSERS = { settings: 'closeSettings', trash: 'closeTrash', appPasswords: 'closeAppPasswords', backups: 'closeBackups', reminders: 'closeReminders', password: 'closePasswordModal' };
+  var BACKDROP_CLOSERS = { palette: 'closePalette', settings: 'closeSettings', trash: 'closeTrash', appPasswords: 'closeAppPasswords', backups: 'closeBackups', reminders: 'closeReminders', password: 'closePasswordModal' };
 
   function modalShell(name, phase, c, label, width, inner) {
     var mo = modalMotion(name, phase === 'closing');
@@ -4794,6 +5063,13 @@
       +   (f.deptId ? '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Name') + '</label>'
       +     '<input id="mappingNameInput" data-form="mappingForm" data-field="name" value="' + esc(f.name) + '" maxlength="60" style="height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>' : '')
       +   '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('The calendar label below is only for your own reference in the sidebar — the subscribe link works either way.') + '</div>'
+      +   (f.deptId ? '<div style="display:flex; flex-direction:column; gap:6px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Colour') + '</label>'
+      +     '<div role="radiogroup" aria-label="' + T('Colour') + '" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">'
+      +       [''].concat(DEPT_COLORS).map(function (col) {
+                var on = (f.color || '').toUpperCase() === col;
+                return '<span class="interactive" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setMappingColor" data-id="' + col + '" title="' + (col ? col : T('No colour')) + '" style="display:flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; ' + (col ? 'background:' + col + ';' : 'border:1.5px dashed ' + c.outline + ';') + ' box-shadow:' + (on ? '0 0 0 2px ' + c.surface + ', 0 0 0 4px ' + c.onSurface : 'none') + ';"></span>';
+              }).join('')
+      +     '</div></div>' : '')
       +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Calendar List Name') + '</label>'
       +     '<input id="mappingListInput" data-form="mappingForm" data-field="calendarList" value="' + esc(f.calendarList) + '" placeholder="' + T('e.g. Work / Dev-Backend') + '" style="height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>'
       +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Tag') + '</label>'
@@ -4810,6 +5086,15 @@
 
   // ---- event delegation ----
   var ACTIONS = {
+    closePalette: function () { closePalette(); },
+    toggleSelect: function (el) { toggleSelect(Number(el.getAttribute('data-id'))); },
+    clearSelection: function () { clearSelection(); },
+    selectAllShown: function () { selectAllShown(); },
+    bulkDelete: function () { bulkDelete(); },
+    openPalette: function () { openPalette(); },
+    runPaletteItem: function (el) { runPaletteItem(Number(el.getAttribute('data-id'))); },
+    shiftCalendar: function (el) { shiftCalendar(Number(el.getAttribute('data-id'))); },
+    setMappingColor: function (el) { setState({ mappingForm: Object.assign({}, state.mappingForm, { color: el.getAttribute('data-id') }) }); },
     sortByColumn: function (el) { var k = el.getAttribute('data-id'); setTaskSort(state.taskSort === k ? 'created' : k); },
     openSettings: function () { openSettings(); },
     closeSettings: function () { closeSettings(); },
@@ -4979,6 +5264,7 @@
 
   document.getElementById('root').addEventListener('input', function (e) {
     var el = e.target;
+    if (el.id === 'paletteInput') { setPaletteQuery(el.value); return; }
     if (el.tagName === 'TEXTAREA' && (el.classList.contains('autosize') || el.id === 'commentDraftInput')) fitTextarea(el);
     // Checked before the data-field gate below, which this input does not have.
     if (el.id === 'accentHexInput') { setAccentHex(el.value); return; }
@@ -5010,6 +5296,13 @@
     if (el.id === 'newTaskRepeatSelect') { setRepeatFreq(el.value); return; }
     if (el.id === 'detailStatusSelect') { setDetailStatus(el.value); return; }
     if (el.id === 'detailAssigneeSelect') { setDetailAssignee(el.value); return; }
+    if (el.id === 'bulkStatusSelect') { if (el.value) bulkSetStatus(el.value); return; }
+    if (el.id === 'bulkPrioritySelect') { if (el.value) bulkPatch({ priority: el.value }); return; }
+    if (el.id === 'bulkAssigneeSelect') {
+      if (el.value === '0') bulkPatch({ assignee: '', assigneeId: 0 });
+      else { var bm = memberById(Number(el.value)); if (bm) bulkPatch({ assignee: bm.displayName, assigneeId: bm.id }); }
+      return;
+    }
     if (el.id === 'detailPrioritySelect') { patchDetailTask({ priority: el.value }); return; }
     if (el.id === 'detailDeptSelect') { patchDetailTask({ deptId: el.value }); return; }
     if (el.id === 'filterSortSelect') { setTaskSort(el.value); return; }
@@ -5034,6 +5327,51 @@
 
   // A div with data-action is a button to everyone except the keyboard, which
   // sends Enter/Space and expects a click. Native controls already do this.
+  // Keyboard shortcuts that work anywhere on the page. Letters only act when
+  // no field has the focus, so typing a C into a comment never opens a form.
+  function typingInField(t) {
+    return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+  }
+  document.addEventListener('keydown', function (e) {
+    if (!state.user) return;
+    if ((e.metaKey || e.ctrlKey) && !e.altKey && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      if (state.paletteOpen) closePalette(); else openPalette();
+      return;
+    }
+    if (state.paletteOpen) {
+      var items = paletteItems(), n = items.cmds.length + items.tasks.length;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        state.paletteIndex = n ? (Math.min(state.paletteIndex, n - 1) + (e.key === 'ArrowDown' ? 1 : -1) + n) % n : 0;
+        render();
+        var opt = document.getElementById('palette-opt-' + state.paletteIndex);
+        if (opt && opt.scrollIntoView) opt.scrollIntoView({ block: 'nearest' });
+        return;
+      }
+      if (e.key === 'Enter') { e.preventDefault(); runPaletteItem(Math.min(state.paletteIndex, n - 1)); return; }
+      return;
+    }
+    if (e.metaKey || e.ctrlKey || e.altKey || typingInField(e.target)) return;
+    var modalOpen = state.newTaskModalPhase !== 'closed' || state.settingsPhase !== 'closed' || state.openSelect || state.datePicker;
+    if (modalOpen) return;
+    var k = e.key;
+    if (k === '/') { e.preventDefault(); focusSearch(); return; }
+    if (k === 'c' || k === 'C') { if (canCreateTask()) { e.preventDefault(); openTaskModal(); } return; }
+    if (state.detailPhase === 'open') return;
+    if (k === 'j' || k === 'J') { e.preventDefault(); moveRowFocus(1); return; }
+    if (k === 'k' || k === 'K') { e.preventDefault(); moveRowFocus(-1); return; }
+    if (k === 'x' || k === 'X') {
+      var row = document.activeElement && document.activeElement.closest && document.activeElement.closest('.task-row');
+      if (row && row.querySelector('.sel-box')) { e.preventDefault(); toggleSelect(Number(row.getAttribute('data-id'))); setTimeout(function () { var r = document.querySelector('.task-row[data-id="' + row.getAttribute('data-id') + '"]'); if (r) r.focus(); }, 0); }
+      return;
+    }
+    if (k === '1') { setViewMode('list'); return; }
+    if (k === '2') { setViewMode('grid'); return; }
+    if (k === '3' && !isNarrowScreen()) { setViewMode('calendar'); return; }
+    if (k === '?') { openPalette(); return; }
+  });
+
   document.getElementById('root').addEventListener('keydown', function (e) {
     // An open menu takes the arrows, Enter, Space and Tab; the field keeps focus.
     if (state.openSelect) {

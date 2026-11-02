@@ -759,3 +759,13 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: .38; cu
 .task-form .bare-field:focus { box-shadow: none !important; outline: none; }
 .task-form .bare-field::placeholder { color: var(--text-muted); }
 .task-form-chips .mselect-trigger:hover, .task-form-chips .date-trigger:hover { border-color: var(--outline) !important; }
+
+/* Row selection: the tick box takes the status ring's place on hover, on
+   keyboard focus, and whenever anything is selected. */
+.sel-box { display: none; width: 16px; height: 16px; border-radius: var(--r-xs); border: 2px solid var(--on-surface-variant); background: var(--surface); cursor: pointer; flex-shrink: 0; position: relative; }
+.sel-box.on { background: var(--primary); border-color: var(--primary); }
+.sel-box.on::after { content: ''; position: absolute; left: 3.5px; top: 0; width: 4px; height: 8px; border: solid var(--on-primary); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.task-row:hover .sel-box, .task-row:focus-visible .sel-box, .selecting .sel-box { display: block; }
+.task-row:hover .sel-box ~ .status-ring, .task-row:focus-visible .sel-box ~ .status-ring, .selecting .sel-box ~ .status-ring { display: none; }
+.status-ring { display: flex; }
+.bulk-bar { max-width: calc(100vw - 24px); overflow-x: auto; }

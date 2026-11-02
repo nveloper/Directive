@@ -130,6 +130,13 @@ func migrate(db *sql.DB) {
 		log.Println("migration: tasks.deleted_at added (trash)")
 	}
 
+	// A department's colour, a "#rrggbb" an administrator picks so its work
+	// can be told apart at a glance; empty for none.
+	if !columnExists(db, "departments", "color") {
+		mustExec(db, `ALTER TABLE departments ADD COLUMN color TEXT NOT NULL DEFAULT ''`)
+		log.Println("migration: departments.color added")
+	}
+
 	// A task's icon: an emoji, "image" for an uploaded picture (kept in images
 	// as task:<id>), or empty for none.
 	if !columnExists(db, "tasks", "icon") {

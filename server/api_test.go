@@ -577,3 +577,37 @@ func TestActivityForOneTask(t *testing.T) {
 	}
 	expect(t, "bad id", admin.json("GET", "/api/activity?task=x", nil, nil), http.StatusBadRequest)
 }
+
+// Departments carry a colour, and the list can be cut to a due-date range
+// for the calendar view.
+func TestDeptColourAndDueRange(t *testing.T) {
+	_, client := newTestServer(t)
+	admin, member, _ := setupTeam(t, client)
+	expect(t, "set colour", admin.json("PUT", "/api/departments/ops", map[string]string{"color": "#12ab9c"}, nil), http.StatusNoContent)
+	expect(t, "bad colour", admin.json("PUT", "/api/departments/ops", map[string]string{"color": "teal"}, nil), http.StatusBadRequest)
+	expect(t, "member cannot", member.json("PUT", "/api/departments/ops", map[string]string{"color": "#000000"}, nil), http.StatusForbidden)
+	var depts []Department
+	expect(t, "list", admin.json("GET", "/api/departments", nil, &depts), http.StatusOK)
+	found := false
+	for _, d := range depts {
+		if d.ID == "ops" {
+			found = d.Color == "#12AB9C"
+		}
+	}
+	if !found {
+		t.Fatalf("colour not stored: %+v", depts)
+	}
+
+	for _, due := range []string{"2026-04-30", "2026-05-01", "2026-05-31", "2026-06-01", ""} {
+		expect(t, "create", admin.json("POST", "/api/tasks", map[string]interface{}{"title": "t" + due, "priority": "Low", "dueDate": due, "deptId": "ops"}, nil), http.StatusCreated)
+	}
+	var res taskListResponse
+	expect(t, "range", admin.json("GET", "/api/tasks?scope=all&sort=due&dueFrom=2026-05-01&dueTo=2026-05-31", nil, &res), http.StatusOK)
+	var got []string
+	for _, x := range res.Tasks {
+		got = append(got, x.DueDate)
+	}
+	if strings.Join(got, ",") != "2026-05-01,2026-05-31" {
+		t.Fatalf("range gave %v", got)
+	}
+}
