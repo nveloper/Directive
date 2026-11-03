@@ -836,3 +836,6 @@ body { line-height: 1.45; }
 /* The title is the dialog's headline (M3 Headline S), not a form field,
    so the phone rule that lifts fields to 16px leaves it alone. */
 .task-form #newTaskTitleInput { font-size: 24px !important; line-height: 32px !important; min-height: 32px !important; }
+/* Calendar chips are small on a mouse screen; under a finger they get a
+   32 minimum so a day's task can be hit. */
+@media (pointer: coarse) { .cal-chip { min-height: 32px; height: auto !important; } }

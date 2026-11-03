@@ -3384,7 +3384,7 @@
     var month = r.week ? -1 : r.first.getMonth();
     var touch = isTouchScreen();
     var head = (LANG === 'ko' ? ['일', '월', '화', '수', '목', '금', '토'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']).map(function (x, i) {
-      return '<div style="padding:6px 8px; font-size:12px; font-weight:500; color:' + (i === 0 ? c.error : c.textMuted) + ';">' + x + '</div>';
+      return '<div class="t-label-m" style="padding:8px; color:' + (i === 0 ? c.error : c.onSurfaceVariant) + ';">' + x + '</div>';
     }).join('');
     var cells = '';
     for (var i = 0; i < r.days; i++) {
@@ -3393,28 +3393,28 @@
       // A week shows every task; a month on a touch screen shows one per day
       // and counts the rest, so the names that are there stay readable.
       var shown = r.week ? list : list.slice(0, touch ? 1 : 4);
-      cells += '<div class="cal-cell" style="min-width:0; min-height:' + (r.week ? 'calc(100dvh / var(--zoom, 1) - 300px)' : '112px') + '; padding:6px; display:flex; flex-direction:column; gap:3px; border-right:1px solid ' + c.outlineVariant + '; border-bottom:1px solid ' + c.outlineVariant + '; background:' + (inMonth ? c.surface : c.surfaceContainerLow) + ';">'
-        + '<span class="tnum" style="align-self:flex-start; min-width:22px; height:22px; padding:0 6px; display:inline-flex; align-items:center; justify-content:center; border-radius:11px; font-size:12px; font-weight:' + (iso === today ? 600 : 400) + '; ' + (iso === today ? 'background:' + c.primary + '; color:' + c.onPrimary + ';' : 'color:' + (inMonth ? c.onSurfaceVariant : c.textMuted) + ';') + '">' + d.getDate() + '</span>'
+      cells += '<div class="cal-cell" style="min-width:0; min-height:' + (r.week ? 'calc(100dvh - 304px)' : '120px') + '; padding:8px; display:flex; flex-direction:column; gap:4px; border-right:1px solid ' + c.outlineVariant + '; border-bottom:1px solid ' + c.outlineVariant + '; background:' + (inMonth ? c.surface : c.surfaceContainerLow) + ';">'
+        + '<span class="tnum t-label-m" style="align-self:flex-start; min-width:24px; height:24px; padding:0 4px; box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center; border-radius:var(--r-full); ' + (iso === today ? 'background:' + c.primary + '; color:' + c.onPrimary + ';' : 'color:' + (inMonth ? c.onSurfaceVariant : c.textMuted) + ';') + '">' + d.getDate() + '</span>'
         + shown.map(function (t) {
             var col = deptColor(t.deptId) || c.outline;
             var done = t.status === 'done';
-            return '<div class="interactive" data-action="openTask" data-id="' + t.id + '" title="' + esc(t.title) + '" style="display:flex; align-items:center; gap:5px; min-width:0; ' + (r.week ? 'min-height:28px; padding:4px 6px; align-items:flex-start; font-size:13px; line-height:1.35;' : 'height:22px; padding:0 6px; font-size:12px;') + ' border-radius:4px; background:' + c.surfaceContainer + '; box-shadow:inset 3px 0 0 ' + col + '; color:' + (done ? c.textMuted : (t.overdue ? c.error : c.onSurface)) + ';">'
-              + statusIconHtml(t.status, (maps.statusStyle[t.status] || maps.statusStyle.todo).dot, 11)
+            return '<div data-action="openTask" data-id="' + t.id + '" title="' + esc(t.title) + '" class="interactive cal-chip ' + (r.week ? 't-body-m' : 't-body-s') + '" style="display:flex; align-items:center; gap:4px; min-width:0; ' + (r.week ? 'min-height:32px; padding:4px 8px; box-sizing:border-box; align-items:center;' : 'height:24px; padding:0 8px;') + ' border-radius:var(--r-xs); background:' + c.surfaceContainer + '; box-shadow:inset 3px 0 0 ' + col + '; color:' + (done ? c.textMuted : (t.overdue ? c.error : c.onSurface)) + ';">'
+              + '<span style="display:flex; flex-shrink:0; height:' + (r.week ? 20 : 16) + 'px; align-items:center;">' + statusIconHtml(t.status, (maps.statusStyle[t.status] || maps.statusStyle.todo).dot, 12) + '</span>'
               + '<span style="overflow:hidden; text-overflow:ellipsis; ' + (r.week ? 'overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;' : 'white-space:nowrap;') + (done ? ' text-decoration:line-through;' : '') + '">' + esc(t.title) + '</span></div>';
           }).join('')
-        + (list.length > shown.length ? '<span title="' + esc(list.slice(shown.length).map(function (t) { return t.title; }).join('\n')) + '" style="font-size:12px; color:' + c.textMuted + '; padding-left:6px;">' + T('+{n} more', { n: list.length - shown.length }) + '</span>' : '')
+        + (list.length > shown.length ? '<span title="' + esc(list.slice(shown.length).map(function (t) { return t.title; }).join('\n')) + '" class="t-label-m" style="color:' + c.onSurfaceVariant + '; padding-left:8px;">' + T('+{n} more', { n: list.length - shown.length }) + '</span>' : '')
         + '</div>';
     }
-    var nav = function (delta, label, inner) { return '<span class="interactive" data-action="shiftCalendar" data-id="' + delta + '" aria-label="' + T(label) + '" style="display:inline-flex; align-items:center; justify-content:center; height:30px; min-width:30px; padding:0 8px; border-radius:var(--r-sm); font-size:13px; color:' + c.onSurfaceVariant + ';">' + inner + '</span>'; };
-    var undated = state.taskMeta.total >= 100 ? '<span style="font-size:12px; color:' + c.textMuted + ';">' + T('Showing the first 100 tasks due this month.') + '</span>' : '';
-    return '<div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">'
-      +   '<span style="font-size:16px; font-weight:500; margin-right:6px;">' + esc(r.first.toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</span>'
+    var nav = function (delta, label, inner) { return '<span class="interactive ' + (delta === 0 ? 'text-btn t-label-l' : 'icon-btn') + '" data-action="shiftCalendar" data-id="' + delta + '" aria-label="' + T(label) + '" style="color:' + (delta === 0 ? c.primary : c.onSurfaceVariant) + ';">' + inner + '</span>'; };
+    var undated = state.taskMeta.total >= 100 ? '<span class="t-body-s" style="color:' + c.onSurfaceVariant + ';">' + T('Showing the first 100 tasks due this month.') + '</span>' : '';
+    return '<div style="display:flex; align-items:center; gap:4px; margin-bottom:8px; flex-wrap:wrap;">'
+      +   '<span class="t-title-l" style="margin-right:8px;">' + esc(r.first.toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</span>'
       +   nav(-1, r.week ? 'Previous week' : 'Previous month', ICON.chevronLeft) + nav(0, 'Today', T('Today')) + nav(1, r.week ? 'Next week' : 'Next month', ICON.chevronRight)
       +   '<span style="flex:1;"></span>' + undated
-      +   '<div role="group" aria-label="' + T('Calendar span') + '" style="display:inline-flex; border:1px solid ' + c.outline + '; border-radius:var(--r-full); overflow:hidden;">'
+      +   '<div role="group" aria-label="' + T('Calendar span') + '" style="display:inline-flex; height:40px; box-sizing:content-box; border:1px solid ' + c.outline + '; border-radius:var(--r-full); overflow:hidden;">'
       +     [['week', 'Week'], ['month', 'Month']].map(function (p) {
               var on = calendarSpan() === p[0];
-              return '<span class="interactive" data-action="setCalendarSpan" data-id="' + p[0] + '" aria-pressed="' + on + '" style="display:inline-flex; align-items:center; height:32px; padding:0 14px; font-size:13px; font-weight:500; background:' + (on ? c.secondaryContainer : 'transparent') + '; color:' + (on ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">' + T(p[1]) + '</span>';
+              return '<span class="interactive t-label-l" data-action="setCalendarSpan" data-id="' + p[0] + '" aria-pressed="' + on + '" style="display:inline-flex; align-items:center; padding:0 16px; background:' + (on ? c.secondaryContainer : 'transparent') + '; color:' + (on ? c.onSecondaryContainer : c.onSurface) + ';' + (p[0] === 'month' ? ' border-left:1px solid ' + c.outline + ';' : '') + '">' + T(p[1]) + '</span>';
             }).join('')
       +   '</div>'
       + '</div>'
@@ -3430,10 +3430,10 @@
     var cols = EDITABLE_STATUSES.map(function (st) {
       var list = items.filter(function (t) { return t.status === st; });
       var dot = maps.statusStyle[st].dot;
-      return '<section class="board-col" data-drop-status="' + st + '" aria-label="' + esc(TAB_LABELS[st]) + '" style="flex:1 1 0; min-width:240px; display:flex; flex-direction:column; gap:8px; padding:8px; border-radius:var(--r-md); background:' + c.surfaceContainerLow + ';">'
-        + '<div style="display:flex; align-items:center; gap:8px; padding:4px 4px 2px;">' + statusIconHtml(st, dot, 14) + '<span style="font-size:13px; font-weight:500;">' + TAB_LABELS[st] + '</span><span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + list.length + '</span></div>'
+      return '<section class="board-col" data-drop-status="' + st + '" aria-label="' + esc(TAB_LABELS[st]) + '" style="flex:1 1 0; min-width:256px; display:flex; flex-direction:column; gap:8px; padding:8px; border-radius:var(--r-l); background:' + c.surfaceContainerLow + ';">'
+        + '<div style="display:flex; align-items:center; gap:8px; height:40px; padding:0 8px;">' + statusIconHtml(st, dot, 18) + '<span class="t-title-s">' + TAB_LABELS[st] + '</span><span class="tnum t-label-m" style="color:' + c.onSurfaceVariant + ';">' + list.length + '</span></div>'
         + list.map(function (t) { return taskCard(t, maps, c); }).join('')
-        + (list.length ? '' : '<div style="padding:16px 8px; text-align:center; font-size:12px; color:' + c.textMuted + ';">' + T('Drop a task here') + '</div>')
+        + (list.length ? '' : '<div class="t-body-m" style="padding:16px 8px; text-align:center; color:' + c.onSurfaceVariant + ';">' + T('Drop a task here') + '</div>')
         + '</section>';
     }).join('');
     return '<div style="display:flex; gap:12px; align-items:flex-start; min-width:min-content;">' + cols + '</div>';
@@ -3443,13 +3443,13 @@
     var v = taskView(t, maps, c);
     var writable = canWriteDept(t.deptId);
     var cls = 'interactive board-card' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + '';
-    return '<div class="' + cls + '"' + (writable ? ' draggable="true"' : '') + ' data-action="openTask" data-id="' + t.id + '" style="background:' + c.surface + '; border-radius:var(--r-md); padding:12px; min-width:0; display:flex; flex-direction:column; gap:8px;">'
-      + '<div style="display:flex; align-items:flex-start; gap:6px; font-size:15px; font-weight:500; line-height:1.4; color:' + (t.status === 'done' ? c.textMuted : c.onSurface) + ';">' + taskIconHtml(t, 16) + '<span style="min-width:0; overflow-wrap:anywhere;">' + esc(t.title) + '</span></div>'
-      + '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px; color:' + c.textMuted + ';">' + (t.deptId ? '<span style="display:inline-flex; align-items:center; gap:5px; font-weight:500; padding:1px 6px; border-radius:var(--r-xs); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';">' + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span>' : '') + taskBadges(t, c) + '</div>'
+    return '<div class="' + cls + '"' + (writable ? ' draggable="true"' : '') + ' data-action="openTask" data-id="' + t.id + '" style="background:' + c.surface + '; border-radius:var(--r-md); padding:16px; min-width:0; display:flex; flex-direction:column; gap:12px;">'
+      + '<div class="t-body-l" style="display:flex; align-items:flex-start; gap:8px; color:' + (t.status === 'done' ? c.textMuted : c.onSurface) + ';">' + taskIconHtml(t, 16) + '<span style="min-width:0; overflow-wrap:anywhere;">' + esc(t.title) + '</span></div>'
+      + '<div class="t-label-m" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; color:' + c.onSurfaceVariant + ';">' + (t.deptId ? '<span style="display:inline-flex; align-items:center; gap:4px; padding:4px 8px; border-radius:var(--r-sm); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';">' + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span>' : '') + taskBadges(t, c) + '</div>'
       + searchMatchHtml(t, c)
-      + '<div style="display:flex; align-items:center; gap:6px;">'
-      +   (hasAssignee(t) ? assigneeAvatarHtml(t, v, 20) : '') + '<span style="flex:1;"></span>'
-      +   (t.dueDate ? '<span class="tnum" style="font-size:12px; color:' + (t.overdue ? c.error : c.onSurfaceVariant) + '; font-weight:' + (t.overdue ? 500 : 400) + ';">' + esc(relativeDue(t.dueDate, t.overdue)) + '</span>' : '')
+      + '<div style="display:flex; align-items:center; gap:8px;">'
+      +   (hasAssignee(t) ? assigneeAvatarHtml(t, v, 24) : '') + '<span style="flex:1;"></span>'
+      +   (t.dueDate ? '<span class="tnum ' + (t.overdue ? 't-label-m' : 't-body-s') + '" style="color:' + (t.overdue ? c.error : c.onSurfaceVariant) + ';">' + esc(relativeDue(t.dueDate, t.overdue)) + '</span>' : '')
       +   priorityIconHtml(t.priority, v.priorityColor, c.outlineVariant)
       + '</div>'
       + '</div>';
