@@ -2293,16 +2293,15 @@
   // The old rows stay fully visible until the new ones arrive; then the two
   // cross-fade in place - the old as a still copy fading out on top, the new
   // fading in under it - so the list never dips or goes blank.
+  // Tabs, departments and pages all change the list the same way: the old
+  // rows fade out and the new ones fade in (softSwap), with the data
+  // fetched inside the swap.
   function reloadListSoftly(change) {
     var token = ++nav.listToken;
-    var body = document.querySelector('#task-list .list-body > div');
-    var ghost = body ? body.innerHTML : '';
-    setState(change);
-    if (isNarrowScreen() && window.scrollY) { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); } }
-    return fetchTasks().then(function () {
-      if (nav.listToken !== token) return;
-      setState({ listFade: 'in', listGhost: ghost });
-      setTimeout(function () { if (nav.listToken === token && state.listFade === 'in') setState({ listFade: '', listGhost: '' }); }, 260);
+    softSwap('fade', function () {
+      setState(change);
+      if (isNarrowScreen() && window.scrollY) window.scrollTo(0, 0);
+      return fetchTasks().then(function () { if (nav.listToken === token) render(); });
     });
   }
   function selectNode(id) {
@@ -2366,11 +2365,7 @@
   // Turning the page moves the same way changing a tab does, instead of the
   // rows swapping out from under the eye.
   function goToPage(next) {
-    softSwap('fade', function () {
-      setState({ page: next });
-      if (isNarrowScreen() && window.scrollY) window.scrollTo(0, 0);
-      return fetchTasks().then(render);
-    });
+    reloadListSoftly({ page: next });
   }
   function prevPage() {
     if (state.page <= 1) return;
