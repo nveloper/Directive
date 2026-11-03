@@ -1099,8 +1099,8 @@ svg[fill="none"][stroke="currentColor"] { stroke-width: 1.6; }
 /* The root keeps the browser's own cross-fade, so the parts that did not
    change stay perfectly still; changed blocks fade out, then in. */
 ::view-transition-group(root) { animation-duration: 240ms; }
-::view-transition-old(cal-grid), ::view-transition-old(settings-body) { animation: swapOut 140ms var(--ease-exit) both; }
-::view-transition-new(cal-grid), ::view-transition-new(settings-body) { animation: swapIn 260ms var(--ease-enter) 60ms both; }
+::view-transition-old(cal-grid), ::view-transition-old(settings-body), ::view-transition-old(list-body) { animation: swapOut 140ms var(--ease-exit) both; }
+::view-transition-new(cal-grid), ::view-transition-new(settings-body), ::view-transition-new(list-body) { animation: swapIn 260ms var(--ease-enter) 60ms both; }
 ::view-transition-group(cal-nav) { animation: none; }
 ::view-transition-old(cal-nav) { display: none; }
 ::view-transition-new(cal-nav) { animation: none; }
@@ -1119,3 +1119,6 @@ html[data-swap=prev]::view-transition-new(cal-title) { animation-name: swapInLef
 @keyframes swapOutRight { to { opacity: 0; transform: translateX(16px); } }
 @keyframes swapInRight { from { opacity: 0; transform: translateX(16px); } }
 @keyframes swapInLeft { from { opacity: 0; transform: translateX(-16px); } }
+/* The search field is never part of the fade: what is typed stays crisp. */
+::view-transition-group(search-box), ::view-transition-group(search-box-m), ::view-transition-new(search-box), ::view-transition-new(search-box-m) { animation: none; }
+::view-transition-old(search-box), ::view-transition-old(search-box-m) { display: none; }
