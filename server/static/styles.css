@@ -910,17 +910,21 @@ body { line-height: 1.45; }
   animation: indicatorGrow var(--m-spatial) var(--spring) both;
 }
 .view-toggle .anim-seg::before { background: var(--surface); box-shadow: var(--e1); }
-/* Tabs: the underline grows out from the middle of the new tab. */
+/* Tabs: the underline slides from the tab that was selected to the new one,
+   stretching to its width on the way. The tab's own border is held back
+   while a pseudo-element plays the move from the measured offset. */
 @keyframes holdBorder { from, to { border-bottom-color: transparent; } }
-@keyframes underlineGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-.anim-tab { position: relative; animation: holdBorder var(--m-spatial) steps(1, end); }
-.anim-tab::after {
-  content: ''; position: absolute; left: 0; right: 0; bottom: -2px; height: 3px; border-radius: 3px 3px 0 0;
-  background: var(--primary);
-  animation: underlineGrow var(--m-spatial) var(--spring) both;
+@keyframes tabSlide {
+  from { transform: translateX(var(--tab-dx, 0px)) scaleX(var(--tab-sx, 1)); }
+  to   { transform: none; }
 }
-#task-list [role="tab"].anim-tab::after { bottom: -3px; }
-.bell-panel .anim-tab::after { height: 2px; bottom: -2px; }
+.anim-tab-slide { position: relative; animation: holdBorder var(--m-spatial) steps(1, end) var(--tab-delay, 0ms); }
+.anim-tab-slide::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -3px; height: 3px; border-radius: 3px 3px 0 0;
+  background: var(--primary); transform-origin: left center;
+  animation: tabSlide var(--m-spatial) cubic-bezier(.3, 1.15, .4, 1) var(--tab-delay, 0ms) both;
+}
+.bell-panel .anim-tab-slide::after { height: 2px; bottom: -2px; }
 
 /* Rows arrive in a short cascade when the list changes. */
 @keyframes rowRise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
