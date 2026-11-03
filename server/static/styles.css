@@ -889,7 +889,9 @@ body { line-height: 1.45; }
 [data-action="pickAvatar"]:active, [data-action="removeAvatar"]:active, [data-action="openUsers"]:active,
 [data-action="openPasswordModal"]:active, [data-action="openAppPasswords"]:active,
 [data-action="openReminders"]:active, [data-action="openBackups"]:active,
-.nav-item:active, .dept-row:has(.dept-label:active) { border-radius: var(--r-sm) !important; }
+/* The sidebar's hover and selected shape is a rounded rectangle, the same
+   shape a press shows - not a pill that turns square only while held. */
+.left-nav .nav-item, .left-nav .dept-row, .left-nav .dept-label { border-radius: var(--r-md) !important; }
 .tree-chevron-btn:active { border-radius: var(--r-sm) !important; }
 /* The FAB grows rounder under the pointer and squarer when pressed; its plus
    turns a quarter as the dialog it opens comes up. */
@@ -1122,3 +1124,6 @@ html[data-swap=prev]::view-transition-new(cal-title) { animation-name: swapInLef
 /* The search field is never part of the fade: what is typed stays crisp. */
 ::view-transition-group(search-box), ::view-transition-group(search-box-m), ::view-transition-new(search-box), ::view-transition-new(search-box-m) { animation: none; }
 ::view-transition-old(search-box), ::view-transition-old(search-box-m) { display: none; }
+/* Board cards moved between columns glide to their new place. */
+::view-transition-group(*.card) { animation-duration: 380ms; animation-timing-function: var(--ease-enter); }
+::view-transition-old(*.card), ::view-transition-new(*.card) { height: 100%; }

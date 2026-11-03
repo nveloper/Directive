@@ -5677,9 +5677,21 @@
       state.dragTaskId = null; state.dropStatus = '';
       markDropColumn(null);
       if (!t || !st || t.status === st) return;
-      t.status = st;
-      if (st === 'done') t.overdue = false;
-      render();
+      // The card glides from its old column to its place in the new one,
+      // and the cards around it close up and make room, instead of jumping.
+      var nameCards = function (on) {
+        Array.prototype.forEach.call(document.querySelectorAll('#task-list .board-card[data-id]'), function (el) {
+          el.style.viewTransitionName = on ? 'card-' + el.getAttribute('data-id').replace(/[^A-Za-z0-9_-]/g, '_') : '';
+          if (on) el.style.viewTransitionClass = 'card';
+        });
+      };
+      nameCards(true);
+      softSwap('card', function () {
+        t.status = st;
+        if (st === 'done') t.overdue = false;
+        render();
+        nameCards(true);
+      });
       api('PUT', '/api/tasks/' + id + '/status', { status: st }).then(function (res) {
         if (res && res.nextId) showSnackbar(T('Done. The next one is scheduled.'));
         return refreshTasks();
