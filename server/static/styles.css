@@ -10,7 +10,11 @@
   --r-xs: 4px;   /* checkboxes, chips, tags */
   --r-sm: 8px;   /* fields, chips, menu items, rows (Material: small) */
   --r-md: 12px;  /* cards, popovers, menus (Material: medium) */
+  --r-l: 16px;   /* list rows, FAB (Material: large) */
   --r-lg: 28px;  /* dialogs, sheets (Material: extra large) */
+
+  /* spacing: the Material 4dp grid, nothing in between */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s6: 24px; --s8: 32px;
   --r-full: 999px; /* buttons, nav indicators, search */
 
   /* elevation */
@@ -410,7 +414,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 
   /* A finger is not a mouse pointer: every control in the bar and the panels
      gets a 44px target, and the text that labels them comes up to size. */
-  .top-bar .interactive:not(.brand-icon) { width: 44px !important; height: 44px !important; }
+  .top-bar .interactive:not(.brand-icon) { width: 48px !important; height: 48px !important; }
   .top-bar .interactive:not(.brand-icon) svg { width: 22px; height: 22px; }
   /* Centred on the same line as the buttons beside it. */
   .top-bar .brand-icon { align-self: center; }
@@ -425,11 +429,11 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
   .new-task-inline { display: none !important; }
   .fab-new-task { display: flex !important; }
   .btn-label { display: none; }
-  .filter-btn { width: 44px; padding: 0 !important; justify-content: center; }
+  .filter-btn { width: 48px; height: 48px !important; padding: 0 !important; justify-content: center; }
   .view-toggle { display: none !important; }
 
   /* Room under the list so the floating button never sits on the footer. */
-  main#task-list { padding: 16px 14px calc(84px + env(safe-area-inset-bottom, 0px)) 14px !important; gap: 12px !important; }
+  main#task-list { padding: 8px 16px calc(88px + env(safe-area-inset-bottom, 0px)) 16px !important; gap: 8px !important; }
   .page-title { font-size: 20px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   /* Tabs are scrolled sideways rather than wrapped onto three lines. */
@@ -440,7 +444,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
     padding-bottom: 2px;
   }
   [role="tablist"]::-webkit-scrollbar { display: none; }
-  [role="tablist"] > * { flex-shrink: 0; min-height: 40px; font-size: 14px !important; }
+  [role="tablist"] > * { flex-shrink: 0; min-height: 48px; }
 
   .dropdown-panel { max-width: calc(100vw - 24px); }
 
@@ -777,15 +781,24 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: .38; cu
 
 /* Rows have no dividers: the hover and selected states give each one its
    own rounded shape instead. */
-#task-list .task-row { border-radius: 16px; }
+#task-list .task-row { border-radius: var(--r-l); }
 
 /* Body copy gets room to breathe; numbers in tables keep their columns. */
 body { line-height: 1.45; }
 .detail-body { font-size: 15px !important; line-height: 1.7 !important; }
 
-/* Touch screens are read at arm's length: everything one step bigger
-   (12px text becomes 13px+), taps get taller to match. Mouse screens keep
-   the base scale. The app shell divides its viewport height by --zoom. */
-@media (pointer: coarse) { :root { --zoom: 1.08; } }
-@media (pointer: coarse) and (min-width: 700px) { :root { --zoom: 1.15; } }
-#root { zoom: var(--zoom, 1); }
+/* Material 3 type scale (values from the @material/web 2.2 token files).
+   Each role fixes size, line height and weight together; nothing else is
+   used on screens that have been moved over. Tracking is left at 0 for
+   Korean text. */
+.t-headline-m { font-size: 28px; line-height: 36px; font-weight: 400; }
+.t-headline-s { font-size: 24px; line-height: 32px; font-weight: 400; }
+.t-title-l    { font-size: 22px; line-height: 28px; font-weight: 400; }
+.t-title-m    { font-size: 16px; line-height: 24px; font-weight: 500; }
+.t-title-s    { font-size: 14px; line-height: 20px; font-weight: 500; }
+.t-body-l     { font-size: 16px; line-height: 24px; font-weight: 400; }
+.t-body-m     { font-size: 14px; line-height: 20px; font-weight: 400; }
+.t-body-s     { font-size: 12px; line-height: 16px; font-weight: 400; }
+.t-label-l    { font-size: 14px; line-height: 20px; font-weight: 500; }
+.t-label-m    { font-size: 12px; line-height: 16px; font-weight: 500; }
+.t-label-s    { font-size: 11px; line-height: 16px; font-weight: 500; }

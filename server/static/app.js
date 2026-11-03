@@ -2998,7 +2998,7 @@
   // An assignee linked to an account gets their photo; a free-text one keeps
   // the initials circle it has always had.
   function assigneeAvatarHtml(t, v, sizePx) {
-    var fallback = '<div style="width:' + sizePx + 'px; height:' + sizePx + 'px; border-radius:50%; background:' + v.avatarBg + '; color:' + v.avatarColor + '; font-size:' + Math.max(12, Math.round(sizePx * 0.42)) + 'px; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0;">' + esc(computeInitials(t.assignee)) + '</div>';
+    var fallback = '<div style="width:' + sizePx + 'px; height:' + sizePx + 'px; border-radius:50%; background:' + v.avatarBg + '; color:' + v.avatarColor + '; font-size:' + Math.max(12, Math.round(sizePx * 0.42)) + 'px; line-height:1; font-weight:500; display:flex; align-items:center; justify-content:center; flex-shrink:0;">' + esc(computeInitials(t.assignee)) + '</div>';
     if (!t.assigneeId) return fallback;
     return withImageFallback('/api/users/' + t.assigneeId + '/avatar?v=' + state.avatarVersion, fallback, sizePx, '50%');
   }
@@ -3008,11 +3008,11 @@
     var out = '';
     if (t.checklistTotal) {
       var all = t.checklistDone === t.checklistTotal;
-      out += '<span title="' + T('{done} of {total} checklist items done', { done: t.checklistDone, total: t.checklistTotal }) + '" style="display:inline-flex; align-items:center; gap:3px; font-size:12px; font-weight:500; color:' + (all ? c.secondary : c.onSurfaceVariant) + ';">'
+      out += '<span class="t-label-m" title="' + T('{done} of {total} checklist items done', { done: t.checklistDone, total: t.checklistTotal }) + '" style="display:inline-flex; align-items:center; gap:4px; color:' + (all ? c.secondary : c.onSurfaceVariant) + ';">'
         + ICON.checklist + t.checklistDone + '/' + t.checklistTotal + '</span>';
     }
     if (t.attachmentCount) {
-      out += '<span title="' + T(t.attachmentCount === 1 ? '{n} attachment' : '{n} attachments', { n: t.attachmentCount }) + '" style="display:inline-flex; align-items:center; gap:3px; font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">'
+      out += '<span class="t-label-m" title="' + T(t.attachmentCount === 1 ? '{n} attachment' : '{n} attachments', { n: t.attachmentCount }) + '" style="display:inline-flex; align-items:center; gap:4px; color:' + c.onSurfaceVariant + ';">'
         + '<svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 9.5l-5.6 5.6a3.5 3.5 0 0 1-5-5L10.2 4a2.3 2.3 0 0 1 3.3 3.3L7.8 13a1.2 1.2 0 0 1-1.7-1.7l5.2-5.2"></path></svg>'
         + t.attachmentCount + '</span>';
     }
@@ -3024,7 +3024,7 @@
 
   function commentBadge(t, c) {
     if (!t.commentCount) return '';
-    return '<span title="' + T(t.commentCount === 1 ? '{n} comment' : '{n} comments', { n: t.commentCount }) + '" style="display:inline-flex; align-items:center; gap:3px; font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">'
+    return '<span class="t-label-m" title="' + T(t.commentCount === 1 ? '{n} comment' : '{n} comments', { n: t.commentCount }) + '" style="display:inline-flex; align-items:center; gap:4px; color:' + c.onSurfaceVariant + ';">'
       + '<svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5.5h12v8H8l-4 3v-11Z"></path></svg>'
       + t.commentCount + '</span>';
   }
@@ -3043,8 +3043,8 @@
       var needle = esc(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       text = text.replace(new RegExp(needle, 'gi'), function (x) { return '<mark style="background:' + c.primaryContainer + '; color:' + c.onPrimaryContainer + '; border-radius:3px; padding:0 1px;">' + x + '</mark>'; });
     }
-    return '<span class="search-match" style="display:block; font-size:12px; line-height:1.45; color:' + c.onSurfaceVariant + '; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'
-      + '<b style="font-weight:600;">' + esc(where) + '</b> · ' + text + '</span>';
+    return '<span class="search-match t-body-s" style="display:block; color:' + c.onSurfaceVariant + '; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'
+      + '<b style="font-weight:500;">' + esc(where) + '</b> · ' + text + '</span>';
   }
 
   // Status as a small ring that fills as work moves on: empty to do, half in
@@ -3076,8 +3076,8 @@
     var shown = t.overdue ? 'overdue' : t.status;
     var dot = (maps.statusStyle[t.status] || maps.statusStyle.todo).dot;
     var done = t.status === 'done';
-    var cell = 'display:flex; align-items:center; min-width:0; padding:0 12px; height:48px;';
-    var dept = t.deptId ? '<span style="display:inline-flex; align-items:center; gap:6px; max-width:100%; overflow:hidden; font-size:12px; font-weight:500; padding:2px 8px; border-radius:var(--r-xs); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';"><span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span></span>' : '';
+    var cell = 'display:flex; align-items:center; min-width:0; padding:0 16px; height:52px;';
+    var dept = t.deptId ? '<span class="t-label-m" style="display:inline-flex; align-items:center; gap:4px; max-width:100%; overflow:hidden; padding:4px 8px; border-radius:var(--r-sm); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';"><span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span></span>' : '';
     // One row is one control: the cells sit on the table's own columns through
     // subgrid, so the whole row lights up under the pointer and takes a single
     // stop in the tab order, instead of six cells each reacting on their own.
@@ -3087,13 +3087,13 @@
       +   '<span class="status-ring">' + statusIconHtml(t.status, dot) + '</span><span style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0);">' + esc((STATUS_META[shown] || STATUS_META.todo).label) + '</span></div>'
       + '<div style="' + cell + ' gap:8px;">'
       +   taskIconHtml(t, 16)
-      +   '<span style="flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:15px; font-weight:500; color:' + (done ? c.textMuted : c.onSurface) + ';">' + esc(t.title) + '</span>'
-      +   '<span style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0; font-size:12px; color:' + c.textMuted + ';">' + taskBadges(t, c) + (t.calendarVisible ? '<span title="' + T('Shown in calendar') + '" style="display:inline-flex; color:' + c.textMuted + ';"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="14" height="13" rx="2"></rect><path d="M3 8h14M7 2v4M13 2v4"></path></svg></span>' : '') + '</span>'
+      +   '<span class="t-body-l" style="flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:' + (done ? c.textMuted : c.onSurface) + ';">' + esc(t.title) + '</span>'
+      +   '<span class="t-label-m" style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0; color:' + c.textMuted + ';">' + taskBadges(t, c) + (t.calendarVisible ? '<span title="' + T('Shown in calendar') + '" style="display:inline-flex; color:' + c.textMuted + ';"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="14" height="13" rx="2"></rect><path d="M3 8h14M7 2v4M13 2v4"></path></svg></span>' : '') + '</span>'
       +   (t.match ? '<span style="flex:1; min-width:0;">' + searchMatchHtml(t, c) + '</span>' : '')
       + '</div>'
       + '<div style="' + cell + '">' + dept + '</div>'
-      + '<div style="' + cell + ' gap:8px;">' + (hasAssignee(t) ? assigneeAvatarHtml(t, v, 20) + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; color:' + c.onSurfaceVariant + ';">' + esc(t.assignee) + '</span>' : '<span style="font-size:13px; color:' + c.textMuted + ';">' + T('Unassigned') + '</span>') + '</div>'
-      + '<div class="tnum" style="' + cell + ' font-size:13px; white-space:nowrap; color:' + (t.overdue ? c.error : (t.dueDate ? c.onSurfaceVariant : c.textMuted)) + '; font-weight:' + (t.overdue ? 500 : 400) + ';">' + esc(t.dueDate ? relativeDue(t.dueDate, t.overdue) : '—') + '</div>'
+      + '<div style="' + cell + ' gap:8px;">' + (hasAssignee(t) ? assigneeAvatarHtml(t, v, 20) + '<span class="t-body-m" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:' + c.onSurfaceVariant + ';">' + esc(t.assignee) + '</span>' : '<span class="t-body-m" style="color:' + c.textMuted + ';">' + T('Unassigned') + '</span>') + '</div>'
+      + '<div class="tnum ' + (t.overdue ? 't-label-l' : 't-body-m') + '" style="' + cell + ' white-space:nowrap; color:' + (t.overdue ? c.error : (t.dueDate ? c.onSurfaceVariant : c.textMuted)) + ';">' + esc(t.dueDate ? relativeDue(t.dueDate, t.overdue) : '—') + '</div>'
       + '<div title="' + esc(T(t.priority)) + '" style="' + cell + ' justify-content:center;">' + priorityIconHtml(t.priority, v.priorityColor, c.outlineVariant) + '</div>'
       + '</div>';
   }
@@ -3106,29 +3106,29 @@
       icon = '<circle cx="21" cy="21" r="11"></circle><path d="M29 29l9 9"></path>';
       title = T('No results for “{q}”', { q: state.searchQuery.trim() });
       text = T('Search covers titles, descriptions, checklists, comments and file names.');
-      action = '<span class="interactive" data-action="clearSearch" style="height:32px; padding:0 14px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; display:inline-flex; align-items:center; font-size:13px; font-weight:500;">' + T('Clear search') + '</span>';
+      action = '<span class="interactive t-label-l" data-action="clearSearch" style="height:40px; padding:0 24px; border-radius:var(--r-full); border:1px solid ' + c.outline + '; display:inline-flex; align-items:center;">' + T('Clear search') + '</span>';
     } else if (filtersActive() || state.activeTab !== 'all') {
       icon = '<path d="M8 12h32M14 24h20M20 36h8"></path>';
       title = T('No tasks match');
       text = T('Nothing here with the current tab and filters.');
-      action = filtersActive() ? '<span class="interactive" data-action="clearFilters" style="height:32px; padding:0 14px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; display:inline-flex; align-items:center; font-size:13px; font-weight:500;">' + T('Clear filters') + '</span>' : '';
+      action = filtersActive() ? '<span class="interactive t-label-l" data-action="clearFilters" style="height:40px; padding:0 24px; border-radius:var(--r-full); border:1px solid ' + c.outline + '; display:inline-flex; align-items:center;">' + T('Clear filters') + '</span>' : '';
     } else {
       icon = '<rect x="9" y="8" width="30" height="34" rx="4"></rect><path d="M17 18h14M17 25h14M17 32h8"></path>';
       title = T('No tasks yet');
       text = T('Tasks added here show up for everyone in the department.');
-      action = canCreateTask() ? '<span class="interactive" data-action="openTaskModal" style="height:32px; padding:0 14px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500;">' + ICON.plus + T('New Task') + '</span>' : '';
+      action = canCreateTask() ? '<span class="interactive t-label-l" data-action="openTaskModal" style="height:40px; padding:0 24px 0 16px; border-radius:var(--r-full); background:' + c.primary + '; color:' + c.onPrimary + '; display:inline-flex; align-items:center; gap:8px;">' + ICON.plus + T('New Task') + '</span>' : '';
     }
     return '<div style="grid-column:1 / -1; display:flex; flex-direction:column; align-items:center; gap:8px; padding:64px 16px; text-align:center;">'
       + '<svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="' + c.textMuted + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + icon + '</svg>'
-      + '<div style="font-size:16px; font-weight:500; margin-top:4px;">' + esc(title) + '</div>'
-      + '<div style="font-size:13px; color:' + c.onSurfaceVariant + '; max-width:340px; line-height:1.5;">' + esc(text) + '</div>'
-      + (action ? '<div style="margin-top:8px;">' + action + '</div>' : '')
+      + '<div class="t-title-m" style="margin-top:8px;">' + esc(title) + '</div>'
+      + '<div class="t-body-m" style="color:' + c.onSurfaceVariant + '; max-width:340px;">' + esc(text) + '</div>'
+      + (action ? '<div style="margin-top:16px;">' + action + '</div>' : '')
       + '</div>';
   }
   function skeletonRows(c, n) {
     var out = '';
     for (var i = 0; i < n; i++) {
-      out += '<div class="skeleton-row" style="grid-column:1 / -1; display:flex; align-items:center; gap:14px; height:44px; padding:0 12px; border-bottom:1px solid ' + c.outlineVariant + ';">'
+      out += '<div class="skeleton-row" style="grid-column:1 / -1; display:flex; align-items:center; gap:16px; height:52px; padding:0 16px;">'
         + '<span class="skeleton" style="width:16px; height:16px; border-radius:50%;"></span>'
         + '<span class="skeleton" style="width:' + (38 + (i * 13) % 30) + '%; height:12px;"></span>'
         + '<span style="flex:1;"></span><span class="skeleton" style="width:80px; height:12px;"></span></div>';
@@ -3137,21 +3137,22 @@
   }
 
   // On a phone each task is a two-line row: what it is, then where, who and when.
+  // A two-line M3 list item: 72 tall, 16 in from each side, a 24 leading
+  // icon, Body L headline over Body M supporting text.
   function taskMobileRow(t, maps, c) {
     var dot = (maps.statusStyle[t.status] || maps.statusStyle.todo).dot;
     var done = t.status === 'done';
     var bits = [];
     if (t.deptId) bits.push(esc(nodeLabel(t.deptId).split(' · ').pop()));
     if (hasAssignee(t)) bits.push(esc(t.assignee));
-    var due = t.dueDate ? '<span class="tnum" style="color:' + (t.overdue ? c.error : c.onSurfaceVariant) + '; font-weight:' + (t.overdue ? 500 : 400) + ';">' + esc(relativeDue(t.dueDate, t.overdue)) + '</span>' : '';
-    return '<div class="interactive task-row' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + '" data-action="openTask" data-id="' + t.id + '" style="display:flex; align-items:flex-start; gap:12px; padding:12px 8px; border-radius:16px;">'
-      + '<span style="padding-top:2px;">' + statusIconHtml(t.status, dot, 18) + '</span>'
-      + '<div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">'
-      +   '<div style="display:flex; align-items:center; gap:6px; min-width:0;">' + taskIconHtml(t, 16) + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:15px; font-weight:500; color:' + (done ? c.textMuted : c.onSurface) + ';">' + esc(t.title) + '</span></div>'
-      +   '<div style="display:flex; align-items:center; gap:8px; font-size:13px; color:' + c.onSurfaceVariant + '; min-width:0;"><span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + bits.join(' · ') + '</span>' + taskBadges(t, c) + '<span style="flex:1;"></span>' + due + '</div>'
+    var due = t.dueDate ? '<span class="tnum ' + (t.overdue ? 't-label-l' : 't-body-m') + '" style="flex-shrink:0; color:' + (t.overdue ? c.error : c.onSurfaceVariant) + ';">' + esc(relativeDue(t.dueDate, t.overdue)) + '</span>' : '';
+    return '<div class="interactive task-row' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + '" data-action="openTask" data-id="' + t.id + '" style="display:flex; align-items:center; gap:16px; min-height:72px; padding:8px 16px; border-radius:var(--r-l);">'
+      + '<span style="flex-shrink:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">' + statusIconHtml(t.status, dot, 20) + '</span>'
+      + '<div style="flex:1; min-width:0; display:flex; flex-direction:column;">'
+      +   '<div style="display:flex; align-items:center; gap:8px; min-width:0;">' + taskIconHtml(t, 16) + '<span class="t-body-l" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:' + (done ? c.textMuted : c.onSurface) + ';">' + esc(t.title) + '</span>' + due + '</div>'
+      +   '<div class="t-body-m" style="display:flex; align-items:center; gap:8px; color:' + c.onSurfaceVariant + '; min-width:0;"><span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + bits.join(' · ') + '</span>' + taskBadges(t, c) + '<span style="flex:1;"></span>' + priorityIconHtml(t.priority, maps.priorityColor[t.priority], c.outlineVariant) + '</div>'
       +   searchMatchHtml(t, c)
       + '</div>'
-      + '<span style="padding-top:3px;">' + priorityIconHtml(t.priority, maps.priorityColor[t.priority], c.outlineVariant) + '</span>'
       + '</div>';
   }
 
@@ -3553,7 +3554,7 @@
       + mSelectMenu(c)
       + datePickerPopover(c)
       + (canCreateTask()
-        ? '<div class="interactive fab-new-task" data-action="openTaskModal" aria-label="' + T('New task') + '" style="position:fixed; right:18px; bottom:calc(18px + env(safe-area-inset-bottom, 0px)); z-index:45; align-items:center; justify-content:center; width:56px; height:56px; border-radius:50%; background:' + c.primary + '; color:' + c.onPrimary + '; box-shadow:var(--e2);">' + ICON.plus.replace('width="17" height="17"', 'width="24" height="24"') + '</div>'
+        ? '<div class="interactive fab-new-task" data-action="openTaskModal" aria-label="' + T('New task') + '" style="position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); z-index:45; align-items:center; justify-content:center; width:56px; height:56px; border-radius:var(--r-l); background:' + c.primary + '; color:' + c.onPrimary + '; box-shadow:var(--e2);">' + ICON.plus.replace('width="17" height="17"', 'width="24" height="24"') + '</div>'
         : '')
       + '</div>';
   }
@@ -3704,7 +3705,7 @@
             : brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 36, 'guide'))
       +   '<div class="app-name-text" style="font-size:18px; font-weight:500; white-space:nowrap;">' + esc(state.appName) + '</div>'
       + '</div>'
-      + '<div class="mobile-page-title" style="min-width:0; font-size:20px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + esc(currentPageTitle()) + '</div>'
+      + '<div class="mobile-page-title t-title-l" style="min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + esc(currentPageTitle()) + '</div>'
       + '<div class="topbar-center" style="flex:1; display:flex; justify-content:center;">'
       +   '<div class="desktop-search-bar" style="align-items:center; gap:10px; width:520px; max-width:100%; height:44px; padding:0 18px; border-radius:22px; background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">'
       +     ICON.search
@@ -3846,8 +3847,8 @@
       var bg = 'transparent';
       var color = active ? c.primary : (id === 'overdue' && count ? c.error : c.onSurfaceVariant);
       var underline = active ? c.primary : 'transparent';
-      return '<div class="interactive' + (active ? oneShotClass('tab') : '') + '" data-action="setTab" data-id="' + id + '" role="tab" aria-selected="' + (active ? 'true' : 'false') + '" aria-label="' + TAB_LABELS[id] + ', ' + T(count === 1 ? '{n} task' : '{n} tasks', { n: count }) + '" style="display:flex; align-items:center; gap:6px; height:38px; padding:0 4px; margin-bottom:-1px; border-radius:0; background:' + bg + '; color:' + color + '; font-size:14px; font-weight:500; border-bottom:3px solid ' + underline + ';">'
-        + '<span>' + TAB_LABELS[id] + '</span><span style="font-size:12px; font-weight:500; color:' + (active ? c.onSurfaceVariant : c.textMuted) + ';">' + count + '</span></div>';
+      return '<div class="interactive t-title-s' + (active ? oneShotClass('tab') : '') + '" data-action="setTab" data-id="' + id + '" role="tab" aria-selected="' + (active ? 'true' : 'false') + '" aria-label="' + TAB_LABELS[id] + ', ' + T(count === 1 ? '{n} task' : '{n} tasks', { n: count }) + '" style="display:flex; align-items:center; gap:4px; height:48px; padding:0 4px; margin-bottom:-1px; border-radius:0; background:' + bg + '; color:' + color + '; border-bottom:3px solid ' + underline + '; box-sizing:border-box;">'
+        + '<span>' + TAB_LABELS[id] + '</span><span class="tnum" style="color:' + (active ? c.onSurfaceVariant : c.textMuted) + ';">' + count + '</span></div>';
     }).join('');
 
     var maps = styleMaps(c);
@@ -3855,31 +3856,31 @@
     var page = clamp(meta.page || 1, 1, totalPages);
     var pageItems = state.tasks;
 
-    var filterField = 'height:36px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:13px; background:' + c.surface + '; color:' + c.onSurface + ';';
+    var filterField = 'height:40px; padding:0 12px; border-radius:var(--r-xs); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';';
     var filterPanel = (state.filterOpen || state.dropdownClosing === 'filter')
-      ? '<div class="' + dropdownClass('filter') + '" style="' + dropdownStyle('filter') + 'position:absolute; top:46px; right:0; width:240px; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:14px; z-index:60; display:flex; flex-direction:column; gap:12px;">'
-        + '<div><div style="font-size:12px; font-weight:500; letter-spacing:.03em; color:' + c.onSurfaceVariant + '; margin-bottom:6px;">' + T('SORT BY') + '</div>'
+      ? '<div class="' + dropdownClass('filter') + '" style="' + dropdownStyle('filter') + 'position:absolute; top:48px; right:0; width:256px; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:16px; z-index:60; display:flex; flex-direction:column; gap:16px;">'
+        + '<div><div class="t-title-s" style="color:' + c.onSurfaceVariant + '; margin-bottom:8px;">' + T('SORT BY') + '</div>'
         +   mSelectFrom('<select id="filterSortSelect" aria-label="' + T('Sort by') + '" style="' + filterField + '">'
               + TASK_SORTS.map(function (o) { return '<option value="' + o[0] + '"' + (state.taskSort === o[0] ? ' selected' : '') + '>' + T(o[1]) + '</option>'; }).join('')
               + '</select>', c)
         + '</div>'
-        + '<div><div style="font-size:12px; font-weight:500; letter-spacing:.03em; color:' + c.onSurfaceVariant + '; margin-bottom:6px;">' + T('ASSIGNEE') + '</div>'
+        + '<div><div class="t-title-s" style="color:' + c.onSurfaceVariant + '; margin-bottom:8px;">' + T('ASSIGNEE') + '</div>'
         +   mSelectFrom('<select id="filterAssigneeSelect" aria-label="' + T('Assignee') + '" style="' + filterField + '">'
               + [['', T('Anyone')], ['none', T('Unassigned')]].concat(state.members.map(function (m) { return [String(m.id), esc(m.displayName)]; }))
                   .map(function (o) { return '<option value="' + o[0] + '"' + (state.filterAssignee === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('')
               + '</select>', c)
         + '</div>'
-        + '<div><div style="font-size:12px; font-weight:500; letter-spacing:.03em; color:' + c.onSurfaceVariant + '; margin-bottom:6px;">' + T('PRIORITY') + '</div>'
+        + '<div><div class="t-title-s" style="color:' + c.onSurfaceVariant + '; margin-bottom:8px;">' + T('PRIORITY') + '</div>'
         + ['High', 'Medium', 'Low'].map(function (p) {
-            return '<label class="interactive" style="display:flex; align-items:center; gap:8px; padding:5px 4px; border-radius:var(--r-sm); font-size:13px; cursor:pointer;"><input type="checkbox" data-action="toggleFilterPriority" data-id="' + p + '" ' + (state.filterPriority[p] ? 'checked' : '') + '></input>' + T(p) + '</label>';
+            return '<label class="interactive t-body-m" style="display:flex; align-items:center; gap:12px; min-height:40px; padding:0 8px; border-radius:var(--r-sm); cursor:pointer;"><input type="checkbox" data-action="toggleFilterPriority" data-id="' + p + '" ' + (state.filterPriority[p] ? 'checked' : '') + '></input>' + T(p) + '</label>';
           }).join('')
         + '</div>'
-        + '<div><div style="font-size:12px; font-weight:500; letter-spacing:.03em; color:' + c.onSurfaceVariant + '; margin-bottom:6px;">' + T('CALENDAR') + '</div>'
+        + '<div><div class="t-title-s" style="color:' + c.onSurfaceVariant + '; margin-bottom:8px;">' + T('CALENDAR') + '</div>'
         + [['all', 'All'], ['shown', 'In calendar'], ['hidden', 'Not in calendar']].map(function (pair) {
-            return '<label class="interactive" style="display:flex; align-items:center; gap:8px; padding:5px 4px; border-radius:var(--r-sm); font-size:13px; cursor:pointer;"><input type="radio" name="filterCalendar" data-action="setFilterCalendar" data-id="' + pair[0] + '" ' + (state.filterCalendar === pair[0] ? 'checked' : '') + '></input>' + T(pair[1]) + '</label>';
+            return '<label class="interactive t-body-m" style="display:flex; align-items:center; gap:12px; min-height:40px; padding:0 8px; border-radius:var(--r-sm); cursor:pointer;"><input type="radio" name="filterCalendar" data-action="setFilterCalendar" data-id="' + pair[0] + '" ' + (state.filterCalendar === pair[0] ? 'checked' : '') + '></input>' + T(pair[1]) + '</label>';
           }).join('')
         + '</div>'
-        + (filtersActive() ? '<span class="interactive" data-action="clearFilters" style="align-self:flex-end; font-size:12px; font-weight:500; color:' + c.primary + ';">' + T('Clear filters') + '</span>' : '')
+        + (filtersActive() ? '<span class="interactive t-label-l" data-action="clearFilters" style="align-self:flex-end; display:inline-flex; align-items:center; height:40px; padding:0 12px; border-radius:var(--r-full); color:' + c.primary + ';">' + T('Clear filters') + '</span>' : '')
         + '</div>'
       : '';
 
@@ -3888,7 +3889,7 @@
     if (useCardRows()) {
       // Wider than a phone, the rows stop at a readable width so each date
       // stays near its title instead of at the far edge of the screen.
-      bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" style="flex:1; min-height:0; overflow:auto;"><div style="display:flex; flex-direction:column; gap:2px; max-width:680px;">'
+      bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" style="flex:1; min-height:0; overflow:auto;"><div style="display:flex; flex-direction:column; max-width:720px;">'
         + (loadingNow ? skeletonRows(c, 6) : (pageItems.length ? pageItems.map(function (t) { return taskMobileRow(t, maps, c); }).join('') : emptyStateHtml(c)))
         + '</div></div>';
     } else if (state.viewMode === 'calendar') {
@@ -3901,14 +3902,14 @@
       var rowsHtml = pageItems.map(function (t) { return taskRow(t, maps, c); }).join('');
       var emptyHtml = loadingNow ? skeletonRows(c, 8) : (pageItems.length === 0 ? emptyStateHtml(c) : '');
       bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" class="' + (selectedIds().length ? 'selecting' : '') + '" style="flex:1; min-height:0; overflow:auto;">'
-        + '<div role="table" style="display:grid; grid-template-columns:36px minmax(240px,1fr) 140px 168px 112px 52px; min-width:760px;">'
+        + '<div role="table" style="display:grid; grid-template-columns:40px minmax(240px,1fr) 144px 176px 120px 56px; min-width:776px;">'
         +   [['', T('Status')], [T('Task'), '', 'title'], [T('Department')], [T('Assignee')], [T('Due Date'), '', 'due'], ['', T('Priority'), 'priority']].map(function (h, i) {
               // Columns the server can sort by sort when their heading is
               // clicked; clicking the active one goes back to the default order.
               var key = h[2], on = key && state.taskSort === key;
               var arrow = on ? '<svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4v12M5 11l5 5 5-5"></path></svg>' : '';
               var name = h[0] || h[1];
-              return '<div role="columnheader"' + (key ? ' class="interactive" data-action="sortByColumn" data-id="' + key + '" aria-sort="' + (on ? 'ascending' : 'none') + '" title="' + esc(T(on ? 'Back to the default order' : 'Sort by {col}', { col: name })) + '"' : '') + (h[1] ? ' aria-label="' + esc(h[1]) + '"' : '') + ' style="position:sticky; top:0; z-index:1; display:flex; align-items:center; gap:4px; height:32px; padding:0 12px; background:' + c.surface + '; font-size:12px; letter-spacing:.02em; font-weight:500; color:' + (on ? c.primary : c.onSurfaceVariant) + ';' + (i === 0 || i === 5 ? ' justify-content:center;' : '') + '">' + (i === 5 && !on ? '' : h[0]) + arrow + (i === 5 && !arrow ? '<svg width="12" height="12" viewBox="0 0 20 18" aria-hidden="true"><rect x="3" y="11" width="3.5" height="4" rx="1" fill="currentColor"></rect><rect x="8" y="7" width="3.5" height="8" rx="1" fill="currentColor"></rect><rect x="13" y="3" width="3.5" height="12" rx="1" fill="currentColor"></rect></svg>' : '') + '</div>';
+              return '<div role="columnheader"' + (key ? ' class="interactive" data-action="sortByColumn" data-id="' + key + '" aria-sort="' + (on ? 'ascending' : 'none') + '" title="' + esc(T(on ? 'Back to the default order' : 'Sort by {col}', { col: name })) + '"' : '') + (h[1] ? ' aria-label="' + esc(h[1]) + '"' : '') + ' style="position:sticky; top:0; z-index:1; display:flex; align-items:center; gap:4px; height:48px; padding:0 16px; background:' + c.surface + '; font-size:14px; line-height:20px; font-weight:500; color:' + (on ? c.primary : c.onSurfaceVariant) + ';' + (i === 0 || i === 5 ? ' justify-content:center;' : '') + '">' + (i === 5 && !on ? '' : h[0]) + arrow + (i === 5 && !arrow ? '<svg width="12" height="12" viewBox="0 0 20 18" aria-hidden="true"><rect x="3" y="11" width="3.5" height="4" rx="1" fill="currentColor"></rect><rect x="8" y="7" width="3.5" height="8" rx="1" fill="currentColor"></rect><rect x="13" y="3" width="3.5" height="12" rx="1" fill="currentColor"></rect></svg>' : '') + '</div>';
             }).join('')
         +   rowsHtml + emptyHtml
         + '</div></div>';
@@ -3920,35 +3921,35 @@
 
     var narrow = isNarrowScreen();
     var filterHtml = '<div data-dropdown="filter" style="position:relative;' + (narrow ? ' flex-shrink:0;' : '') + '">'
-      +   '<div class="interactive filter-btn" data-action="toggleFilterOpen" title="' + T('Filter') + '" style="position:relative; display:flex; align-items:center; gap:6px; height:40px; padding:0 16px; border-radius:var(--r-sm); border:1px solid ' + (filtersActive() ? c.primary : c.outline) + '; color:' + (filtersActive() ? c.primary : c.onSurfaceVariant) + '; font-size:14px; font-weight:500;">' + ICON.filter + '<span class="btn-label">' + T('Filter') + '</span>'
+      +   '<div class="interactive filter-btn t-label-l" data-action="toggleFilterOpen" title="' + T('Filter') + '" style="position:relative; display:flex; align-items:center; gap:8px; height:40px; padding:0 24px 0 16px; border-radius:var(--r-full); border:1px solid ' + (filtersActive() ? c.primary : c.outline) + '; color:' + (filtersActive() ? c.primary : c.onSurfaceVariant) + ';">' + ICON.filter + '<span class="btn-label">' + T('Filter') + '</span>'
       +     (filtersActive() ? '<span aria-label="' + T('Filters on') + '" style="position:absolute; top:6px; right:8px; width:7px; height:7px; border-radius:50%; background:' + c.primary + ';"></span>' : '') + '</div>'
       +   filterPanel
       + '</div>';
-    var tablistHtml = '<div role="tablist" aria-label="' + T('Filter by status') + '" data-scroll-key="tabs" style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; border-bottom:1px solid ' + c.outlineVariant + ';' + (narrow ? ' flex:1; min-width:0;' : '') + '">' + tabsHtml + '</div>';
-    return '<main id="task-list" tabindex="-1" class="content-sheet ' + animClass + '" style="flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; padding:24px 28px 16px; gap:14px; background:' + c.surface + ';">'
+    var tablistHtml = '<div role="tablist" aria-label="' + T('Filter by status') + '" data-scroll-key="tabs" style="display:flex; align-items:center; gap:24px; flex-wrap:wrap; border-bottom:1px solid ' + c.outlineVariant + ';' + (narrow ? ' flex:1; min-width:0;' : '') + '">' + tabsHtml + '</div>';
+    return '<main id="task-list" tabindex="-1" class="content-sheet ' + animClass + '" style="flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; padding:24px 24px 16px; gap:16px; background:' + c.surface + ';">'
       + '<div style="display:' + (narrow ? 'none' : 'flex') + '; align-items:flex-start; justify-content:space-between; gap:16px;">'
-      +   '<div style="min-width:0; flex:1;"><div style="font-size:12px; color:' + c.onSurfaceVariant + '; margin-bottom:3px;">' + esc(pathLabel) + '</div><div class="page-title" title="' + esc(titleLabel) + '" style="font-size:28px; line-height:36px; font-weight:500;">' + esc(titleLabel) + '</div></div>'
+      +   '<div style="min-width:0; flex:1;"><div class="t-body-s" style="color:' + c.onSurfaceVariant + '; margin-bottom:4px;">' + esc(pathLabel) + '</div><div class="page-title t-headline-m" title="' + esc(titleLabel) + '">' + esc(titleLabel) + '</div></div>'
       +   '<div style="display:flex; align-items:center; gap:8px;">'
-      +     '<div class="view-toggle" role="radiogroup" aria-label="' + T('View') + '" style="display:flex; align-items:center; gap:2px; padding:3px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + ';">'
+      +     '<div class="view-toggle" role="radiogroup" aria-label="' + T('View') + '" style="display:flex; align-items:center; gap:4px; height:40px; box-sizing:border-box; padding:4px; border-radius:var(--r-full); background:' + c.surfaceContainerHigh + ';">'
       +       [['list', 'List', ICON.listView], ['grid', 'Board', ICON.gridView], ['calendar', 'Calendar', ICON.calendarView.replace('width="19" height="19"', 'width="16" height="16"')]].map(function (v) {
                 var on = state.viewMode === v[0];
-                return '<div class="interactive" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setViewMode" data-id="' + v[0] + '" title="' + T(v[1]) + '" aria-label="' + T(v[1]) + '" style="width:30px; height:30px; border-radius:4px; display:flex; align-items:center; justify-content:center; color:' + (on ? c.onSurface : c.onSurfaceVariant) + '; background:' + (on ? c.surface : 'transparent') + ';' + (on ? ' box-shadow:var(--e1);' : '') + '">' + v[2] + '</div>';
+                return '<div class="interactive" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setViewMode" data-id="' + v[0] + '" title="' + T(v[1]) + '" aria-label="' + T(v[1]) + '" style="width:40px; height:32px; border-radius:var(--r-full); display:flex; align-items:center; justify-content:center; color:' + (on ? c.onSurface : c.onSurfaceVariant) + '; background:' + (on ? c.surface : 'transparent') + ';' + (on ? ' box-shadow:var(--e1);' : '') + '">' + v[2] + '</div>';
               }).join('')
       +     '</div>'
       +     (narrow ? '' : filterHtml)
             +     (canCreateTask()
-              ? '<div class="interactive new-task-inline" data-action="openTaskModal" style="display:flex; align-items:center; gap:7px; height:40px; padding:0 18px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; font-weight:500;">' + ICON.plus + '<span>' + T('New Task') + '</span></div>'
-              : '<div class="new-task-inline" title="' + T('An administrator has to put your account in a department first') + '" style="display:flex; align-items:center; gap:7px; height:40px; padding:0 18px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + '; font-size:14px; font-weight:500; opacity:.7;">' + ICON.plus + '<span>' + T('New Task') + '</span></div>')
+              ? '<div class="interactive new-task-inline t-label-l" data-action="openTaskModal" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 24px 0 16px; border-radius:var(--r-full); background:' + c.primary + '; color:' + c.onPrimary + ';">' + ICON.plus + '<span>' + T('New Task') + '</span></div>'
+              : '<div class="new-task-inline t-label-l" title="' + T('An administrator has to put your account in a department first') + '" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 24px 0 16px; border-radius:var(--r-full); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + '; opacity:.7;">' + ICON.plus + '<span>' + T('New Task') + '</span></div>')
       +   '</div>'
       + '</div>'
       + (narrow ? '<div style="display:flex; align-items:center; gap:4px;">' + tablistHtml + filterHtml + '</div>' : tablistHtml)
       + bodyHtml
-      + '<div style="flex-shrink:0; display:flex; align-items:center; justify-content:space-between; font-size:13px; color:' + c.onSurfaceVariant + ';">'
+      + '<div class="t-body-m" style="flex-shrink:0; display:flex; align-items:center; justify-content:space-between; min-height:40px; color:' + c.onSurfaceVariant + ';">'
       +   '<span aria-live="polite">' + (meta.total ? T('Showing {a}-{b} of {n}', { a: rangeStart, b: rangeEnd, n: meta.total }) : '') + '</span>'
-      +   '<div style="display:' + (totalPages > 1 ? 'flex' : 'none') + '; align-items:center; gap:14px;"><span>' + T('Page {p} of {n}', { p: page, n: totalPages }) + '</span>'
+      +   '<div style="display:' + (totalPages > 1 ? 'flex' : 'none') + '; align-items:center; gap:16px;"><span>' + T('Page {p} of {n}', { p: page, n: totalPages }) + '</span>'
       +     '<div style="display:flex; align-items:center; gap:4px;">'
-      +       '<div class="interactive" data-action="prevPage" aria-label="' + T('Previous page') + '" aria-disabled="' + (page <= 1 ? 'true' : 'false') + '" style="width:28px; height:28px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; color:' + c.onSurfaceVariant + '; opacity:' + (page <= 1 ? '.4' : '1') + '; pointer-events:' + (page <= 1 ? 'none' : 'auto') + ';">' + ICON.chevronLeft + '</div>'
-      +       '<div class="interactive" data-action="nextPage" aria-label="' + T('Next page') + '" aria-disabled="' + (page >= totalPages ? 'true' : 'false') + '" style="width:28px; height:28px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; color:' + c.onSurfaceVariant + '; opacity:' + (page >= totalPages ? '.4' : '1') + '; pointer-events:' + (page >= totalPages ? 'none' : 'auto') + ';">' + ICON.chevronRight + '</div>'
+      +       '<div class="interactive" data-action="prevPage" aria-label="' + T('Previous page') + '" aria-disabled="' + (page <= 1 ? 'true' : 'false') + '" style="width:40px; height:40px; border-radius:var(--r-full); display:flex; align-items:center; justify-content:center; color:' + c.onSurfaceVariant + '; opacity:' + (page <= 1 ? '.4' : '1') + '; pointer-events:' + (page <= 1 ? 'none' : 'auto') + ';">' + ICON.chevronLeft + '</div>'
+      +       '<div class="interactive" data-action="nextPage" aria-label="' + T('Next page') + '" aria-disabled="' + (page >= totalPages ? 'true' : 'false') + '" style="width:40px; height:40px; border-radius:var(--r-full); display:flex; align-items:center; justify-content:center; color:' + c.onSurfaceVariant + '; opacity:' + (page >= totalPages ? '.4' : '1') + '; pointer-events:' + (page >= totalPages ? 'none' : 'auto') + ';">' + ICON.chevronRight + '</div>'
       +     '</div>'
       +   '</div>'
       + '</div>'
