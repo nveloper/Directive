@@ -3604,8 +3604,8 @@
     var mineTab = state.bellTab === 'mine';
     var bellTabBtn = function (id, label, count) {
       var on = state.bellTab === id;
-      return '<span class="interactive" role="tab" aria-selected="' + (on ? 'true' : 'false') + '" data-action="setBellTab" data-id="' + id + '" style="display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 2px; margin-bottom:-1px; font-size:13px; font-weight:' + (on ? 600 : 400) + '; color:' + (on ? c.onSurface : c.onSurfaceVariant) + '; border-bottom:2px solid ' + (on ? c.primary : 'transparent') + ';">' + label
-        + (count > 0 ? '<span class="tnum" style="font-size:12px; font-weight:500; min-width:18px; padding:0 5px; border-radius:9px; text-align:center; background:' + c.error + '; color:#fff;">' + count + '</span>' : '') + '</span>';
+      return '<span class="interactive t-title-s" role="tab" aria-selected="' + (on ? 'true' : 'false') + '" data-action="setBellTab" data-id="' + id + '" style="display:inline-flex; align-items:center; justify-content:center; gap:4px; flex:1; height:48px; box-sizing:border-box; margin-bottom:-1px; color:' + (on ? c.primary : c.onSurfaceVariant) + '; border-bottom:2px solid ' + (on ? c.primary : 'transparent') + ';">' + label
+        + (count > 0 ? '<span class="tnum t-label-s" style="min-width:16px; height:16px; padding:0 4px; box-sizing:border-box; border-radius:var(--r-full); text-align:center; background:' + c.error + '; color:#fff;">' + count + '</span>' : '') + '</span>';
     };
     // Lists are grouped under Today, Yesterday and Earlier.
     var dayGroup = function (iso) {
@@ -3619,70 +3619,70 @@
       var last = '', out = '';
       items.forEach(function (x) {
         var g = dayGroup(when(x));
-        if (g !== last) { out += '<div style="padding:10px 6px 4px; font-size:12px; font-weight:500; color:' + c.textMuted + ';">' + esc(g) + '</div>'; last = g; }
+        if (g !== last) { out += '<div class="t-title-s" style="display:flex; align-items:center; height:40px; padding:0 16px; color:' + c.onSurfaceVariant + ';">' + esc(g) + '</div>'; last = g; }
         out += draw(x);
       });
       return out;
     };
-    var unreadDot = function (on) { return '<span aria-hidden="true" style="width:6px; height:6px; margin-top:8px; border-radius:50%; flex-shrink:0; background:' + (on ? c.primary : 'transparent') + ';"></span>'; };
+    var unreadDot = function (on) { return '<span aria-hidden="true" style="position:absolute; left:4px; top:50%; width:8px; height:8px; margin-top:-4px; border-radius:50%; background:' + (on ? c.primary : 'transparent') + ';"></span>'; };
     var personAvatar = function (name, size) {
       var col = avatarColors(name, c.dark);
       return '<span style="display:flex; align-items:center; justify-content:center; width:' + size + 'px; height:' + size + 'px; border-radius:50%; flex-shrink:0; background:' + col.bg + '; color:' + col.color + '; font-size:' + (size >= 32 ? 14 : 12) + 'px; line-height:1; font-weight:500;">' + esc(computeInitials(name)) + '</span>';
     };
     var notifKindIcon = function (kind) {
-      if (kind === 'dueToday' || kind === 'dueTomorrow') return '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10.5" r="6.5"></circle><path d="M10 7v3.5l2.5 1.5"></path></svg>';
+      if (kind === 'dueToday' || kind === 'dueTomorrow') return '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10.5" r="6.5"></circle><path d="M10 7v3.5l2.5 1.5"></path></svg>';
       return '';
     };
     var mineList = state.notifications.length === 0
-      ? '<div style="padding:28px 12px; text-align:center; font-size:13px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('Nothing for you yet. You will hear here when someone assigns you a task, mentions you with @, or comments on your work, and on the morning a task of yours is due.') + '</div>'
+      ? '<div class="t-body-m" style="padding:32px 24px; text-align:center; color:' + c.onSurfaceVariant + ';">' + T('Nothing for you yet. You will hear here when someone assigns you a task, mentions you with @, or comments on your work, and on the morning a task of yours is due.') + '</div>'
       : grouped(state.notifications, function (n) { return n.createdAt; }, function (n) {
           var lead = (n.kind === 'dueToday' || n.kind === 'dueTomorrow')
-            ? '<span style="display:flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; flex-shrink:0; background:' + c.warningContainer + '; color:' + c.onWarningContainer + ';">' + notifKindIcon(n.kind) + '</span>'
-            : personAvatar(n.actorName || '?', 24);
-          return '<div class="interactive" data-action="openNotification" data-id="' + n.id + '" style="display:flex; align-items:flex-start; gap:8px; padding:8px 6px; border-radius:var(--r-sm); opacity:' + (n.taskGone ? '.6' : '1') + ';">'
+            ? '<span style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:50%; flex-shrink:0; background:' + c.warningContainer + '; color:' + c.onWarningContainer + ';">' + notifKindIcon(n.kind) + '</span>'
+            : personAvatar(n.actorName || '?', 40);
+          return '<div class="interactive" data-action="openNotification" data-id="' + n.id + '" style="position:relative; display:flex; align-items:center; gap:16px; min-height:72px; padding:8px 16px; box-sizing:border-box; border-radius:var(--r-l); opacity:' + (n.taskGone ? '.6' : '1') + ';">'
             + unreadDot(!n.read) + lead
-            + '<span style="display:flex; flex-direction:column; gap:2px; min-width:0;">'
-            +   '<span style="font-size:13px; line-height:1.45; color:' + (n.read ? c.onSurfaceVariant : c.onSurface) + ';">' + esc(notificationLine(n)) + '</span>'
-            +   '<span style="font-size:12px; color:' + c.textMuted + ';">' + esc(formatStamp(n.createdAt)) + (n.taskGone ? ' &middot; ' + T('deleted') : '') + '</span>'
+            + '<span style="flex:1; display:flex; flex-direction:column; min-width:0;">'
+            +   '<span class="t-body-m" style="color:' + (n.read ? c.onSurfaceVariant : c.onSurface) + ';">' + esc(notificationLine(n)) + '</span>'
+            +   '<span class="t-body-s" style="color:' + c.onSurfaceVariant + ';">' + esc(formatStamp(n.createdAt)) + (n.taskGone ? ' &middot; ' + T('deleted') : '') + '</span>'
             + '</span>'
             + '</div>';
         });
     // Your own actions are left out unless asked for: you know what you did.
     var activityItems = state.activity.filter(function (a) { return state.activityIncludeMine || !(state.user && a.actorId === state.user.id); });
     var activityList = (activityItems.length === 0
-      ? '<div style="padding:28px 12px; text-align:center; font-size:13px; color:' + c.onSurfaceVariant + ';">' + T(state.activity.length ? 'Nobody else has done anything yet.' : 'Nothing has happened yet.') + '</div>'
+      ? '<div class="t-body-m" style="padding:32px 24px; text-align:center; color:' + c.onSurfaceVariant + ';">' + T(state.activity.length ? 'Nobody else has done anything yet.' : 'Nothing has happened yet.') + '</div>'
       : grouped(activityItems, function (a) { return a.at; }, function (a) {
           var fresh = !state.activitySeen || a.at > state.activitySeen;
-          return '<div style="display:flex; align-items:flex-start; gap:8px; padding:8px 6px;">'
-            + unreadDot(fresh) + personAvatar(a.actorName || '?', 24)
-            + '<span style="display:flex; flex-direction:column; gap:2px; min-width:0;">'
-            +   '<span style="font-size:13px; line-height:1.45; color:' + c.onSurface + ';">' + esc(activityLine(a)) + '</span>'
-            +   '<span style="font-size:12px; color:' + c.textMuted + ';">' + esc(formatStamp(a.at)) + '</span>'
+          return '<div style="position:relative; display:flex; align-items:center; gap:16px; min-height:72px; padding:8px 16px; box-sizing:border-box;">'
+            + unreadDot(fresh) + personAvatar(a.actorName || '?', 40)
+            + '<span style="flex:1; display:flex; flex-direction:column; min-width:0;">'
+            +   '<span class="t-body-m" style="color:' + c.onSurface + ';">' + esc(activityLine(a)) + '</span>'
+            +   '<span class="t-body-s" style="color:' + c.onSurfaceVariant + ';">' + esc(formatStamp(a.at)) + '</span>'
             + '</span>'
             + '</div>';
         }))
-      + '<label class="interactive" style="display:flex; align-items:center; gap:8px; margin:6px 0 2px; padding:6px; border-radius:var(--r-sm); font-size:12px; color:' + c.onSurfaceVariant + '; cursor:pointer;"><input type="checkbox" data-action="toggleActivityMine"' + (state.activityIncludeMine ? ' checked' : '') + '>' + T('Include my own actions') + '</label>';
+      + '<label class="interactive t-body-m" style="display:flex; align-items:center; gap:4px; min-height:48px; margin-top:8px; padding:0 16px 0 4px; border-radius:var(--r-full); color:' + c.onSurfaceVariant + '; cursor:pointer;"><span class="cb-target"><input type="checkbox" data-action="toggleActivityMine"' + (state.activityIncludeMine ? ' checked' : '') + '></span>' + T('Include my own actions') + '</label>';
     var canMarkRead = mineTab ? bellCount > 0 : unread > 0;
     var alertsSupported = typeof window.Notification === 'function';
 
     var notifPanel = (state.notifOpen || state.dropdownClosing === 'notif')
-      ? '<div class="' + dropdownClass('notif') + ' bell-panel" style="' + dropdownStyle('notif') + 'position:absolute; top:46px; right:0; width:380px; max-height:520px; display:flex; flex-direction:column; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); z-index:60;">'
-        + '<div style="display:flex; align-items:center; gap:18px; padding:4px 14px 0; border-bottom:1px solid ' + c.outlineVariant + ';" role="tablist" aria-label="' + T('Notifications') + '">'
+      ? '<div class="' + dropdownClass('notif') + ' bell-panel" style="' + dropdownStyle('notif') + 'position:absolute; top:48px; right:0; width:400px; max-height:560px; display:flex; flex-direction:column; background:' + c.surfaceContainer + '; border-radius:var(--r-l); box-shadow:var(--e2); z-index:60; overflow:hidden;">'
+        + '<div style="display:flex; align-items:center; gap:0; padding:0 8px 0 0; border-bottom:1px solid ' + c.outlineVariant + ';" role="tablist" aria-label="' + T('Notifications') + '">'
         +   bellTabBtn('mine', T('For you'), bellCount) + bellTabBtn('activity', T('Activity'), 0)
-        +   (canMarkRead ? '<span class="interactive" data-action="markAllNotifsRead" style="margin-left:auto; font-size:12px; color:' + c.primary + '; font-weight:500;">' + T('Mark all read') + '</span>' : '')
+        +   (canMarkRead ? '<span class="interactive text-btn t-label-l" data-action="markAllNotifsRead" style="color:' + c.primary + ';">' + T('Mark all read') + '</span>' : '')
         + '</div>'
-        + '<div data-scroll-key="' + (mineTab ? 'bell-mine' : 'activity') + '" style="flex:1; min-height:0; overflow-y:auto; padding:0 8px 8px 8px;">' + (mineTab ? mineList : activityList) + '</div>'
+        + '<div data-scroll-key="' + (mineTab ? 'bell-mine' : 'activity') + '" style="flex:1; min-height:0; overflow-y:auto; padding:0 8px 8px;">' + (mineTab ? mineList : activityList) + '</div>'
         + (mineTab && alertsSupported
-          ? '<div style="display:flex; align-items:center; gap:8px; padding:8px 14px; border-top:1px solid ' + c.outlineVariant + '; font-size:12px; color:' + c.onSurfaceVariant + ';">'
+          ? '<div class="t-body-m" style="display:flex; align-items:center; gap:16px; min-height:56px; padding:8px 16px 8px 24px; box-sizing:border-box; border-top:1px solid ' + c.outlineVariant + '; color:' + c.onSurfaceVariant + ';">'
             + '<span style="flex:1;">' + T('Desktop alerts when this tab is in the background') + '</span>'
-            + '<span class="interactive" data-action="toggleDesktopAlerts" role="switch" aria-checked="' + (state.desktopAlerts ? 'true' : 'false') + '" title="' + T('Desktop alerts') + '" style="position:relative; width:34px; height:20px; border-radius:var(--r-sm); flex-shrink:0; background:' + (state.desktopAlerts ? c.primary : c.surfaceContainerHigh) + '; border:1px solid ' + (state.desktopAlerts ? c.primary : c.outline) + ';"><span style="position:absolute; top:2px; left:' + (state.desktopAlerts ? 16 : 2) + 'px; width:14px; height:14px; border-radius:50%; background:' + (state.desktopAlerts ? c.onPrimary : c.outline) + '; transition:left .2s;"></span></span>'
+            + '<span class="interactive" data-action="toggleDesktopAlerts" role="switch" aria-checked="' + (state.desktopAlerts ? 'true' : 'false') + '" title="' + T('Desktop alerts') + '" style="position:relative; width:52px; height:32px; box-sizing:border-box; border-radius:var(--r-full); flex-shrink:0; background:' + (state.desktopAlerts ? c.primary : c.surfaceContainerHigh) + '; border:2px solid ' + (state.desktopAlerts ? c.primary : c.outline) + ';"><span style="position:absolute; top:50%; left:' + (state.desktopAlerts ? 22 : 6) + 'px; width:' + (state.desktopAlerts ? 24 : 16) + 'px; height:' + (state.desktopAlerts ? 24 : 16) + 'px; transform:translateY(-50%); border-radius:50%; background:' + (state.desktopAlerts ? c.onPrimary : c.outline) + '; transition:left .2s, width .2s, height .2s;"></span></span>'
             + '</div>'
           : '')
         + '</div>'
       : '';
 
     var accountPanel = (state.accountOpen || state.dropdownClosing === 'account')
-      ? '<div class="' + dropdownClass('account') + '" style="' + dropdownStyle('account') + 'position:absolute; top:46px; right:0; width:260px; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:60; display:flex; flex-direction:column; gap:2px;">'
+      ? '<div class="' + dropdownClass('account') + ' account-panel" style="' + dropdownStyle('account') + 'position:absolute; top:46px; right:0; width:260px; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:60; display:flex; flex-direction:column; gap:2px;">'
         + '<div style="padding:8px 10px 6px 10px; display:flex; align-items:center; gap:10px;">'
           +   avatarHtml(avatarColors(state.user.displayName, c.dark).bg, avatarColors(state.user.displayName, c.dark).color, 44)
           +   '<div style="min-width:0;"><div style="font-size:13px; font-weight:500;">' + esc(state.user.displayName) + '</div><div style="font-size:12px; color:' + c.onSurfaceVariant + ';">@' + esc(state.user.username) + ' · ' + esc(T(state.user.role)) + '</div></div>'

@@ -414,8 +414,10 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 
   /* A finger is not a mouse pointer: every control in the bar and the panels
      gets a 44px target, and the text that labels them comes up to size. */
-  .top-bar .interactive:not(.brand-icon) { width: 48px !important; height: 48px !important; }
-  .top-bar .interactive:not(.brand-icon) svg { width: 22px; height: 22px; }
+  /* Only the bar's own buttons: the panels that hang off it (alerts, account)
+     are inside .top-bar too and keep their own sizes. */
+  .top-bar .interactive:not(.brand-icon):not(.bell-panel *):not(.account-panel *) { width: 48px !important; height: 48px !important; }
+  .top-bar .interactive:not(.brand-icon):not(.bell-panel *):not(.account-panel *) > svg { width: 24px; height: 24px; }
   /* Centred on the same line as the buttons beside it. */
   .top-bar .brand-icon { align-self: center; }
 
@@ -538,8 +540,8 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
   /* Hung off the bell, the panel ran past the left edge of a phone screen;
      there it spans the screen under the top bar instead. */
   .bell-panel {
-    position: fixed !important; top: 64px !important; left: 12px !important; right: 12px !important;
-    width: auto !important; max-height: min(440px, 70vh) !important;
+    position: fixed !important; top: 64px !important; left: 8px !important; right: 8px !important;
+    width: auto !important; max-height: min(560px, 72vh) !important;
   }
 }
 
