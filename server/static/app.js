@@ -433,6 +433,7 @@
     selectedNode: 'all',
     activeTab: 'all',
     contentAnim: 'settled',
+    listFade: '',
     departments: [],
     tasks: [],
     todayTasks: [],
@@ -2293,8 +2294,15 @@
     nav.tabTarget = id;
     state.tabSlide = tabSlideFrom('#task-list [role="tablist"]', id);
     playOnce('tab', 'anim-tab-slide', 420);
-    setState({ activeTab: id, page: 1 });
-    fetchTasks().then(render);
+    var token = ++nav.tabToken;
+    // The old list dims while the new one loads, then the new one fades up
+    // from there: a soft cross-fade instead of a swap or a blank.
+    setState({ activeTab: id, page: 1, listFade: 'dim' });
+    fetchTasks().then(function () {
+      if (nav.tabToken !== token) return;
+      setState({ listFade: 'in' });
+      setTimeout(function () { if (nav.tabToken === token && state.listFade === 'in') setState({ listFade: '' }); }, 260);
+    });
   }
 
   function clearSearch() { setState({ searchQuery: '', page: 1 }); fetchTasks().then(render); }
@@ -3930,6 +3938,10 @@
     var rangeStart = pageItems.length === 0 ? 0 : (page - 1) * meta.pageSize + 1;
     var rangeEnd = (page - 1) * meta.pageSize + pageItems.length;
     var animClass = state.contentAnim === 'out' ? 'content-out' : (state.contentAnim === 'in' ? 'content-in' : '');
+    // motion() resumes a fade a re-render lands in, instead of replaying it.
+    var dimM = motion('list:dim', state.listFade === 'dim', 'list-dim', 140, true);
+    var upM = motion('list:in', state.listFade === 'in', 'list-in', 240);
+    var listFadeMotion = state.listFade === 'dim' ? dimM : upM;
 
     var narrow = isNarrowScreen();
     var filterHtml = '<div data-dropdown="filter" style="position:relative;' + (narrow ? ' flex-shrink:0;' : '') + '">'
@@ -3955,7 +3967,9 @@
       +   '</div>'
       + '</div>'
       + (narrow ? '<div style="display:flex; align-items:center; gap:4px;">' + tablistHtml + filterHtml + '</div>' : tablistHtml)
-      + bodyHtml
+      // Only the list itself fades on a tab change; the header and the tabs
+      // stay put so the underline can slide across them.
+      + '<div class="list-body ' + listFadeMotion.cls + '" style="' + listFadeMotion.style + 'flex:1; min-height:0; display:flex; flex-direction:column;">' + bodyHtml + '</div>'
       + '<div class="t-body-m" style="flex-shrink:0; display:flex; align-items:center; justify-content:space-between; min-height:40px; color:' + c.onSurfaceVariant + ';">'
       +   '<span aria-live="polite">' + (meta.total ? T('Showing {a}-{b} of {n}', { a: rangeStart, b: rangeEnd, n: meta.total }) : '') + '</span>'
       +   '<div style="display:' + (totalPages > 1 ? 'flex' : 'none') + '; align-items:center; gap:16px;"><span>' + T('Page {p} of {n}', { p: page, n: totalPages }) + '</span>'
