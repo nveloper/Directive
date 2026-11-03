@@ -338,7 +338,7 @@
   // Dates are written the reader's way: "Sep 24" or "9월 24일".
   var LOCALE = LANG === 'ko' ? 'ko-KR' : 'en-US';
   function shortDate(d) { return d.toLocaleDateString(LOCALE, { month: 'short', day: 'numeric' }); }
-  var CONTENT_OUT_MS = 90, CONTENT_IN_MS = 560, MODAL_CLOSE_MS = 160;
+  var CONTENT_OUT_MS = 90, CONTENT_IN_MS = 560, MODAL_CLOSE_MS = 260;
   var ACCENT_PRESETS = ['#6750A4', '#006A6A', '#3A5BA9', '#8B5000', '#984061'];
   var ICON = {
     listView: '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 6h12M4 10h12M4 14h12"></path></svg>',
@@ -2254,7 +2254,7 @@
   }
 
   function modalMotion(name, closing) {
-    var cardIn = motion(name + ':in', !closing, 'card-in', 390);
+    var cardIn = motion(name + ':in', !closing, 'card-in', name === 'detail' ? 400 : 420);
     var cardOut = motion(name + ':out', closing, 'card-out', 240, true);
     var dimIn = motion(name + ':dimIn', !closing, 'overlay-in', 300);
     var dimOut = motion(name + ':dimOut', closing, 'overlay-out', 240, true);
@@ -2450,7 +2450,7 @@
   // 'anim-open'/'anim-close' class that plays the slide once and then
   // self-clears, so it does not replay on every unrelated re-render while
   // the drawer sits open (e.g. ticking a task inside it).
-  var MOBILE_DRAWER_OPEN_MS = 330, MOBILE_DRAWER_CLOSE_MS = 300;
+  var MOBILE_DRAWER_OPEN_MS = 330, MOBILE_DRAWER_CLOSE_MS = 280;
 
   function setMobileNav(open) {
     var token = ++nav.mobileNavToken;

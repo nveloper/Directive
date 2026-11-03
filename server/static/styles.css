@@ -28,9 +28,14 @@
   --m-fast: 100ms;
   --m-base: 160ms;
   --m-slow: 220ms;
+  /* Exits: M3 emphasized-accelerate, long enough to read as a move. */
+  --m-exit: 240ms;
+  --ease-exit: cubic-bezier(.3, 0, .8, .15);
+  /* Panels that slide in: M3 emphasized-decelerate, no overshoot. */
+  --ease-enter: cubic-bezier(.05, .7, .1, 1);
   --ease: cubic-bezier(.2, 0, 0, 1);
   --m-spatial: 420ms;
-  --spring: cubic-bezier(.34, 1.36, .64, 1);
+  --spring: cubic-bezier(.34, 1.18, .64, 1);
   --spring-fast: cubic-bezier(.3, 1.6, .5, 1);
 
   /* the state layer laid over anything that can be pressed */
@@ -143,9 +148,9 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 .content-in { animation: contentSlideIn 140ms ease forwards; }
 
 .overlay-in { animation: overlayFadeIn var(--m-base) ease forwards; }
-.overlay-out { animation: overlayFadeOut var(--m-base) ease forwards; }
+.overlay-out { animation: overlayFadeOut var(--m-exit) var(--ease-exit) forwards; }
 .card-in { animation: modalPopIn var(--m-slow) var(--ease) forwards; }
-.card-out { animation: modalPopOut var(--m-base) ease forwards; }
+.card-out { animation: modalPopOut var(--m-exit) var(--ease-exit) forwards; }
 .row-highlight { animation: rowHighlight 900ms ease; }
 .dropdown-panel { transform-origin: top right; }
 /* The entrance is its own class so it can be dropped once it has played -
@@ -352,7 +357,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 .left-nav.open, .left-nav.anim-open, .left-nav.anim-close { visibility: visible; box-shadow: var(--e3); }
 .left-nav.open { transform: translateX(0); }
 .left-nav.anim-open { animation: drawerSlideInLeft var(--m-spatial) var(--ease) forwards; }
-.left-nav.anim-close { animation: drawerSlideOutLeft var(--m-base) ease forwards; }
+.left-nav.anim-close { animation: drawerSlideOutLeft var(--m-exit) var(--ease-exit) forwards; }
 .left-nav .drawer-close-btn { display: flex; }
 /* A drawer slides over the page without darkening it. The layer stays so a
    click outside still closes the drawer, but it paints nothing - the panel's
@@ -380,7 +385,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 .right-panel.open, .right-panel.anim-open, .right-panel.anim-close { visibility: visible; box-shadow: var(--e3); }
 .right-panel.open { transform: translateX(0); }
 .right-panel.anim-open { animation: drawerSlideInRight var(--m-spatial) var(--ease) forwards; }
-.right-panel.anim-close { animation: drawerSlideOutRight var(--m-base) ease forwards; }
+.right-panel.anim-close { animation: drawerSlideOutRight var(--m-exit) var(--ease-exit) forwards; }
 
 /* Wide screens: the department list stops being a drawer. */
 @media (min-width: 1200px) {
@@ -586,8 +591,8 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
   --pad: 24px; border-radius: 0; padding: var(--pad); gap: 24px;
   border-left: 1px solid var(--outline-variant);
 }
-.detail-overlay .task-detail.card-in { animation: drawerSlideInRight var(--m-slow) var(--ease) both; }
-.detail-overlay .task-detail.card-out { animation: drawerSlideOutRight var(--m-base) ease both; }
+.detail-overlay .task-detail.card-in { animation: drawerSlideInRight 400ms var(--ease-enter) both; }
+.detail-overlay .task-detail.card-out { animation: drawerSlideOutRight var(--m-exit) var(--ease-exit) both; }
 .detail-props .mselect-trigger:hover, .detail-props .date-trigger:hover { border-color: var(--outline) !important; }
 .mselect-label svg, .mselect-item-label svg { vertical-align: -3px; }
 @media (max-width: 860px) {
@@ -938,7 +943,7 @@ body { line-height: 1.45; }
 .content-in .task-row:nth-child(n+8), .content-in .board-card:nth-child(n+8) { animation-delay: 140ms; }
 
 /* Dialogs and menus land with the spatial spring. */
-.card-in { animation-timing-function: var(--spring) !important; animation-duration: var(--m-spatial) !important; }
+.card-in:not(.task-detail) { animation-timing-function: var(--spring) !important; animation-duration: var(--m-spatial) !important; }
 .dropdown-in { animation-timing-function: var(--spring) !important; animation-duration: 320ms !important; transform-origin: top right; }
 .mselect-in { animation-timing-function: var(--spring) !important; animation-duration: 320ms !important; }
 
