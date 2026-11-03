@@ -3458,12 +3458,7 @@
       +   '<span class="t-title-l" style="margin-right:8px;">' + esc(r.first.toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</span>'
       +   nav(-1, r.week ? 'Previous week' : 'Previous month', ICON.chevronLeft) + nav(0, 'Today', T('Today')) + nav(1, r.week ? 'Next week' : 'Next month', ICON.chevronRight)
       +   '<span style="flex:1;"></span>' + undated
-      +   '<div role="group" aria-label="' + T('Calendar span') + '" style="display:inline-flex; height:40px; box-sizing:content-box; border:1px solid ' + c.outline + '; border-radius:var(--r-full); overflow:hidden;">'
-      +     [['week', 'Week'], ['month', 'Month']].map(function (p) {
-              var on = calendarSpan() === p[0];
-              return '<span class="interactive t-label-l' + (on ? oneShotClass('seg') : '') + '" data-action="setCalendarSpan" data-id="' + p[0] + '" aria-pressed="' + on + '" style="display:inline-flex; align-items:center; padding:0 16px; background:' + (on ? c.secondaryContainer : 'transparent') + '; color:' + (on ? c.onSecondaryContainer : c.onSurface) + ';' + (p[0] === 'month' ? ' border-left:1px solid ' + c.outline + ';' : '') + '">' + T(p[1]) + '</span>';
-            }).join('')
-      +   '</div>'
+      +   segmented('span', [['week', 'Week'], ['month', 'Month']], calendarSpan(), 'setCalendarSpan', c, { label: 'Calendar span', type: 't-label-l', style: 'width:200px;' })
       + '</div>'
       + '<div role="grid" aria-label="' + T('Calendar') + '" style="display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); border-top:1px solid ' + c.outlineVariant + '; border-left:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); overflow:hidden;">'
       +   head.replace(/<div style="/g, '<div style="border-right:1px solid ' + c.outlineVariant + '; border-bottom:1px solid ' + c.outlineVariant + '; background:' + c.surfaceContainerLow + '; ')
@@ -3981,12 +3976,7 @@
       + '<div style="display:' + (narrow ? 'none' : 'flex') + '; align-items:flex-start; justify-content:space-between; gap:16px;">'
       +   '<div style="min-width:0; flex:1;"><div class="t-body-s" style="color:' + c.onSurfaceVariant + '; margin-bottom:4px;">' + esc(pathLabel) + '</div><div class="page-title t-headline-m" title="' + esc(titleLabel) + '">' + esc(titleLabel) + '</div></div>'
       +   '<div style="display:flex; align-items:center; gap:8px;">'
-      +     '<div class="view-toggle" role="radiogroup" aria-label="' + T('View') + '" style="display:flex; align-items:center; gap:4px; height:40px; box-sizing:border-box; padding:4px; border-radius:var(--r-full); background:' + c.surfaceContainerHigh + ';">'
-      +       [['list', 'List', ICON.listView], ['grid', 'Board', ICON.gridView], ['calendar', 'Calendar', ICON.calendarView.replace('width="19" height="19"', 'width="16" height="16"')]].map(function (v) {
-                var on = state.viewMode === v[0];
-                return '<div class="interactive' + (on ? oneShotClass('seg') : '') + '" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setViewMode" data-id="' + v[0] + '" title="' + T(v[1]) + '" aria-label="' + T(v[1]) + '" style="width:40px; height:32px; border-radius:var(--r-full); display:flex; align-items:center; justify-content:center; color:' + (on ? c.onSurface : c.onSurfaceVariant) + '; background:' + (on ? c.surface : 'transparent') + ';' + (on ? ' box-shadow:var(--e1);' : '') + '">' + v[2] + '</div>';
-              }).join('')
-      +     '</div>'
+      +     segmented('view', [['list', 'List', ICON.listView, true], ['grid', 'Board', ICON.gridView, true], ['calendar', 'Calendar', ICON.calendarView.replace('width="19" height="19"', 'width="16" height="16"'), true]], state.viewMode, 'setViewMode', c, { label: 'View', tonal: true, cls: 'view-toggle', style: 'width:132px;' })
       +     (narrow ? '' : filterHtml)
             +     (canCreateTask()
               ? '<div class="interactive new-task-inline t-label-l" data-action="openTaskModal" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 24px 0 16px; border-radius:var(--r-full); background:' + c.primary + '; color:' + c.onPrimary + ';">' + ICON.plus + '<span>' + T('New Task') + '</span></div>'
@@ -4887,26 +4877,43 @@
   }
 
   // Light / Dark / System, as one segmented control.
-  function themeSegmented(c) {
-    var opts = [['light', 'Light', ICON.themeLight], ['dark', 'Dark', ICON.themeDark], ['system', 'System', ICON.themeSystem]];
-    var idx = Math.max(0, THEME_MODE_ORDER.indexOf(state.themeMode));
-    var from = nav.themeSegFrom == null ? idx : nav.themeSegFrom;
-    // One pill under three equal cells; on a change it slides from the old
-    // cell to the new one, and the new cell's icon turns into place.
-    return '<div role="radiogroup" aria-label="' + T('Theme') + '" class="theme-seg" style="--seg-i:' + idx + '; --seg-from:' + from + '; border:1px solid ' + c.outline + ';">'
-      + '<span class="theme-seg-pill' + oneShotClass('seg') + '" aria-hidden="true" style="background:' + c.secondaryContainer + ';"></span>'
-      + opts.map(function (o) {
-          var on = state.themeMode === o[0];
-          return '<span class="interactive t-label-m theme-seg-cell" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setThemeMode" data-id="' + o[0] + '" style="color:' + (on ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
-            + '<span class="theme-seg-icon' + (on ? oneShotClass('segIcon') : '') + '">' + o[2] + '</span><span class="theme-seg-label">' + T(o[1]) + '</span></span>';
+  // A segmented control: equal cells over one pill. On a change the pill
+  // slides from the old cell to the new one and the new cell's icon turns in.
+  // items: [id, label, icon, iconOnly]. o.tonal: filled track, raised pill.
+  function segmented(key, items, cur, action, c, o) {
+    o = o || {};
+    var ids = items.map(function (it) { return it[0]; });
+    var idx = Math.max(0, ids.indexOf(cur));
+    var from = segFrom[key] == null ? idx : segFrom[key];
+    var track = o.tonal ? 'background:' + c.surfaceContainerHigh + ';' : 'border:1px solid ' + c.outline + ';';
+    var pill = o.tonal ? 'background:' + c.surface + '; box-shadow:var(--e1);' : 'background:' + c.secondaryContainer + ';';
+    return '<div role="radiogroup" aria-label="' + T(o.label || '') + '" class="seg' + (o.tonal ? ' seg-tonal' : '') + (o.cls ? ' ' + o.cls : '') + '" data-seg="' + key + '" style="--seg-n:' + items.length + '; --seg-i:' + idx + '; --seg-from:' + from + '; ' + track + (o.style || '') + '">'
+      + '<span class="seg-pill' + oneShotClass('seg:' + key) + '" aria-hidden="true" style="' + pill + '"></span>'
+      + items.map(function (it) {
+          var on = it[0] === cur;
+          var onColor = o.tonal ? c.onSurface : c.onSecondaryContainer;
+          return '<span class="interactive ' + (o.type || 't-label-m') + ' seg-cell" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="' + action + '" data-id="' + it[0] + '"' + (it[3] ? ' title="' + T(it[1]) + '" aria-label="' + T(it[1]) + '"' : '') + ' style="color:' + (on ? onColor : c.onSurfaceVariant) + ';">'
+            + (it[2] ? '<span class="seg-icon' + (on ? oneShotClass('segIcon:' + key) : '') + '">' + it[2] + '</span>' : '')
+            + (it[3] ? '' : '<span class="seg-label' + (!it[2] && on ? oneShotClass('segIcon:' + key) : '') + '">' + T(it[1]) + '</span>')
+            + '</span>';
         }).join('')
       + '</div>';
   }
+  var segFrom = {};
+  function segMorph(key, ids, oldId, newId) {
+    if (oldId === newId) return;
+    segFrom[key] = Math.max(0, ids.indexOf(oldId));
+    playOnce('seg:' + key, 'anim-seg-slide', 420);
+    playOnce('segIcon:' + key, 'anim-seg-icon', 520);
+  }
+
+  // Light / Dark / System.
+  function themeSegmented(c) {
+    return segmented('theme', [['light', 'Light', ICON.themeLight], ['dark', 'Dark', ICON.themeDark], ['system', 'System', ICON.themeSystem]], state.themeMode, 'setThemeMode', c, { label: 'Theme' });
+  }
   function setThemeMode(mode) {
     if (THEME_MODE_ORDER.indexOf(mode) < 0 || mode === state.themeMode) return;
-    nav.themeSegFrom = Math.max(0, THEME_MODE_ORDER.indexOf(state.themeMode));
-    playOnce('seg', 'anim-seg-slide', 420);
-    playOnce('segIcon', 'anim-seg-icon', 520);
+    segMorph('theme', THEME_MODE_ORDER, state.themeMode, mode);
     try { localStorage.setItem('directive_theme_mode', mode); } catch (e) {}
     if (isDarkActive() !== computeDark(mode)) playOnce('palette', 'anim-palette', 420);
     setState({ themeMode: mode });
@@ -5201,7 +5208,7 @@
     bulkDelete: function () { bulkDelete(); },
     openPalette: function () { openPalette(); },
     runPaletteItem: function (el) { runPaletteItem(Number(el.getAttribute('data-id'))); },
-    setCalendarSpan: function (el) { if (el.getAttribute('data-id') !== calendarSpan()) playOnce('seg', 'anim-seg', 420); setCalendarSpan(el.getAttribute('data-id')); },
+    setCalendarSpan: function (el) { segMorph('span', ['week', 'month'], calendarSpan(), el.getAttribute('data-id')); setCalendarSpan(el.getAttribute('data-id')); },
     shiftCalendar: function (el) { shiftCalendar(Number(el.getAttribute('data-id'))); },
     setMappingColor: function (el) { setState({ mappingForm: Object.assign({}, state.mappingForm, { color: el.getAttribute('data-id') }) }); },
     sortByColumn: function (el) { var k = el.getAttribute('data-id'); setTaskSort(state.taskSort === k ? 'created' : k); },
@@ -5225,7 +5232,7 @@
     setTab: function (el) { setTab(el.getAttribute('data-id')); },
     toggleTodayTask: function (el) { toggleTodayTask(Number(el.getAttribute('data-id'))); },
     clearSearch: function () { clearSearch(); },
-    setViewMode: function (el) { if (el.getAttribute('data-id') !== state.viewMode) playOnce('seg', 'anim-seg', 420); setViewMode(el.getAttribute('data-id')); },
+    setViewMode: function (el) { segMorph('view', ['list', 'grid', 'calendar'], state.viewMode, el.getAttribute('data-id')); setViewMode(el.getAttribute('data-id')); },
     prevPage: function () { prevPage(); },
     nextPage: function () { nextPage(); },
     clearFilters: function () { clearFilters(); },

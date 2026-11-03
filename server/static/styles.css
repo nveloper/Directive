@@ -1046,22 +1046,24 @@ svg[fill="none"][stroke="currentColor"] { stroke-width: 1.6; }
   body:has(.modal-overlay, .detail-overlay, .left-nav.open, .right-panel.open) { overflow: hidden !important; }
 }
 
-/* ---- Theme segmented control ----------------------------------------------
-   Three equal cells over one pill. The pill slides between cells; the icon of
-   the chosen mode turns into place. No dividers - the pill carries selection. */
-.theme-seg { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); height: 40px; padding: 3px; box-sizing: border-box; border-radius: var(--r-full); isolation: isolate; }
-.theme-seg-pill { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / 3); border-radius: var(--r-full); z-index: -1;
+/* ---- Segmented controls -----------------------------------------------------
+   Equal cells over one pill. The pill slides between cells in one move; the chosen cell's icon turns into place. No dividers. */
+.seg { position: relative; display: grid; grid-template-columns: repeat(var(--seg-n), minmax(0, 1fr)); height: 40px; padding: 3px; box-sizing: border-box; border-radius: var(--r-full); isolation: isolate; flex: none; }
+.seg-tonal { padding: 4px; }
+.seg-pill { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / var(--seg-n)); border-radius: var(--r-full); z-index: -1;
   transform: translateX(calc(var(--seg-i) * 100%)); }
-.theme-seg-pill.anim-seg-slide { animation: segSlide var(--m-spatial) var(--spring) var(--shot-delay, 0ms) both; }
+.seg-tonal .seg-pill { top: 4px; bottom: 4px; left: 4px; width: calc((100% - 8px) / var(--seg-n)); }
+.seg-pill.anim-seg-slide { animation: segSlide var(--m-spatial) var(--spring) var(--shot-delay, 0ms) both; }
 @keyframes segSlide {
-  from { transform: translateX(calc(var(--seg-from) * 100%)) scaleX(1); }
-  45% { transform: translateX(calc((var(--seg-from) + (var(--seg-i) - var(--seg-from)) * .55) * 100%)) scaleX(1.12); }
-  to { transform: translateX(calc(var(--seg-i) * 100%)) scaleX(1); }
+  from { transform: translateX(calc(var(--seg-from) * 100%)); }
+  to { transform: translateX(calc(var(--seg-i) * 100%)); }
 }
-.theme-seg-cell { display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; padding: 0 4px; border-radius: var(--r-full); transition: color var(--m-base) var(--ease); background: transparent; }
-.theme-seg-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.theme-seg-icon { display: inline-flex; flex: none; }
-.theme-seg-icon svg { width: 18px; height: 18px; }
-.theme-seg-icon.anim-seg-icon { animation: segIconTurn 520ms var(--spring) var(--shot-delay, 0ms) both; }
+.seg-cell { display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; padding: 0 4px; border-radius: var(--r-full); transition: color var(--m-base) var(--ease); background: transparent; }
+.seg-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seg-icon { display: inline-flex; flex: none; }
+.seg:not(.seg-tonal) .seg-icon svg { width: 18px; height: 18px; }
+.seg-icon.anim-seg-icon { animation: segIconTurn 520ms var(--spring) var(--shot-delay, 0ms) both; }
+.seg-label.anim-seg-icon { animation: segLabelIn 420ms var(--spring) var(--shot-delay, 0ms) both; }
 @keyframes segIconTurn { from { transform: rotate(-90deg) scale(.6); opacity: .4; } to { transform: rotate(0) scale(1); opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .theme-seg-pill.anim-seg-slide, .theme-seg-icon.anim-seg-icon { animation: none; } }
+@keyframes segLabelIn { from { transform: scale(.88); } to { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .seg-pill.anim-seg-slide, .anim-seg-icon { animation: none; } }
