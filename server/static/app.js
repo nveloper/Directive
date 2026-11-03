@@ -434,6 +434,7 @@
     activeTab: 'all',
     contentAnim: 'settled',
     listFade: '',
+    listGhost: '',
     departments: [],
     tasks: [],
     todayTasks: [],
@@ -2256,15 +2257,19 @@
   // Changing what the list shows (department, tab, page) only touches the
   // list: it dims while the new rows load and fades up when they arrive. The
   // page around it - bar, title, tabs - never fades, so nothing blinks.
+  // The old rows stay fully visible until the new ones arrive; then the two
+  // cross-fade in place - the old as a still copy fading out on top, the new
+  // fading in under it - so the list never dips or goes blank.
   function reloadListSoftly(change) {
     var token = ++nav.listToken;
-    change.listFade = 'dim';
+    var body = document.querySelector('#task-list .list-body > div');
+    var ghost = body ? body.innerHTML : '';
     setState(change);
     if (isNarrowScreen() && window.scrollY) { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); } }
     return fetchTasks().then(function () {
       if (nav.listToken !== token) return;
-      setState({ listFade: 'in' });
-      setTimeout(function () { if (nav.listToken === token && state.listFade === 'in') setState({ listFade: '' }); }, 260);
+      setState({ listFade: 'in', listGhost: ghost });
+      setTimeout(function () { if (nav.listToken === token && state.listFade === 'in') setState({ listFade: '', listGhost: '' }); }, 260);
     });
   }
   function selectNode(id) {
@@ -3927,9 +3932,10 @@
     var rangeEnd = (page - 1) * meta.pageSize + pageItems.length;
     var animClass = state.contentAnim === 'out' ? 'content-out' : (state.contentAnim === 'in' ? 'content-in' : '');
     // motion() resumes a fade a re-render lands in, instead of replaying it.
-    var dimM = motion('list:dim', state.listFade === 'dim', 'list-dim', 140, true);
-    var upM = motion('list:in', state.listFade === 'in', 'list-in', 240);
-    var listFadeMotion = state.listFade === 'dim' ? dimM : upM;
+    var listFadeMotion = motion('list:in', state.listFade === 'in', 'list-in', 240);
+    var ghostMotion = motion('list:ghost', state.listFade === 'in' && !!state.listGhost, 'list-ghost-out', 240, true);
+    var ghostHtml = state.listFade === 'in' && state.listGhost
+      ? '<div class="list-ghost ' + ghostMotion.cls + '" aria-hidden="true" style="' + ghostMotion.style + '">' + state.listGhost + '</div>' : '';
 
     var narrow = isNarrowScreen();
     var filterHtml = '<div data-dropdown="filter" style="position:relative;' + (narrow ? ' flex-shrink:0;' : '') + '">'
@@ -3957,7 +3963,10 @@
       + (narrow ? '<div style="display:flex; align-items:center; gap:4px;">' + tablistHtml + filterHtml + '</div>' : tablistHtml)
       // Only the list itself fades on a tab change; the header and the tabs
       // stay put so the underline can slide across them.
-      + '<div class="list-body ' + listFadeMotion.cls + '" style="' + listFadeMotion.style + 'flex:1; min-height:0; display:flex; flex-direction:column;">' + bodyHtml + '</div>'
+      + '<div class="list-body ' + listFadeMotion.cls + '" style="' + listFadeMotion.style.replace('animation-delay', '--fade-delay') + 'position:relative; flex:1; min-height:0; display:flex; flex-direction:column;">'
+      +   bodyHtml
+      +   ghostHtml
+      + '</div>'
       + '<div class="t-body-m" style="flex-shrink:0; display:flex; align-items:center; justify-content:space-between; min-height:40px; color:' + c.onSurfaceVariant + ';">'
       +   '<span aria-live="polite">' + (meta.total ? T('Showing {a}-{b} of {n}', { a: rangeStart, b: rangeEnd, n: meta.total }) : '') + '</span>'
       +   '<div style="display:' + (totalPages > 1 ? 'flex' : 'none') + '; align-items:center; gap:16px;"><span>' + T('Page {p} of {n}', { p: page, n: totalPages }) + '</span>'
