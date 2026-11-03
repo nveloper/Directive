@@ -3103,6 +3103,16 @@
   // The server stores "Unassigned" as text for tasks made without anyone.
   function hasAssignee(t) { return !!t.assignee && t.assignee !== 'Unassigned'; }
 
+  // When a task's status changes, its icon morphs into the new one instead
+  // of swapping: the new ring or fill pops in, and a tick draws itself.
+  var seenStatus = {};
+  function statusMorph(t, where) {
+    var key = where + ':' + t.id;
+    var prev = seenStatus[key];
+    seenStatus[key] = t.status;
+    if (prev && prev !== t.status) playOnce('status:' + key, t.status === 'done' ? 'anim-status to-done' : 'anim-status', 620);
+    return oneShotClass('status:' + key);
+  }
   function statusIconHtml(status, color, size) {
     size = size || 16;
     var ring = '<circle cx="10" cy="10" r="7.5" fill="none" stroke="' + color + '" stroke-width="2"></circle>';
@@ -3135,7 +3145,7 @@
     return '<div class="interactive task-row' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + (state.selected[t.id] ? ' is-selected' : '') + '" data-action="openTask" data-id="' + t.id + '" style="grid-column:1 / -1; display:grid; grid-template-columns:subgrid;' + (state.selected[t.id] ? ' background:' + c.primaryContainer + ';' : '') + '">'
       + '<div title="' + esc(v.statusLabel) + '" style="' + cell + ' justify-content:center; padding:0 0 0 8px;">'
       +   (canWriteDept(t.deptId) ? '<span class="sel-box' + (state.selected[t.id] ? ' on' : '') + '" data-action="toggleSelect" data-id="' + t.id + '" role="checkbox" aria-checked="' + (state.selected[t.id] ? 'true' : 'false') + '" aria-label="' + esc(T('Select {task}', { task: t.title })) + '"></span>' : '')
-      +   '<span class="status-ring">' + statusIconHtml(t.status, dot) + '</span><span style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0);">' + esc((STATUS_META[shown] || STATUS_META.todo).label) + '</span></div>'
+      +   '<span class="status-ring' + statusMorph(t, 'row') + '">' + statusIconHtml(t.status, dot) + '</span><span style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0);">' + esc((STATUS_META[shown] || STATUS_META.todo).label) + '</span></div>'
       + '<div style="' + cell + ' gap:8px;">'
       +   taskIconHtml(t, 16)
       +   '<span class="t-body-l" style="flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:' + (done ? c.textMuted : c.onSurface) + ';">' + esc(t.title) + '</span>'
@@ -3198,7 +3208,7 @@
     if (hasAssignee(t)) bits.push(esc(t.assignee));
     var due = t.dueDate ? '<span class="tnum ' + (t.overdue ? 't-label-l' : 't-body-m') + '" style="flex-shrink:0; color:' + (t.overdue ? c.error : c.onSurfaceVariant) + ';">' + esc(relativeDue(t.dueDate, t.overdue)) + '</span>' : '';
     return '<div class="interactive task-row' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + '" data-action="openTask" data-id="' + t.id + '" style="display:flex; align-items:center; gap:16px; min-height:72px; padding:8px 16px; border-radius:var(--r-l);">'
-      + '<span style="flex-shrink:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">' + statusIconHtml(t.status, dot, 20) + '</span>'
+      + '<span class="' + statusMorph(t, 'mrow').trim() + '" style="flex-shrink:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">' + statusIconHtml(t.status, dot, 20) + '</span>'
       + '<div style="flex:1; min-width:0; display:flex; flex-direction:column;">'
       +   '<div style="display:flex; align-items:center; gap:8px; min-width:0;">' + taskIconHtml(t, 16) + '<span class="t-body-l" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:' + (done ? c.textMuted : c.onSurface) + ';">' + esc(t.title) + '</span>' + due + '</div>'
       +   '<div class="t-body-m" style="display:flex; align-items:center; gap:8px; color:' + c.onSurfaceVariant + '; min-width:0;"><span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + bits.join(' · ') + '</span>' + taskBadges(t, c) + '<span style="flex:1;"></span>' + priorityIconHtml(t.priority, maps.priorityColor[t.priority], c.outlineVariant) + '</div>'
@@ -4709,7 +4719,7 @@
       ? mSelectFrom('<select id="detailStatusSelect" aria-label="' + T('Status') + '" style="' + fieldStyle + '">'
         + EDITABLE_STATUSES.map(function (s) { return '<option value="' + s + '"' + (s === t.status ? ' selected' : '') + '>' + statusIconHtml(s, maps.statusStyle[s].dot, 14) + '<span style="margin-left:8px;">' + TAB_LABELS[s] + '</span>' + '</option>'; }).join('')
         + '</select>', c)
-      : plain(statusIconHtml(t.status, dot) + esc(v.statusLabel));
+      : plain('<span class="' + statusMorph(t, 'detail').trim() + '" style="display:inline-flex;">' + statusIconHtml(t.status, dot) + '</span>' + esc(v.statusLabel));
     var assigneeCur = Number(t.assigneeId) > 0 ? String(t.assigneeId) : (t.assignee ? '-1' : '0');
     var assigneeValue = writable && assigneeCur !== '-1'
       ? mSelectFrom('<select id="detailAssigneeSelect" aria-label="' + T('Assignee') + '" style="' + fieldStyle + '">'
