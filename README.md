@@ -9,7 +9,12 @@ and open a browser.
 **[Try the demo](https://nveloper.github.io/Directive/)** - the real interface running on sample data in your
 browser, with no server behind it. Nothing you do there is kept.
 
-![The task list](docs/ui-spec/after-phase5/02-bulk-select.png)
+![The task list](docs/screenshots/task-list.png)
+
+<p>
+  <img src="docs/screenshots/task-detail-dark.png" alt="A task open in the side panel, in dark mode" width="72%">
+  <img src="docs/screenshots/phone.png" alt="The task list on a phone" width="24%">
+</p>
 
 ## Features
 
