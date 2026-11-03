@@ -193,7 +193,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
 }
 
 /* A column flex container shrinks its children before it overflows, so a long
@@ -237,8 +237,8 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 /* The bar sits above the scrolling region and owns the safe area over it, so
    the status bar never scrolls away with the content. */
 .top-bar {
-  height: calc(56px + env(safe-area-inset-top, 0px));
-  padding: env(safe-area-inset-top, 0px) calc(20px + env(safe-area-inset-right, 0px)) 0 calc(20px + env(safe-area-inset-left, 0px));
+  height: calc(64px + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) calc(16px + env(safe-area-inset-right, 0px)) 0 calc(16px + env(safe-area-inset-left, 0px));
 }
 
 .drawer-close-btn, .drawer-header-row,
@@ -383,7 +383,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
     position: relative;
     top: auto; bottom: auto; left: auto;
     z-index: auto;
-    width: 248px;
+    width: 280px;
     flex-shrink: 0;
     transform: none;
     visibility: visible;
@@ -407,9 +407,9 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
   .account-meta { display: none !important; }
 
   .top-bar {
-    height: calc(60px + env(safe-area-inset-top, 0px));
+    height: calc(64px + env(safe-area-inset-top, 0px));
     padding: env(safe-area-inset-top, 0px) calc(8px + env(safe-area-inset-right, 0px)) 0 calc(8px + env(safe-area-inset-left, 0px));
-    gap: 2px;
+    gap: 4px;
   }
 
   /* A finger is not a mouse pointer: every control in the bar and the panels
@@ -839,3 +839,19 @@ body { line-height: 1.45; }
 /* Calendar chips are small on a mouse screen; under a finger they get a
    32 minimum so a day's task can be hit. */
 @media (pointer: coarse) { .cal-chip { min-height: 32px; height: auto !important; } }
+
+/* M3 navigation drawer rows: 48 with a mouse, 56 under a finger, Label L,
+   a full-pill indicator. The tree chevron is a 20 icon in a 40 target. */
+.nav-item { min-height: 48px; box-sizing: border-box; }
+.tree-chevron-btn { width: 40px; height: 40px; padding: 10px; box-sizing: border-box; border-radius: var(--r-full) !important; }
+@media (pointer: coarse) {
+  .nav-item { min-height: 56px; }
+  .tree-chevron-btn { width: 48px; height: 48px; padding: 14px; }
+}
+/* .icon-btn sets display:flex; buttons that only exist on some screens keep
+   their own visibility rules. */
+.mobile-search-btn.icon-btn { display: none; }
+@media (max-width: 860px) { .mobile-search-btn.icon-btn { display: flex; } }
+.drawer-close-btn.icon-btn { display: none; }
+.left-nav .drawer-close-btn.icon-btn, .right-panel .drawer-close-btn.icon-btn { display: flex; }
+@media (min-width: 1200px) { .left-nav .drawer-close-btn.icon-btn { display: none; } }

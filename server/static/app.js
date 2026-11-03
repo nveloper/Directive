@@ -153,7 +153,7 @@
     if (mode === true) mode = 'edit';
     if (mode === false || !mode) mode = 'none';
     var letter = esc((state.appName || 'D').charAt(0).toUpperCase());
-    var fallback = '<div style="width:' + sizePx + 'px; height:' + sizePx + 'px; border-radius:' + Math.round(sizePx * 0.28) + 'px; background:' + bg + '; color:' + fg + '; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:' + Math.round(sizePx * 0.42) + 'px;">' + letter + '</div>';
+    var fallback = '<div style="width:' + sizePx + 'px; height:' + sizePx + 'px; border-radius:' + Math.round(sizePx * 0.28) + 'px; background:' + bg + '; color:' + fg + '; display:flex; align-items:center; justify-content:center; font-weight:500; line-height:1; font-size:' + Math.round(sizePx * 0.42) + 'px;">' + letter + '</div>';
     var attrs = mode === 'edit'
       ? 'class="interactive brand-icon" data-action="toggleBrandMenu" title="' + T('Change app icon') + '" aria-haspopup="menu" aria-expanded="' + (state.brandOpen ? 'true' : 'false') + '"'
       : (mode === 'guide'
@@ -3564,10 +3564,10 @@
   function brandMenu(c) {
     if (!state.brandOpen && state.dropdownClosing !== 'brand') return '';
     var item = function (action, label, color) {
-      return '<div class="interactive" role="menuitem" data-action="' + action + '" style="padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + color + ';">' + T(label) + '</div>';
+      return '<div class="interactive t-label-l" role="menuitem" data-action="' + action + '" style="display:flex; align-items:center; min-height:48px; padding:0 12px; border-radius:var(--r-sm); color:' + color + ';">' + T(label) + '</div>';
     };
-    return '<div class="' + dropdownClass('brand') + '" role="menu" style="' + dropdownStyle('brand') + 'transform-origin:top left; position:absolute; top:46px; left:0; width:220px; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:60; display:flex; flex-direction:column; gap:2px;">'
-      + '<div style="padding:6px 10px 4px 10px; font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('App icon (also used as the favicon)') + '</div>'
+    return '<div class="' + dropdownClass('brand') + '" role="menu" style="' + dropdownStyle('brand') + 'transform-origin:top left; position:absolute; top:48px; left:0; width:240px; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:60; display:flex; flex-direction:column; gap:0;">'
+      + '<div class="t-title-s" style="padding:8px 12px; color:' + c.onSurfaceVariant + ';">' + T('App icon (also used as the favicon)') + '</div>'
       + item('pickAppIcon', 'Upload image', c.onSurface)
       + item('removeAppIcon', 'Use the default icon', c.onSurface)
       + '</div>';
@@ -3575,7 +3575,7 @@
 
   function topBar(c) {
     var searchClear = state.searchQuery
-      ? '<span class="interactive" data-action="clearSearch" style="display:flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
+      ? '<span class="interactive icon-btn" data-action="clearSearch" aria-label="' + T('Clear search') + '" style="margin-right:-12px; color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
       : '';
 
     // On a narrow screen the always-open 420px search field left no room for
@@ -3589,10 +3589,10 @@
         : motion('search:in', true, 'mobile-search-bar-open', 300);
       if (state.mobileSearchClosing) motion('search:in', false); else motion('search:out', false);
       return '<div class="top-bar ' + sm.cls + '" style="' + sm.style + 'flex-shrink:0; display:flex; align-items:center; gap:10px; background:' + c.surface + '; border-bottom:1px solid ' + c.outlineVariant + ';">'
-        + '<span class="interactive" data-action="closeMobileSearch" title="' + T('Back') + '" style="display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; color:' + c.onSurfaceVariant + '; flex-shrink:0;">' + ICON.chevronLeft + '</span>'
-        + '<div style="flex:1; display:flex; align-items:center; gap:8px; height:40px; padding:0 14px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">'
+        + '<span class="interactive icon-btn" data-action="closeMobileSearch" title="' + T('Back') + '" aria-label="' + T('Back') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.chevronLeft + '</span>'
+        + '<div style="flex:1; display:flex; align-items:center; gap:12px; height:48px; padding:0 16px; border-radius:var(--r-full); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">'
         +   ICON.search
-        +   '<input id="mobileSearchInput" data-field="searchQuery" value="' + esc(state.searchQuery) + '" placeholder="' + T('Search tasks, comments, files') + '" style="border:none; outline:none; background:transparent; flex:1; font-size:14px; color:inherit;"></input>'
+        +   '<input id="mobileSearchInput" data-field="searchQuery" value="' + esc(state.searchQuery) + '" placeholder="' + T('Search tasks, comments, files') + '" style="border:none; outline:none; padding:0; background:transparent; flex:1; min-width:0; font-size:16px; line-height:24px; color:inherit;"></input>'
         +   searchClear
         + '</div>'
       + '</div>';
@@ -3682,37 +3682,36 @@
       : '';
 
     var accountPanel = (state.accountOpen || state.dropdownClosing === 'account')
-      ? '<div class="' + dropdownClass('account') + ' account-panel" style="' + dropdownStyle('account') + 'position:absolute; top:46px; right:0; width:260px; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:60; display:flex; flex-direction:column; gap:2px;">'
-        + '<div style="padding:8px 10px 6px 10px; display:flex; align-items:center; gap:10px;">'
-          +   avatarHtml(avatarColors(state.user.displayName, c.dark).bg, avatarColors(state.user.displayName, c.dark).color, 44)
-          +   '<div style="min-width:0;"><div style="font-size:13px; font-weight:500;">' + esc(state.user.displayName) + '</div><div style="font-size:12px; color:' + c.onSurfaceVariant + ';">@' + esc(state.user.username) + ' · ' + esc(T(state.user.role)) + '</div></div>'
+      ? '<div class="' + dropdownClass('account') + ' account-panel" style="' + dropdownStyle('account') + 'position:absolute; top:56px; right:0; width:288px; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:60; display:flex; flex-direction:column; gap:0;">'
+        + '<div style="padding:8px 12px; display:flex; align-items:center; gap:12px;">'
+          +   avatarHtml(avatarColors(state.user.displayName, c.dark).bg, avatarColors(state.user.displayName, c.dark).color, 40)
+          +   '<div style="min-width:0;"><div class="t-title-s">' + esc(state.user.displayName) + '</div><div class="t-body-s" style="color:' + c.onSurfaceVariant + ';">@' + esc(state.user.username) + ' · ' + esc(T(state.user.role)) + '</div></div>'
         + '</div>'
-        + '<div style="padding:4px 10px 10px;">' + themeSegmented(c) + '</div>'
-        + '<div style="height:1px; background:' + c.outlineVariant + '; margin:2px 0;"></div>'
-        + '<div class="interactive" data-action="openSettings" style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + c.onSurface + ';"><span>' + T('Settings') + '</span>'
-        +   (isAdmin() && pendingUserCount() > 0 ? '<span class="tnum" style="font-size:12px; font-weight:500; min-width:18px; padding:0 5px; text-align:center; border-radius:9px; background:' + c.error + '; color:#fff;">' + pendingUserCount() + '</span>' : '')
+        + '<div style="padding:8px 12px 12px;">' + themeSegmented(c) + '</div>'
+        + '<div class="interactive t-label-l" data-action="openSettings" style="display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:48px; padding:0 12px; border-radius:var(--r-sm); color:' + c.onSurface + ';"><span>' + T('Settings') + '</span>'
+        +   (isAdmin() && pendingUserCount() > 0 ? '<span class="tnum t-label-s" style="min-width:16px; height:16px; padding:0 4px; box-sizing:border-box; text-align:center; border-radius:var(--r-full); background:' + c.error + '; color:#fff;">' + pendingUserCount() + '</span>' : '')
         + '</div>'
-        + '<div class="interactive" data-action="openGuide" style="padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + c.onSurface + ';">' + T('Guide') + '</div>'
-        + '<div class="interactive" data-action="logout" style="padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + c.error + ';">' + T('Log out') + '</div>'
+        + '<div class="interactive t-label-l" data-action="openGuide" style="display:flex; align-items:center; min-height:48px; padding:0 12px; border-radius:var(--r-sm); color:' + c.onSurface + ';">' + T('Guide') + '</div>'
+        + '<div class="interactive t-label-l" data-action="logout" style="display:flex; align-items:center; min-height:48px; padding:0 12px; border-radius:var(--r-sm); color:' + c.error + ';">' + T('Log out') + '</div>'
         + '</div>'
       : '';
 
     return '<header class="top-bar" style="flex-shrink:0; display:flex; align-items:center; gap:16px; background:transparent;">'
-      + '<div class="interactive hamburger-btn" data-action="toggleSidebar" title="' + T('Departments') + '" style="align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; color:' + c.onSurfaceVariant + '; flex-shrink:0;">' + ICON.hamburger + '</div>'
-      + '<div style="display:flex; align-items:center; gap:10px;">'
+      + '<div class="interactive hamburger-btn icon-btn" data-action="toggleSidebar" title="' + T('Departments') + '" aria-label="' + T('Departments') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.hamburger + '</div>'
+      + '<div style="display:flex; align-items:center; gap:12px;">'
       +   (state.user.role === 'admin'
-            ? '<div data-dropdown="brand" style="position:relative; display:flex;">' + brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 36, 'edit') + brandMenu(c) + '</div>'
-            : brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 36, 'guide'))
-      +   '<div class="app-name-text" style="font-size:18px; font-weight:500; white-space:nowrap;">' + esc(state.appName) + '</div>'
+            ? '<div data-dropdown="brand" style="position:relative; display:flex;">' + brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 40, 'edit') + brandMenu(c) + '</div>'
+            : brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 40, 'guide'))
+      +   '<div class="app-name-text t-title-l" style="white-space:nowrap;">' + esc(state.appName) + '</div>'
       + '</div>'
       + '<div class="mobile-page-title t-title-l" style="min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + esc(currentPageTitle()) + '</div>'
       + '<div class="topbar-center" style="flex:1; display:flex; justify-content:center;">'
-      +   '<div class="desktop-search-bar" style="align-items:center; gap:10px; width:520px; max-width:100%; height:44px; padding:0 18px; border-radius:22px; background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">'
+      +   '<div class="desktop-search-bar" style="align-items:center; gap:12px; width:520px; max-width:100%; height:48px; padding:0 16px; border-radius:var(--r-full); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">'
       +     ICON.search
-      +     '<input id="searchInput" data-field="searchQuery" value="' + esc(state.searchQuery) + '" placeholder="' + T('Search tasks, comments, files') + '" style="border:none; outline:none; background:transparent; flex:1; font-size:14px; color:inherit;"></input>'
+      +     '<input id="searchInput" data-field="searchQuery" value="' + esc(state.searchQuery) + '" placeholder="' + T('Search tasks, comments, files') + '" style="border:none; outline:none; padding:0; background:transparent; flex:1; min-width:0; font-size:16px; line-height:24px; color:inherit;"></input>'
       +     searchClear
       +   '</div>'
-      +   '<div class="interactive mobile-search-btn" data-action="openMobileSearch" title="' + T('Search') + '" style="align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; color:' + c.onSurfaceVariant + ';">' + ICON.search + '</div>'
+      +   '<div class="interactive mobile-search-btn icon-btn" data-action="openMobileSearch" title="' + T('Search') + '" aria-label="' + T('Search') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.search + '</div>'
       + '</div>'
       + '<div class="appearance-controls" style="display:flex; align-items:center; gap:10px;">'
       +   '<div data-dropdown="accent" style="position:relative; width:36px; height:36px;">'
@@ -3729,22 +3728,22 @@
       +   '</div>'
       + '</div>'
       + '<div class="topbar-divider" style="width:1px; height:26px; background:' + c.outlineVariant + ';"></div>'
-      + '<div style="display:flex; align-items:center; gap:14px;">'
+      + '<div style="display:flex; align-items:center; gap:4px;">'
       +   '<div data-dropdown="notif" style="position:relative;">'
-      +     '<div class="interactive" data-action="toggleNotif" title="' + T('Notifications') + '" style="position:relative; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:' + c.onSurfaceVariant + ';">'
-      +       '<svg width="21" height="21" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8a5 5 0 0 1 10 0c0 4 1.5 5 1.5 5h-13S5 12 5 8Z"></path><path d="M8.3 16a1.8 1.8 0 0 0 3.4 0"></path></svg>'
+      +     '<div class="interactive icon-btn" data-action="toggleNotif" title="' + T('Notifications') + '" aria-label="' + T('Notifications') + '" style="position:relative; color:' + c.onSurfaceVariant + ';">'
+      +       '<svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8a5 5 0 0 1 10 0c0 4 1.5 5 1.5 5h-13S5 12 5 8Z"></path><path d="M8.3 16a1.8 1.8 0 0 0 3.4 0"></path></svg>'
       +       (bellCount > 0
-                ? '<span aria-label="' + T('{n} unread', { n: bellCount }) + '" style="position:absolute; top:2px; right:1px; min-width:17px; height:17px; padding:0 4px; border-radius:9px; background:' + c.error + '; color:#fff; font-size:12px; font-weight:500; display:flex; align-items:center; justify-content:center; border:1.5px solid ' + c.surface + ';">' + (bellCount > 99 ? '99+' : bellCount) + '</span>'
-                : (unread > 0 ? '<span style="position:absolute; top:6px; right:7px; width:7px; height:7px; border-radius:50%; background:' + c.outline + '; border:1.5px solid ' + c.surface + ';"></span>' : ''))
+                ? '<span class="tnum t-label-s" aria-label="' + T('{n} unread', { n: bellCount }) + '" style="position:absolute; top:4px; right:4px; min-width:16px; height:16px; padding:0 4px; box-sizing:border-box; border-radius:var(--r-full); background:' + c.error + '; color:#fff; display:flex; align-items:center; justify-content:center;">' + (bellCount > 99 ? '99+' : bellCount) + '</span>'
+                : (unread > 0 ? '<span style="position:absolute; top:8px; right:8px; width:8px; height:8px; border-radius:50%; background:' + c.outline + ';"></span>' : ''))
       +     '</div>'
       +     notifPanel
       +   '</div>'
-      +   '<div class="interactive calendar-drawer-btn" data-action="toggleMobileCalendar" title="' + T('Calendar') + '" style="align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; color:' + c.onSurfaceVariant + ';">' + ICON.calendarView + '</div>'
+      +   '<div class="interactive calendar-drawer-btn icon-btn" data-action="toggleMobileCalendar" title="' + T('Calendar') + '" aria-label="' + T('Calendar') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.calendarView + '</div>'
       +   '<div data-dropdown="account" style="position:relative;">'
-      +     '<div class="interactive" data-action="toggleAccount" style="display:flex; align-items:center; gap:9px; border-radius:var(--r-sm); padding:4px 8px 4px 4px;">'
-      +       avatarHtml(avatarColors(state.user.displayName, c.dark).bg, avatarColors(state.user.displayName, c.dark).color, 34)
-      +       '<div class="account-meta" style="line-height:1.25;"><div style="font-size:13px; font-weight:500;">' + esc(state.user.displayName) + '</div><div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + esc(T(state.user.role)) + '</div></div>'
-      +       '<svg class="account-meta" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" style="color:' + c.onSurfaceVariant + ';"><path d="M6 8l4 4 4-4"></path></svg>'
+      +     '<div class="interactive" data-action="toggleAccount" aria-label="' + T('Account') + '" style="display:flex; align-items:center; gap:8px; height:48px; box-sizing:border-box; border-radius:var(--r-full); padding:4px 12px 4px 4px; margin-left:4px;">'
+      +       avatarHtml(avatarColors(state.user.displayName, c.dark).bg, avatarColors(state.user.displayName, c.dark).color, 40)
+      +       '<div class="account-meta"><div class="t-label-l">' + esc(state.user.displayName) + '</div><div class="t-body-s" style="color:' + c.onSurfaceVariant + ';">' + esc(T(state.user.role)) + '</div></div>'
+      +       '<svg class="account-meta" width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" style="color:' + c.onSurfaceVariant + ';"><path d="M6 8l4 4 4-4"></path></svg>'
       +     '</div>'
       +     accountPanel
       +   '</div>'
@@ -3775,21 +3774,21 @@
       var childrenHtml = d.children.map(function (child) {
         var childSelected = state.selectedNode === child.id;
         var childCount = state.summary.byDept[child.id] || 0;
-        return '<div class="interactive' + (childSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="' + esc(child.id) + '"' + (childSelected ? ' aria-current="true"' : '') + ' style="display:flex; align-items:center; padding:7px 10px; font-size:13px; font-weight:' + (childSelected ? 500 : 400) + '; border-radius:var(--r-sm); background:' + (childSelected ? c.secondaryContainer : 'transparent') + '; color:' + (childSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
-          + (child.color ? '<span style="margin-right:8px; display:flex;">' + deptDot(child.id, 8) + '</span>' : '') + '<span style="flex:1;">' + esc(child.name) + '</span>'
-          + '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + childCount + '</span>'
+        return '<div class="interactive nav-item t-label-l' + (childSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="' + esc(child.id) + '"' + (childSelected ? ' aria-current="true"' : '') + ' style="display:flex; align-items:center; gap:12px; padding:0 24px 0 16px; border-radius:var(--r-full); background:' + (childSelected ? c.secondaryContainer : 'transparent') + '; color:' + (childSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
+          + (child.color ? '<span style="display:flex;">' + deptDot(child.id, 8) + '</span>' : '') + '<span style="flex:1;">' + esc(child.name) + '</span>'
+          + '<span class="tnum t-label-m" style="color:' + c.onSurfaceVariant + ';">' + childCount + '</span>'
           + '</div>';
       }).join('');
 
-      return '<div class="dept-row' + (selected ? oneShotClass('node') : '') + '" style="display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:' + (selected ? c.secondaryContainer : 'transparent') + '; color:' + (selected ? c.onSecondaryContainer : 'inherit') + '; margin-top:2px;">'
-        + '<svg class="interactive tree-chevron' + (expanded ? ' expanded' : '') + (anim ? ' ' + anim : '') + '" data-action="toggleExpand" data-id="' + esc(d.id) + '" role="button" aria-expanded="' + (expanded ? 'true' : 'false') + '" aria-controls="subtree-' + esc(d.id) + '" aria-label="' + (expanded ? 'Collapse ' : 'Expand ') + esc(d.name) + '" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 5l6 5-6 5"></path></svg>'
-        + '<span class="interactive" data-action="selectNode" data-id="' + esc(d.id) + '" style="display:flex; align-items:center; gap:6px; flex:1; min-width:0; border-radius:var(--r-sm);">'
-        +   deptDot(d.id, 8) + '<span style="font-size:14px; font-weight:' + (selected ? 500 : 400) + ';">' + esc(d.name) + '</span>'
+      return '<div class="dept-row nav-item' + (selected ? oneShotClass('node') : '') + '" style="display:flex; align-items:center; gap:0; padding:0 4px; border-radius:var(--r-full); background:' + (selected ? c.secondaryContainer : 'transparent') + '; color:' + (selected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
+        + '<svg class="interactive tree-chevron tree-chevron-btn' + (expanded ? ' expanded' : '') + (anim ? ' ' + anim : '') + '" data-action="toggleExpand" data-id="' + esc(d.id) + '" role="button" aria-expanded="' + (expanded ? 'true' : 'false') + '" aria-controls="subtree-' + esc(d.id) + '" aria-label="' + (expanded ? 'Collapse ' : 'Expand ') + esc(d.name) + '" width="40" height="40" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 5l6 5-6 5"></path></svg>'
+        + '<span class="interactive t-label-l" data-action="selectNode" data-id="' + esc(d.id) + '" style="display:flex; align-items:center; gap:8px; flex:1; min-width:0; align-self:stretch; padding-left:4px; border-radius:var(--r-full);">'
+        +   deptDot(d.id, 8) + '<span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(d.name) + '</span>'
+        +   '<span class="tnum t-label-m" style="color:' + c.onSurfaceVariant + ';' + (isAdmin() ? '' : ' padding-right:20px;') + '">' + deptCount + '</span>'
         + '</span>'
-        + '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + deptCount + '</span>'
-        + (isAdmin() ? '<span class="interactive dept-more" data-action="openMapping" data-id="' + esc(d.id) + '" title="' + T('Department settings') + '" style="display:flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:var(--r-sm); flex-shrink:0; color:' + c.onSurfaceVariant + ';">' + ICON.more + '</span>' : '')
+        + (isAdmin() ? '<span class="interactive dept-more icon-btn" data-action="openMapping" data-id="' + esc(d.id) + '" title="' + T('Department settings') + '" aria-label="' + T('Department settings') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.more + '</span>' : '')
         + '</div>'
-        + '<div class="tree-children' + (expanded ? ' expanded' : '') + (anim ? ' ' + anim : '') + '" id="subtree-' + esc(d.id) + '" style="padding-left:34px;">'
+        + '<div class="tree-children' + (expanded ? ' expanded' : '') + (anim ? ' ' + anim : '') + '" id="subtree-' + esc(d.id) + '" style="padding-left:32px;">'
         +   '<div class="tree-children-inner" role="group" aria-label="' + esc(T('{name} sub-departments', { name: d.name })) + '">' + childrenHtml + '</div>'
         + '</div>';
     }).join('');
@@ -3797,28 +3796,28 @@
     // Closed, the drawer is off screen and out of the reading order; it is
     // still rendered so it can slide in and out.
     var hidden = !isWideScreen() && !state.mobileNavOpen && state.mobileNavAnim !== 'anim-close';
-    return '<nav class="no-scrollbar ' + drawerClass('left-nav', state.mobileNavOpen, state.mobileNavAnim) + '" aria-label="' + T('Departments') + '" aria-hidden="' + (hidden ? 'true' : 'false') + '"' + (hidden ? ' inert' : '') + ' data-scroll-key="sidebar" style="min-height:0; background:' + c.surfaceContainer + '; overflow-y:auto; overflow-x:hidden; padding:18px 12px; display:flex; flex-direction:column; gap:2px;">'
-      + '<div style="display:flex; align-items:center; justify-content:space-between; padding:0 8px 10px 8px;">'
-      +   '<span style="font-size:12px; font-weight:500; color:' + c.textMuted + ';">' + T('Departments') + '</span>'
-      +   (isAdmin() ? '<span class="interactive" data-action="openAddDept" title="' + T('Add Department') + '" aria-label="' + T('Add Department') + '" style="display:flex; align-items:center; justify-content:center; width:24px; height:24px; margin-left:auto; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.plus + '</span>' : '')
-      +   '<span class="interactive drawer-close-btn" data-action="closeMobileNav" title="' + T('Close') + '" style="align-items:center; justify-content:center; width:26px; height:26px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
+    return '<nav class="no-scrollbar ' + drawerClass('left-nav', state.mobileNavOpen, state.mobileNavAnim) + '" aria-label="' + T('Departments') + '" aria-hidden="' + (hidden ? 'true' : 'false') + '"' + (hidden ? ' inert' : '') + ' data-scroll-key="sidebar" style="min-height:0; background:' + c.surfaceContainer + '; overflow-y:auto; overflow-x:hidden; padding:12px; display:flex; flex-direction:column; gap:0;">'
+      + '<div style="display:flex; align-items:center; gap:0; min-height:48px; padding:0 4px 0 16px;">'
+      +   '<span class="t-title-s" style="flex:1; color:' + c.onSurfaceVariant + ';">' + T('Departments') + '</span>'
+      +   (isAdmin() ? '<span class="interactive icon-btn" data-action="openAddDept" title="' + T('Add Department') + '" aria-label="' + T('Add Department') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.plus + '</span>' : '')
+      +   '<span class="interactive drawer-close-btn icon-btn" data-action="closeMobileNav" title="' + T('Close') + '" aria-label="' + T('Close') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
       + '</div>'
-      + '<div class="interactive' + (allSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="all" style="display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:999px; background:' + (allSelected ? c.secondaryContainer : 'transparent') + '; color:' + (allSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
+      + '<div class="interactive nav-item t-label-l' + (allSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="all" style="display:flex; align-items:center; gap:12px; padding:0 24px 0 16px; border-radius:var(--r-full); background:' + (allSelected ? c.secondaryContainer : 'transparent') + '; color:' + (allSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
       +   '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l1-4h10l1 4"></path><path d="M3 8h14v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8Z"></path><path d="M8 11h4"></path></svg>'
-      +   '<span style="flex:1; font-size:14px;">' + T('All Tasks') + '</span>'
-      +   '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + allCount + '</span>'
+      +   '<span style="flex:1;">' + T('All Tasks') + '</span>'
+      +   '<span class="tnum t-label-m" style="color:' + c.onSurfaceVariant + ';">' + allCount + '</span>'
       + '</div>'
-      + '<div class="interactive' + (mineSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="mine" style="display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:999px; background:' + (mineSelected ? c.secondaryContainer : 'transparent') + '; color:' + (mineSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
+      + '<div class="interactive nav-item t-label-l' + (mineSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="mine" style="display:flex; align-items:center; gap:12px; padding:0 24px 0 16px; border-radius:var(--r-full); background:' + (mineSelected ? c.secondaryContainer : 'transparent') + '; color:' + (mineSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
       +   '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="3"></circle><path d="M4 16a6 6 0 0 1 12 0"></path></svg>'
-      +   '<span style="flex:1; font-size:14px; font-weight:' + (mineSelected ? 500 : 400) + ';">' + T('My Tasks') + '</span>'
-      +   '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + state.summary.mine + '</span>'
+      +   '<span style="flex:1;">' + T('My Tasks') + '</span>'
+      +   '<span class="tnum t-label-m" style="color:' + c.onSurfaceVariant + ';">' + state.summary.mine + '</span>'
       + '</div>'
       + deptsHtml
       + '<div style="flex:1;"></div>'
-      + '<div class="interactive" data-action="openTrash" style="display:flex; align-items:center; gap:9px; padding:9px 10px; margin-top:10px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">'
+      + '<div class="interactive nav-item t-label-l" data-action="openTrash" style="display:flex; align-items:center; gap:12px; padding:0 24px 0 16px; margin-top:8px; border-radius:var(--r-full); color:' + c.onSurfaceVariant + ';">'
       +   ICON.trash
-      +   '<span style="flex:1; font-size:14px;">' + T('Trash') + '</span>'
-      +   (state.summary.trash ? '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + state.summary.trash + '</span>' : '')
+      +   '<span style="flex:1;">' + T('Trash') + '</span>'
+      +   (state.summary.trash ? '<span class="tnum t-label-m" style="color:' + c.onSurfaceVariant + ';">' + state.summary.trash + '</span>' : '')
       + '</div>'
       + '</nav>';
   }
