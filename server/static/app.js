@@ -341,8 +341,8 @@
   var CONTENT_OUT_MS = 90, CONTENT_IN_MS = 560, MODAL_CLOSE_MS = 260;
   var ACCENT_PRESETS = ['#6750A4', '#006A6A', '#3A5BA9', '#8B5000', '#984061'];
   var ICON = {
-    listView: '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 6h12M4 10h12M4 14h12"></path></svg>',
-    gridView: '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="6" height="6" rx="1.3"></rect><rect x="11" y="3" width="6" height="6" rx="1.3"></rect><rect x="3" y="11" width="6" height="6" rx="1.3"></rect><rect x="11" y="11" width="6" height="6" rx="1.3"></rect></svg>',
+    listView: '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path class="i-l1" d="M4 6h12"></path><path class="i-l2" d="M4 10h12"></path><path class="i-l3" d="M4 14h12"></path></svg>',
+    gridView: '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><rect class="i-g1" x="3" y="3" width="6" height="6" rx="1.3"></rect><rect class="i-g2" x="11" y="3" width="6" height="6" rx="1.3"></rect><rect class="i-g3" x="3" y="11" width="6" height="6" rx="1.3"></rect><rect class="i-g4" x="11" y="11" width="6" height="6" rx="1.3"></rect></svg>',
     chevronLeft: '<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5l-5 5 5 5"></path></svg>',
     chevronRight: '<svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 5l5 5-5 5"></path></svg>',
     filter: '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h14M6 10h8M8.5 15h3"></path></svg>',
@@ -351,14 +351,14 @@
     check: '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5L15.5 6.5"></path></svg>',
     more: '<svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="4.5" cy="10" r="1.5"></circle><circle cx="10" cy="10" r="1.5"></circle><circle cx="15.5" cy="10" r="1.5"></circle></svg>',
     copy: '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="9" height="9" rx="1.5"></rect><path d="M4 13V5a1 1 0 0 1 1-1h8"></path></svg>',
-    themeLight: '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="10" cy="10" r="4"></circle><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.6 4.6l1.4 1.4M14 14l1.4 1.4M4.6 15.4l1.4-1.4M14 6l1.4-1.4"></path></svg>',
-    themeDark: '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 12.3A7 7 0 1 1 7.7 3.5a5.5 5.5 0 0 0 8.8 8.8Z"></path></svg>',
-    themeSystem: '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10" cy="10" r="7"></circle><path d="M10 3a7 7 0 0 1 0 14Z" fill="currentColor" stroke="none"></path></svg>',
+    themeLight: '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle class="i-core" cx="10" cy="10" r="4"></circle><path class="i-rays" d="M10 2v2M10 16v2M2 10h2M16 10h2M4.6 4.6l1.4 1.4M14 14l1.4 1.4M4.6 15.4l1.4-1.4M14 6l1.4-1.4"></path></svg>',
+    themeDark: '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path class="i-moon" d="M16.5 12.3A7 7 0 1 1 7.7 3.5a5.5 5.5 0 0 0 8.8 8.8Z"></path></svg>',
+    themeSystem: '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="10" cy="10" r="7"></circle><path class="i-half" d="M10 3a7 7 0 0 1 0 14Z" fill="currentColor" stroke="none"></path></svg>',
     // An eyedropper: the accent button opens the colour choices rather than
     // showing the colour, which the whole interface already does.
     eyedropper: '<svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.3 2.9a2.1 2.1 0 0 1 3 3l-1.6 1.6.8.8-1.4 1.4-4.8-4.8 1.4-1.4.8.8z"></path><path d="M10.5 6.3 4.2 12.6a1.6 1.6 0 0 0-.4.8l-.5 2.6a.6.6 0 0 0 .7.7l2.6-.5a1.6 1.6 0 0 0 .8-.4l6.3-6.3"></path></svg>',
     hamburger: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5.5h14M3 10h14M3 14.5h14"></path></svg>',
-    calendarView: '<svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="14" height="12" rx="2"></rect><path d="M3 8.5h14M7 2.5v4M13 2.5v4"></path></svg>',
+    calendarView: '<svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect class="i-page" x="3" y="4.5" width="14" height="12" rx="2"></rect><path class="i-page" d="M3 8.5h14"></path><path class="i-rings" d="M7 2.5v4M13 2.5v4"></path></svg>',
     search: '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="9" cy="9" r="6"></circle><path d="M17 17l-4-4"></path></svg>',
     repeat: '<svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V8a3 3 0 0 1 3-3h9l-2.5-2.5M16 11v1a3 3 0 0 1-3 3H4l2.5 2.5"></path></svg>',
     checklist: '<svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5.5l1.5 1.5L7 4.5M3 12.5l1.5 1.5L7 11.5M10 6h7M10 13h7"></path></svg>',
@@ -4893,7 +4893,7 @@
           var on = it[0] === cur;
           var onColor = o.tonal ? c.onSurface : c.onSecondaryContainer;
           return '<span class="interactive ' + (o.type || 't-label-m') + ' seg-cell" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="' + action + '" data-id="' + it[0] + '"' + (it[3] ? ' title="' + T(it[1]) + '" aria-label="' + T(it[1]) + '"' : '') + ' style="color:' + (on ? onColor : c.onSurfaceVariant) + ';">'
-            + (it[2] ? '<span class="seg-icon' + (on ? oneShotClass('segIcon:' + key) : '') + '">' + it[2] + '</span>' : '')
+            + (it[2] ? '<span class="seg-icon' + (on ? oneShotClass('segIcon:' + key) : '') + '" data-ic="' + it[0] + '">' + it[2] + '</span>' : '')
             + (it[3] ? '' : '<span class="seg-label' + (!it[2] && on ? oneShotClass('segIcon:' + key) : '') + '">' + T(it[1]) + '</span>')
             + '</span>';
         }).join('')
@@ -4904,7 +4904,7 @@
     if (oldId === newId) return;
     segFrom[key] = Math.max(0, ids.indexOf(oldId));
     playOnce('seg:' + key, 'anim-seg-slide', 420);
-    playOnce('segIcon:' + key, 'anim-seg-icon', 520);
+    playOnce('segIcon:' + key, 'anim-seg-icon', 680);
   }
 
   // Light / Dark / System.

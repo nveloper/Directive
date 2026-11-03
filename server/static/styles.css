@@ -1062,8 +1062,33 @@ svg[fill="none"][stroke="currentColor"] { stroke-width: 1.6; }
 .seg-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .seg-icon { display: inline-flex; flex: none; }
 .seg:not(.seg-tonal) .seg-icon svg { width: 18px; height: 18px; }
-.seg-icon.anim-seg-icon { animation: segIconTurn 520ms var(--spring) var(--shot-delay, 0ms) both; }
+/* Each icon arrives in its own way: the sun's rays fan out, the moon rocks
+   into place, the half-disc flips, list lines slide in one after another,
+   board tiles pop in turn, and the calendar's rings drop onto the page. */
+.seg-icon svg * { transform-box: fill-box; transform-origin: center; }
+.seg-icon.anim-seg-icon * { animation-duration: 520ms; animation-timing-function: var(--spring); animation-fill-mode: both; animation-delay: var(--shot-delay, 0ms); }
+.anim-seg-icon[data-ic=light] .i-rays { animation-name: icRays; }
+.anim-seg-icon[data-ic=light] .i-core { animation-name: icCore; }
+.anim-seg-icon[data-ic=dark] .i-moon { animation-name: icMoon; animation-duration: 640ms; animation-timing-function: var(--ease); }
+.anim-seg-icon[data-ic=system] .i-half { animation-name: icHalf; animation-timing-function: var(--ease); }
+.anim-seg-icon[data-ic=list] [class^=i-l] { animation-name: icLine; animation-duration: 360ms; }
+.anim-seg-icon[data-ic=list] .i-l2 { animation-delay: calc(var(--shot-delay, 0ms) + 60ms); }
+.anim-seg-icon[data-ic=list] .i-l3 { animation-delay: calc(var(--shot-delay, 0ms) + 120ms); }
+.anim-seg-icon[data-ic=grid] [class^=i-g] { animation-name: icTile; animation-duration: 380ms; }
+.anim-seg-icon[data-ic=grid] .i-g2 { animation-delay: calc(var(--shot-delay, 0ms) + 50ms); }
+.anim-seg-icon[data-ic=grid] .i-g4 { animation-delay: calc(var(--shot-delay, 0ms) + 100ms); }
+.anim-seg-icon[data-ic=grid] .i-g3 { animation-delay: calc(var(--shot-delay, 0ms) + 150ms); }
+.anim-seg-icon[data-ic=calendar] .i-rings { animation-name: icRings; }
+.anim-seg-icon[data-ic=calendar] .i-page { animation-name: icPage; animation-duration: 420ms; animation-delay: calc(var(--shot-delay, 0ms) + 80ms); animation-timing-function: var(--ease); }
+@keyframes icRays { from { transform: rotate(-40deg) scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes icCore { from { transform: scale(.75); } to { transform: none; } }
+@keyframes icMoon { 0% { transform: rotate(-24deg); } 55% { transform: rotate(8deg); } 80% { transform: rotate(-3deg); } 100% { transform: none; } }
+@keyframes icHalf { from { transform: scaleX(-1); } to { transform: none; } }
+@keyframes icLine { from { transform: translateX(-3px) scaleX(.5); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes icTile { from { transform: scale(.4); opacity: .3; } to { transform: none; opacity: 1; } }
+@keyframes icRings { from { transform: translateY(-3px); opacity: 0; } to { transform: none; opacity: 1; } }
+.seg-icon .i-page { transform-origin: bottom; }
+@keyframes icPage { 0%, 100% { transform: none; } 45% { transform: scaleY(.92); } }
 .seg-label.anim-seg-icon { animation: segLabelIn 420ms var(--spring) var(--shot-delay, 0ms) both; }
-@keyframes segIconTurn { from { transform: rotate(-90deg) scale(.6); opacity: .4; } to { transform: rotate(0) scale(1); opacity: 1; } }
 @keyframes segLabelIn { from { transform: scale(.88); } to { transform: scale(1); } }
-@media (prefers-reduced-motion: reduce) { .seg-pill.anim-seg-slide, .anim-seg-icon { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .seg-pill.anim-seg-slide, .anim-seg-icon, .anim-seg-icon * { animation: none !important; } }
