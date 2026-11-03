@@ -493,7 +493,7 @@
     settingsSection: 'profile'
   };
 
-  var nav = { nodeTarget: state.selectedNode, nodeToken: 0, tabTarget: state.activeTab, tabToken: 0, taskToken: 0, addDeptToken: 0, mappingToken: 0, accentToken: 0, mobileNavToken: 0, mobileCalendarToken: 0 };
+  var nav = { nodeTarget: state.selectedNode, nodeToken: 0, tabTarget: state.activeTab, tabToken: 0, listToken: 0, taskToken: 0, addDeptToken: 0, mappingToken: 0, accentToken: 0, mobileNavToken: 0, mobileCalendarToken: 0 };
 
   try {
     var savedTheme = localStorage.getItem('directive_theme_mode');
@@ -2253,22 +2253,27 @@
     }, TREE_ANIM_MS);
   }
 
+  // Changing what the list shows (department, tab, page) only touches the
+  // list: it dims while the new rows load and fades up when they arrive. The
+  // page around it - bar, title, tabs - never fades, so nothing blinks.
+  function reloadListSoftly(change) {
+    var token = ++nav.listToken;
+    change.listFade = 'dim';
+    setState(change);
+    if (isNarrowScreen() && window.scrollY) { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); } }
+    return fetchTasks().then(function () {
+      if (nav.listToken !== token) return;
+      setState({ listFade: 'in' });
+      setTimeout(function () { if (nav.listToken === token && state.listFade === 'in') setState({ listFade: '' }); }, 260);
+    });
+  }
   function selectNode(id) {
-    if (nav.nodeTarget === id) return;
+    if (state.selectedNode === id) { closeMobileNav(); return; }
     nav.nodeTarget = id;
-    var token = ++nav.nodeToken;
-    setState({ contentAnim: 'out' });
-    setTimeout(function () {
-      if (nav.nodeToken !== token) return;
-      playOnce('node', 'anim-select', 420);
-      setState({ selectedNode: id, contentAnim: 'in', page: 1 });
-      fetchTasks().then(render);
-      // Closing the drawer here (rather than as soon as the tap lands) means
-      // the user still sees which department they picked before it slides
-      // away, instead of the drawer vanishing under their finger.
-      closeMobileNav();
-      setTimeout(function () { if (nav.nodeToken === token) setState({ contentAnim: 'settled' }); }, CONTENT_IN_MS);
-    }, CONTENT_OUT_MS);
+    playOnce('node', 'anim-select', 420);
+    reloadListSoftly({ selectedNode: id, page: 1 });
+    // The drawer stays a moment so the pick is seen, then slides away.
+    setTimeout(closeMobileNav, 180);
   }
 
   // Where the underline should slide in from: the offset and width of the
@@ -2294,17 +2299,7 @@
     nav.tabTarget = id;
     state.tabSlide = tabSlideFrom('#task-list [role="tablist"]', id);
     playOnce('tab', 'anim-tab-slide', 420);
-    var token = ++nav.tabToken;
-    // The old list dims while the new one loads, then the new one fades up
-    // from there: a soft cross-fade instead of a swap or a blank.
-    setState({ activeTab: id, page: 1, listFade: 'dim' });
-    // On a phone the page itself scrolls; a new tab starts at its top.
-    if (isNarrowScreen() && window.scrollY) { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); } }
-    fetchTasks().then(function () {
-      if (nav.tabToken !== token) return;
-      setState({ listFade: 'in' });
-      setTimeout(function () { if (nav.tabToken === token && state.listFade === 'in') setState({ listFade: '' }); }, 260);
-    });
+    reloadListSoftly({ activeTab: id, page: 1 });
   }
 
   function clearSearch() { setState({ searchQuery: '', page: 1 }); fetchTasks().then(render); }
@@ -2330,16 +2325,7 @@
   // Turning the page moves the same way changing a tab does, instead of the
   // rows swapping out from under the eye.
   function goToPage(next) {
-    var token = ++nav.tabToken;
-    setState({ contentAnim: 'out' });
-    setTimeout(function () {
-      if (nav.tabToken !== token) return;
-      state.page = next;
-      fetchTasks().then(function () {
-        setState({ contentAnim: 'in' });
-        setTimeout(function () { if (nav.tabToken === token) setState({ contentAnim: 'settled' }); }, CONTENT_IN_MS);
-      });
-    }, CONTENT_OUT_MS);
+    reloadListSoftly({ page: next });
   }
   function prevPage() {
     if (state.page <= 1) return;
