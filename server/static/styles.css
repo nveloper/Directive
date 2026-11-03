@@ -824,3 +824,12 @@ body { line-height: 1.45; }
   .checklist-row { min-height: 48px !important; }
   .checklist-row, .checklist-add { margin-left: -16px !important; }
 }
+
+/* Form chips: M3 filter chips are 32 high; under a finger they grow to 40
+   so a row of them stays easy to hit. */
+@media (pointer: coarse) {
+  .task-form-chips > *, .task-form-chips .mselect-trigger, .task-form-chips .date-trigger { height: 40px !important; }
+}
+/* The title is the dialog's headline (M3 Headline S), not a form field,
+   so the phone rule that lifts fields to 16px leaves it alone. */
+.task-form #newTaskTitleInput { font-size: 24px !important; line-height: 32px !important; min-height: 32px !important; }

@@ -4069,13 +4069,13 @@
     var lock = readOnly ? ' disabled' : '';
     var stacked = state.detailPhase === 'open' && !!state.detailTaskId;
     var maps = styleMaps(c);
-    var chip = 'height:32px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outlineVariant + '; font-size:13px; background:' + c.surface + '; color:' + c.onSurface + ';';
-    var withIcon = function (icon, text) { return icon + '<span style="margin-left:6px;">' + text + '</span>'; };
-    var personIcon = '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="7" r="3"></circle><path d="M4 16a6 6 0 0 1 12 0"></path></svg>';
-    var deptIcon = '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 6a1 1 0 0 1 1-1h4l1.5 2H16a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6Z"></path></svg>';
+    var chip = 'height:32px; padding:0 12px 0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outlineVariant + '; font-size:14px; line-height:20px; font-weight:500; background:transparent; color:' + c.onSurface + ';';
+    var withIcon = function (icon, text) { return icon + '<span style="margin-left:8px;">' + text + '</span>'; };
+    var personIcon = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="7" r="3"></circle><path d="M4 16a6 6 0 0 1 12 0"></path></svg>';
+    var deptIcon = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 6a1 1 0 0 1 1-1h4l1.5 2H16a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6Z"></path></svg>';
 
     var statusChip = editing ? mSelectFrom('<select' + lock + ' id="newTaskStatusSelect" data-form="newTaskForm" data-field="status" aria-label="' + T('Status') + '" style="' + chip + '">'
-      + EDITABLE_STATUSES.map(function (id) { return '<option value="' + id + '"' + (id === f.status ? ' selected' : '') + '>' + withIcon(statusIconHtml(id, maps.statusStyle[id].dot, 14), TAB_LABELS[id]) + '</option>'; }).join('')
+      + EDITABLE_STATUSES.map(function (id) { return '<option value="' + id + '"' + (id === f.status ? ' selected' : '') + '>' + withIcon(statusIconHtml(id, maps.statusStyle[id].dot, 18), TAB_LABELS[id]) + '</option>'; }).join('')
       + '</select>', c, 'pill') : '';
     var current = assigneeSelectValue(f);
     var assigneeChip = mSelectFrom('<select' + lock + ' id="newTaskAssigneeSelect" data-form="newTaskForm" data-field="assigneeId" aria-label="' + T('Assignee') + '" style="' + chip + '">'
@@ -4086,33 +4086,33 @@
     var priorityChip = mSelectFrom('<select' + lock + ' id="newTaskPrioritySelect" data-form="newTaskForm" data-field="priority" aria-label="' + T('Priority') + '" style="' + chip + '">'
       + ['High', 'Medium', 'Low'].map(function (p) { return '<option value="' + p + '"' + (p === f.priority ? ' selected' : '') + '>' + withIcon(priorityIconHtml(p, maps.priorityColor[p], c.outlineVariant), T(p)) + '</option>'; }).join('')
       + '</select>', c, 'pill');
-    var dueChip = dateTriggerHtml('newTask', f.due, c, lock).replace('height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline, 'height:32px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outlineVariant).replace('font-size:14px;', 'font-size:13px; display:inline-flex !important;');
+    var dueChip = dateTriggerHtml('newTask', f.due, c, lock).replace('height:40px; padding:0 12px; border-radius:var(--r-xs); border:1px solid ' + c.outline, 'height:32px; padding:0 12px 0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outlineVariant).replace('font-size:14px; line-height:20px;', 'font-size:14px; line-height:20px; font-weight:500; display:inline-flex !important;').replace('background:' + c.surface + ';', 'background:transparent;');
     var deptChip = mSelectFrom('<select' + lock + ' id="newTaskDeptSelect" data-form="newTaskForm" data-field="deptId" aria-label="' + T('Department') + '" style="' + chip + '">'
       + '<option value="">' + withIcon(deptIcon, T('No department')) + '</option>'
       + flattenDeptOptions().map(function (o) { return '<option value="' + esc(o.id) + '"' + (o.id === f.deptId ? ' selected' : '') + '>' + withIcon(deptIcon, esc(o.label)) + '</option>'; }).join('')
       + '</select>', c, 'pill');
-    var repeatChip = repeatControl(f, c, lock).split('height:38px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px;').join(chip.replace(/background:[^;]*;\s*color:[^;]*;/, ''));
-    var calChip = '<label class="interactive" title="' + T('Include this task in the department calendar feed') + '" style="display:inline-flex; align-items:center; gap:8px; ' + chip + ' cursor:pointer;"><input type="checkbox"' + lock + ' data-action="toggleTaskCalendar"' + (f.calendarVisible ? ' checked' : '') + '>' + T('In calendar') + '</label>';
+    var repeatChip = repeatControl(f, c, lock).split('height:40px; padding:0 12px; border-radius:var(--r-xs); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px;').join(chip);
+    var calChip = '<label class="interactive form-chip" title="' + T('Include this task in the department calendar feed') + '" style="display:inline-flex; align-items:center; gap:8px; ' + chip + ' cursor:pointer;"><input type="checkbox"' + lock + ' data-action="toggleTaskCalendar"' + (f.calendarVisible ? ' checked' : '') + '>' + T('In calendar') + '</label>';
 
     var title = T(readOnly ? 'Task' : (editing ? 'Edit Task' : 'New Task'));
-    return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="closeTaskModal" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,' + (stacked ? '.25' : '.4') + '); display:flex; align-items:flex-start; justify-content:center; padding-top:12vh; z-index:55;">'
-      + '<div role="dialog" class="task-form ' + mo.card + '" data-scroll-key="' + esc('task:' + (state.editingTaskId || 'new')) + '" aria-modal="true" aria-label="' + esc(title) + '" tabindex="-1" style="' + mo.cardStyle + 'width:600px; max-width:94vw; max-height:calc(80vh / var(--zoom, 1)); overflow-y:auto; background:' + c.surface + '; border-radius:var(--r-lg); padding:20px 24px; display:flex; flex-direction:column; gap:12px; box-shadow:var(--e3);">'
-      +   '<div style="display:flex; align-items:center; gap:8px; font-size:12px; color:' + c.textMuted + ';"><span>' + esc(title) + '</span>'
-      +     '<span class="interactive" data-action="closeTaskModal" aria-label="' + T('Close') + '" style="margin-left:auto; display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span></div>'
-      +   (readOnly ? '<div style="font-size:13px; line-height:1.45; color:' + c.onSurfaceVariant + '; background:' + c.surfaceContainerHigh + '; padding:9px 11px; border-radius:var(--r-sm);">' + esc(T('This task belongs to {dept}, so it is read-only for you.', { dept: nodeLabel(editedTask.deptId) })) + '</div>' : '')
-      +   '<input' + lock + ' id="newTaskTitleInput" class="bare-field" data-form="newTaskForm" data-field="title" value="' + esc(f.title) + '" placeholder="' + T('Task title') + '" aria-label="' + T('Title') + '" style="height:40px; padding:0; border:none; font-size:22px; font-weight:500; background:transparent; color:' + c.onSurface + ';"></input>'
-      +   '<textarea' + lock + ' id="newTaskDescInput" class="bare-field autosize" data-form="newTaskForm" data-field="description" rows="2" placeholder="' + T('Add a description…') + '" aria-label="' + T('Description') + '" style="min-height:44px; max-height:240px; padding:0; border:none; font-size:14px; line-height:1.6; font-family:inherit; resize:none; background:transparent; color:' + c.onSurface + ';">' + esc(f.description || '') + '</textarea>'
-      +   '<div class="task-form-chips" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">'
+    return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="closeTaskModal" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,' + (stacked ? '.24' : '.32') + '); display:flex; align-items:flex-start; justify-content:center; padding-top:12vh; z-index:55;">'
+      + '<div role="dialog" class="task-form ' + mo.card + '" data-scroll-key="' + esc('task:' + (state.editingTaskId || 'new')) + '" aria-modal="true" aria-label="' + esc(title) + '" tabindex="-1" style="' + mo.cardStyle + 'width:600px; max-width:94vw; max-height:80vh; overflow-y:auto; background:' + c.surfaceContainerHigh + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:16px; box-shadow:var(--e3);">'
+      +   '<div style="display:flex; align-items:center; gap:8px; margin:-8px -12px -8px 0;"><span class="t-title-s" style="color:' + c.onSurfaceVariant + ';">' + esc(title) + '</span>'
+      +     '<span class="interactive icon-btn" data-action="closeTaskModal" aria-label="' + T('Close') + '" style="margin-left:auto; border-radius:var(--r-full) !important; color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span></div>'
+      +   (readOnly ? '<div class="t-body-m" style="color:' + c.onSurfaceVariant + '; background:' + c.surface + '; padding:12px 16px; border-radius:var(--r-md);">' + esc(T('This task belongs to {dept}, so it is read-only for you.', { dept: nodeLabel(editedTask.deptId) })) + '</div>' : '')
+      +   '<input' + lock + ' id="newTaskTitleInput" class="bare-field" data-form="newTaskForm" data-field="title" value="' + esc(f.title) + '" placeholder="' + T('Task title') + '" aria-label="' + T('Title') + '" style="height:32px; padding:0; border:none; font-size:24px; line-height:32px; font-weight:400; background:transparent; color:' + c.onSurface + ';"></input>'
+      +   '<textarea' + lock + ' id="newTaskDescInput" class="bare-field autosize" data-form="newTaskForm" data-field="description" rows="2" placeholder="' + T('Add a description…') + '" aria-label="' + T('Description') + '" style="min-height:48px; max-height:240px; padding:0; border:none; font-size:16px; line-height:24px; font-family:inherit; resize:none; background:transparent; color:' + c.onSurface + ';">' + esc(f.description || '') + '</textarea>'
+      +   '<div class="task-form-chips" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">'
       +     statusChip + assigneeChip + priorityChip + dueChip + repeatChip + deptChip + (editing ? calChip : '')
       +   '</div>'
-      +   (current === '-1' ? '<input' + lock + ' id="newTaskAssigneeInput" data-form="newTaskForm" data-field="assignee" value="' + esc(f.assignee) + '" placeholder="' + T('Name') + '" aria-label="' + T('Assignee') + '" style="height:36px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"></input>' : '')
-      +   (f.recurrence ? '<div style="font-size:12px; line-height:1.45; color:' + c.onSurfaceVariant + ';">' + esc(T('{rule}, counting from the due date. Finishing it files the next one.', { rule: describeRepeat(f.recurrence) })) + '</div>' : '')
-      +   (editing ? '' : '<div style="padding-top:4px;">' + checklistSection(c, false, false) + '</div>')
-      +   '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:4px; padding-top:12px; border-top:1px solid ' + c.outlineVariant + ';">'
-      +     (editing && !readOnly ? '<div class="interactive" data-action="deleteTask" style="font-size:13px; font-weight:500; color:' + c.error + '; padding:6px 8px; border-radius:var(--r-sm);">' + T('Delete') + '</div>' : '<span style="font-size:12px; color:' + c.textMuted + ';">' + (readOnly ? '' : T(/Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘ Enter to save' : 'Ctrl Enter to save')) + '</span>')
-      +     '<div style="display:flex; gap:8px;">'
-      +       '<div class="interactive" data-action="closeTaskModal" style="display:flex; align-items:center; justify-content:center; height:36px; padding:0 14px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + '; font-size:13px; font-weight:500;">' + T(readOnly ? 'Close' : 'Cancel') + '</div>'
-      +       (readOnly ? '' : '<div class="interactive" data-action="saveTask" style="display:flex; align-items:center; justify-content:center; height:36px; padding:0 16px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:13px; font-weight:500;">' + (editing ? T('Save Changes') : T('Create Task')) + '</div>')
+      +   (current === '-1' ? '<input' + lock + ' id="newTaskAssigneeInput" data-form="newTaskForm" data-field="assignee" value="' + esc(f.assignee) + '" placeholder="' + T('Name') + '" aria-label="' + T('Assignee') + '" style="height:40px; padding:0 12px; border-radius:var(--r-xs); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';"></input>' : '')
+      +   (f.recurrence ? '<div class="t-body-s" style="color:' + c.onSurfaceVariant + ';">' + esc(T('{rule}, counting from the due date. Finishing it files the next one.', { rule: describeRepeat(f.recurrence) })) + '</div>' : '')
+      +   (editing ? '' : checklistSection(c, false, false))
+      +   '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px;">'
+      +     (editing && !readOnly ? '<div class="interactive text-btn t-label-l" data-action="deleteTask" style="margin-left:-12px; color:' + c.error + ';">' + T('Delete') + '</div>' : '<span class="kbd-hint t-body-s" style="color:' + c.onSurfaceVariant + ';">' + (readOnly ? '' : T(/Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘ Enter to save' : 'Ctrl Enter to save')) + '</span>')
+      +     '<div style="display:flex; gap:8px; margin-left:auto;">'
+      +       '<div class="interactive text-btn t-label-l" data-action="closeTaskModal" style="color:' + c.primary + ';">' + T(readOnly ? 'Close' : 'Cancel') + '</div>'
+      +       (readOnly ? '' : '<div class="interactive t-label-l" data-action="saveTask" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 24px; border-radius:var(--r-full); background:' + c.primary + '; color:' + c.onPrimary + ';">' + (editing ? T('Save Changes') : T('Create Task')) + '</div>')
       +     '</div>'
       +   '</div>'
       + '</div></div>';
@@ -4121,18 +4121,18 @@
 
   function repeatControl(f, c, lock) {
     var r = parseRepeat(f.recurrence);
-    var fieldStyle = 'height:38px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';';
+    var fieldStyle = 'height:40px; padding:0 12px; border-radius:var(--r-xs); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';';
     var opts = REPEAT_OPTIONS.map(function (o) {
       return '<option value="' + o[0] + '"' + (o[0] === r.freq ? ' selected' : '') + '>' + o[1] + '</option>';
     }).join('') + (r.freq === 'custom' ? '<option value="custom" selected>' + T('Custom (set on a phone)') + '</option>' : '');
     var select = mSelectFrom('<select' + lock + ' id="newTaskRepeatSelect" style="' + fieldStyle + '">' + opts + '</select>', c);
     if (!REPEAT_UNITS[r.freq]) return select;
     var unit = REPEAT_UNITS[r.freq];
-    return '<div style="display:flex; gap:6px; align-items:center;">'
+    return '<div style="display:flex; gap:8px; align-items:center;">'
       + '<div style="flex:1; min-width:0;">' + select.replace('style="', 'style="width:100%; ') + '</div>'
-      + (LANG === 'ko' ? '' : '<span style="font-size:12px; color:' + c.onSurfaceVariant + ';">every</span>')
-      + '<input' + lock + ' id="newTaskRepeatInterval" type="number" min="1" max="999" value="' + r.interval + '" aria-label="' + T('Repeat every how many ' + unit[1]) + '" style="width:52px; ' + fieldStyle + ' padding:0 6px;"></input>'
-      + (LANG === 'ko' ? '<span style="font-size:12px; color:' + c.onSurfaceVariant + '; white-space:nowrap;">' + { day: '일', week: '주', month: '개월', year: '년' }[unit[0]] + '마다</span>' : '')
+      + (LANG === 'ko' ? '' : '<span class="t-body-m" style="color:' + c.onSurfaceVariant + ';">every</span>')
+      + '<input' + lock + ' id="newTaskRepeatInterval" type="number" min="1" max="999" value="' + r.interval + '" aria-label="' + T('Repeat every how many ' + unit[1]) + '" style="width:56px; ' + fieldStyle + ' padding:0 8px;"></input>'
+      + (LANG === 'ko' ? '<span class="t-body-m" style="color:' + c.onSurfaceVariant + '; white-space:nowrap;">' + { day: '일', week: '주', month: '개월', year: '년' }[unit[0]] + '마다</span>' : '')
       + '</div>';
   }
 
