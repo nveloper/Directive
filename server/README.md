@@ -22,7 +22,7 @@ The SQLite file is created automatically on first run and holds everything
 (users, departments, tasks, comments, activity, settings) — back it up like any file.
 
 The app's displayed name (shown in the header and browser tab, "Directive" by
-default) can be renamed by an administrator from the account menu — the new
+default) can be renamed by an administrator under Settings → Workspace — the new
 name applies for every user.
 
 Flags:
@@ -107,7 +107,7 @@ There is no live iCloud/CalDAV account sync — that would need this server to
 hold your calendar password/app-password and would fail from a browser
 anyway (iCloud's CalDAV blocks cross-origin requests). Instead, every
 department gets a standing, token-secured `.ics` URL
-(`/calendar/<token>.ics`) shown in the app's right panel — add that as a
+(`/calendar/<token>.ics`) shown in the schedule drawer — add that as a
 **subscribed calendar** in Apple Calendar / Google Calendar / Outlook and its
 due dates show up automatically, no manual export/import.
 
@@ -121,7 +121,8 @@ GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o directive .   # cross-compile 
 
 ## Due today
 
-The right-hand panel lists unfinished tasks due today or already late, soonest
+The schedule drawer (the calendar button in the top bar) lists unfinished
+tasks due today or already late, soonest
 first; ticking one completes the task. There used to be a separate reminders
 list beside the tasks - it was folded into them, since in a phone's reminders
 app the two looked the same anyway. On first start after that change every old
@@ -136,6 +137,27 @@ assignee (anyone, unassigned, or one person), priority and calendar
 visibility. The sort is remembered per browser; filters reset on reload. The
 API takes the same as `sort=` (`created`, `due`, `priority`, `updated`,
 `title`) and `assignee=` (`none` or an account id) on `GET /api/tasks`.
+
+The list's column headings (Task, Due date, Priority) sort it too; clicking
+the active one goes back to creation order.
+
+`GET /api/tasks` also takes `dueFrom=` and `dueTo=` (`YYYY-MM-DD`, inclusive),
+which keep only tasks due in that span - the calendar view asks for one month
+this way.
+
+## Views and shortcuts
+
+The list, the board (a column per status; drag a card to change its status)
+and the month calendar are switched above the list or with `1`, `2`, `3`; the
+choice is remembered per browser. `Ctrl/⌘ K` opens a command menu that runs
+commands and searches tasks. Outside text fields: `C` new task, `/` search,
+`J`/`K` move between rows, Enter open, `X` select, `Esc` clear the selection.
+Selected tasks can have their status, priority or assignee changed, or be
+moved to the trash, together.
+
+Each department can have a colour (department settings, `#rrggbb`, stored in
+`departments.color` and sent as `color` on `PUT /api/departments/{id}`); a
+sub-department without one uses its parent's.
 
 ## Search
 
@@ -195,13 +217,20 @@ A task can carry an **icon**: an emoji, or an uploaded picture (kept in
 
 ## Passwords
 
-Anyone can change their own password (account menu → *Change password*); it
+Anyone can change their own password (Settings → Password and sync); it
 needs the current one, signs out every other session and clears cached phone
 sign-ins, while app passwords keep working. An administrator can **reset**
-someone's password from *Accounts*: that issues a random temporary password,
+someone's password from Settings → Accounts: that issues a random temporary password,
 shown once, signs the person out everywhere, and flags the account so that it
 can reach nothing but the password change until they choose their own. The
 temporary password does not work for CalDAV. No one can see anyone's password.
+
+## Task timeline
+
+The detail panel shows a task's comments and its changes - created, edited,
+done, reopened, files added or removed, trashed or restored - as one timeline.
+It reads them from `GET /api/activity?task=<id>`. An edit is recorded as such,
+not field by field.
 
 ## Checklists
 
@@ -216,14 +245,15 @@ account: someone assigned you a task, mentioned you in a comment (`@Display
 Name` or `@username`), or commented on a task assigned to you. They are stored
 per account, so read/unread is the same on every device, and only that
 account's open tabs are told when one arrives. **Activity** is the shared feed,
-as before. Desktop alerts can be switched on for when the tab is in the
+grouped by day, leaving out your own actions unless you tick *Include my own
+actions*. Desktop alerts can be switched on for when the tab is in the
 background; browsers only allow those on an HTTPS page.
 
 ### Due-date reminders
 
 Once a day the server notifies each assignee of their unfinished tasks due
 today and due tomorrow. An administrator turns this on or off and picks the
-time under their photo → **Due-date reminders** (on at 09:00 by default, by the
+time under Settings → Reminders and backups → **Due-date reminders** (on at 09:00 by default, by the
 server's clock). If the server was off at that time, the day's reminders go out
 as soon as it starts; each day's run happens once, so moving the time later
 does not send the same list twice. Unassigned tasks are left out.
@@ -244,7 +274,7 @@ a calendar carrying `VTODO`; add the account and the tasks appear as to-dos.
 ```
 Server:   https://<your-host>/caldav/
 Username: your Directive username
-Password: an app password (account menu → Phone sync)
+Password: an app password (Settings → Password and sync → Phone sync)
 ```
 
 `/.well-known/caldav` redirects, so most clients only need the host. Clients
@@ -289,8 +319,8 @@ the way in for them, read-only.
 
 ## Backups
 
-An administrator can turn on a daily backup under the account menu →
-*Backups*, choosing the time (by the server's clock - the dialog shows what it
+An administrator can turn on a daily backup under Settings → Reminders
+and backups → *Backups*, choosing the time (by the server's clock - the dialog shows what it
 reads) and how many to keep. Files are named `directive-YYYY-MM-DD-HHMM.db` and
 written to `-backup-dir`; only files named that way are listed, pruned or
 offered for download, so anything else in the folder is left alone. If the
@@ -362,4 +392,5 @@ server against the wrong database leaves another database's files alone.
 - `ratelimit.go` — per-IP throttle on the sign-in endpoints
 - `ics.go` — the per-department `.ics` calendar feed
 - `caldav.go` — the CalDAV server: tasks as VTODO, two-way
+- `../demo/` — the static demo: `mock-api.js` stands in for this server
 - `static/` — the frontend (`index.html`, `app.js`, `styles.css`, and the Pretendard font in `fonts/`, SIL Open Font License)

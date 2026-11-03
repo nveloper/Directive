@@ -49,6 +49,14 @@
   function isWideScreen() {
     return !!(window.matchMedia && window.matchMedia(WIDE_QUERY).matches);
   }
+  // Touch screens (phones, tablets) get the two-line task rows instead of the
+  // table: the table's extra columns are too much to take in at arm's length.
+  function isTouchScreen() {
+    return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  }
+  function useCardRows() {
+    return isNarrowScreen() || (isTouchScreen() && state.viewMode === 'list');
+  }
   function isNarrowScreen() {
     return !!(window.matchMedia && window.matchMedia(NARROW_QUERY).matches);
   }
@@ -132,6 +140,9 @@
   // the letter shows through underneath. Avoids fetching a "does this user
   // have a photo" flag up front.
   function withImageFallback(src, fallbackHtml, sizePx, radiusCss, wrapperAttrs) {
+    // The static demo (demo/) has no server to serve pictures, so it asks for
+    // the letters straight away instead of a request that can only fail.
+    if (window.DIRECTIVE_DEMO) return '<div ' + (wrapperAttrs || '') + ' style="display:flex; flex-shrink:0;">' + fallbackHtml + '</div>';
     return '<div ' + (wrapperAttrs || '') + ' style="position:relative; width:' + sizePx + 'px; height:' + sizePx + 'px; flex-shrink:0;">'
       + fallbackHtml
       + '<img src="' + esc(src) + '" alt="" style="position:absolute; inset:0; width:100%; height:100%; border-radius:' + radiusCss + '; object-fit:cover; pointer-events:none;" onerror="this.remove()">'
@@ -142,7 +153,7 @@
     if (mode === true) mode = 'edit';
     if (mode === false || !mode) mode = 'none';
     var letter = esc((state.appName || 'D').charAt(0).toUpperCase());
-    var fallback = '<div style="width:' + sizePx + 'px; height:' + sizePx + 'px; border-radius:' + Math.round(sizePx * 0.28) + 'px; background:' + bg + '; color:' + fg + '; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:' + Math.round(sizePx * 0.42) + 'px;">' + letter + '</div>';
+    var fallback = '<div style="width:' + sizePx + 'px; height:' + sizePx + 'px; border-radius:' + Math.round(sizePx * 0.28) + 'px; background:' + bg + '; color:' + fg + '; display:flex; align-items:center; justify-content:center; font-weight:500; line-height:1; font-size:' + Math.round(sizePx * 0.42) + 'px;">' + letter + '</div>';
     var attrs = mode === 'edit'
       ? 'class="interactive brand-icon" data-action="toggleBrandMenu" title="' + T('Change app icon') + '" aria-haspopup="menu" aria-expanded="' + (state.brandOpen ? 'true' : 'false') + '"'
       : (mode === 'guide'
@@ -152,7 +163,7 @@
   }
 
   function avatarHtml(bg, fg, sizePx) {
-    var fallback = '<div style="width:' + sizePx + 'px; height:' + sizePx + 'px; border-radius:50%; background:' + bg + '; color:' + fg + '; display:flex; align-items:center; justify-content:center; font-size:' + Math.round(sizePx * 0.38) + 'px; font-weight:600;">' + esc(computeInitials(state.user.displayName)) + '</div>';
+    var fallback = '<div style="width:' + sizePx + 'px; height:' + sizePx + 'px; border-radius:50%; background:' + bg + '; color:' + fg + '; display:flex; align-items:center; justify-content:center; font-size:' + Math.round(sizePx * 0.38) + 'px; line-height:1; font-weight:500;">' + esc(computeInitials(state.user.displayName)) + '</div>';
     return withImageFallback('/api/users/' + state.user.id + '/avatar?v=' + state.avatarVersion, fallback, sizePx, '50%');
   }
 
@@ -209,106 +220,80 @@
     probe.src = url;
   }
 
-  // The palette has two halves. The accent - the one colour a person picks -
-  // is derived here at run time, and is spent on very little: the primary
-  // button, the selected item and the focus ring. Everything else is fixed:
-  // near-neutral surfaces with no tint of the accent in them, and status,
-  // priority and avatar colours that mean the same thing whatever the accent
-  // is. (The role names are Material's, kept so the markup did not have to
-  // change; what they hold is not.)
-  var NEUTRAL = {
-    light: {
-      surface: '#FFFFFF',              // panels, cards, dialogs
-      surfaceContainerLow: '#F7F7F5',  // the canvas behind them, sidebars
-      surfaceContainer: '#F1F1EF',     // menus, table headers
-      surfaceContainerHigh: '#EAEAE7', // hover, counts, tracks
-      surfaceVariant: '#F1F1EF',       // tags and code
-      onSurface: '#1B1B1A',            // text
-      onSurfaceVariant: '#5E5E59',     // secondary text
-      textMuted: '#8E8E88',            // placeholders, quiet icons
-      outline: '#CFCFCA',              // field borders
-      outlineVariant: '#E4E4E0',       // dividers
-      error: '#DC2626',
-      errorContainer: '#FDECEC',
-      onErrorContainer: '#9F1C1C',
-      success: '#16A34A',
-      warning: '#B45309',
-      warningContainer: '#FDF1DC',
-      onWarningContainer: '#8A4B05'
-    },
-    dark: {
-      surface: '#17171A',
-      surfaceContainerLow: '#0F0F11',
-      surfaceContainer: '#1E1E22',
-      surfaceContainerHigh: '#27272C',
-      surfaceVariant: '#222226',
-      onSurface: '#EDEDEF',
-      onSurfaceVariant: '#A1A1AA',
-      textMuted: '#71717A',
-      outline: '#3A3A42',
-      outlineVariant: '#2A2A30',
-      error: '#F87171',
-      errorContainer: '#3A1517',
-      onErrorContainer: '#FCA5A5',
-      success: '#22C55E',
-      warning: '#F59E0B',
-      warningContainer: '#33250D',
-      onWarningContainer: '#FCD34D'
-    }
-  };
-
-  // Status colours: grey to do, blue in progress, amber in review, green
-  // done, red overdue. Each has a dot colour, and a tint and a text colour
-  // for the label it sits in.
-  var STATUS_COLORS = {
-    light: {
-      todo:       { dot: '#8E8E88', bg: '#EFEFEC', color: '#4A4A46' },
-      inprogress: { dot: '#2F6FEB', bg: '#E8EFFD', color: '#1A4DB8' },
-      review:     { dot: '#D97706', bg: '#FDF1DC', color: '#8A4B05' },
-      done:       { dot: '#16A34A', bg: '#E4F4E9', color: '#13703A' },
-      overdue:    { dot: '#DC2626', bg: '#FDECEC', color: '#A61B1B' }
-    },
-    dark: {
-      todo:       { dot: '#8B8B94', bg: '#26262B', color: '#BDBDC4' },
-      inprogress: { dot: '#5B8DEF', bg: '#172340', color: '#93B4F6' },
-      review:     { dot: '#F59E0B', bg: '#33250D', color: '#FBC560' },
-      done:       { dot: '#22C55E', bg: '#10291A', color: '#6EE19A' },
-      overdue:    { dot: '#F87171', bg: '#3A1517', color: '#FCA5A5' }
-    }
-  };
-  var PRIORITY_COLORS = {
-    light: { High: '#EA580C', Medium: '#5E5E59', Low: '#B4B4AE' },
-    dark: { High: '#FB923C', Medium: '#A1A1AA', Low: '#5C5C66' }
-  };
+  // Material You: one seed colour - the accent - tints every surface a little
+  // and fills selected things with a soft tonal container, so the app reads
+  // as one colour family rather than grey with a blue button. Surfaces step
+  // by tone (container tiers) instead of being split by lines.
+  //
+  // Status colours keep distinct hues - grey to do, blue in progress, amber in
+  // review, green done, red overdue - so in progress and done never look
+  // alike, but each is harmonized toward the seed (Material's colour
+  // harmonization: turned up to 15 degrees toward it) so they sit in the same
+  // family instead of reading as stock UI colours.
+  function harmonize(hue, seed) {
+    var d = ((seed - hue + 540) % 360) - 180;
+    return hue + Math.max(-15, Math.min(15, d * 0.5));
+  }
 
   function deriveColors(seed, dark) {
     var base = hexToOklch(seed);
-    var h = base.H, C = base.C;
-    // tone: 0-100, mapped straight onto OKLCH lightness, which is perceptually
-    // even across hues - a yellow and a blue at the same tone look as light
-    // as each other, so any accent lands at a readable lightness.
+    var h = base.H, C = Math.max(base.C, 0.04);
     function tone(hue, chroma, t) { return oklchToHex(t / 100, chroma, hue); }
-    var n = NEUTRAL[dark ? 'dark' : 'light'];
+    var n = Math.min(C * 0.12, 0.016);   // neutral surfaces: just a hint of the seed
+    var nv = Math.min(C * 0.22, 0.03);   // neutral-variant: a little more
+    var sec = Math.min(C * 0.4, 0.06);   // secondary: the seed, muted
     var c = {};
-    Object.keys(n).forEach(function (k) { c[k] = n[k]; });
     if (!dark) {
-      c.primary = tone(h, C, 50);
+      c.primary = tone(h, C, 48);
       c.onPrimary = '#FFFFFF';
-      c.primaryContainer = tone(h, Math.min(C * 0.3, 0.045), 95.5);
-      c.onPrimaryContainer = tone(h, Math.min(C, 0.16), 38);
+      c.primaryContainer = tone(h, Math.min(C * 0.6, 0.09), 92);
+      c.onPrimaryContainer = tone(h, Math.min(C, 0.14), 28);
+      c.secondaryContainer = tone(h, sec, 90);
+      c.onSecondaryContainer = tone(h, sec, 22);
+      c.surface = tone(h, n, 99);
+      c.surfaceContainerLow = tone(h, n, 96.5);
+      c.surfaceContainer = tone(h, n, 94.5);
+      c.surfaceContainerHigh = tone(h, n, 92);
+      c.surfaceVariant = tone(h, nv, 92);
+      c.onSurface = tone(h, n, 22);
+      c.onSurfaceVariant = tone(h, nv, 40);
+      c.textMuted = tone(h, nv, 50);
+      c.outline = tone(h, nv, 72);
+      c.outlineVariant = tone(h, nv, 88);
+      c.error = tone(harmonize(27, h), 0.19, 52);
+      c.errorContainer = tone(harmonize(27, h), 0.06, 93);
+      c.onErrorContainer = tone(harmonize(27, h), 0.12, 32);
+      c.success = tone(harmonize(150, h), 0.14, 55);
+      c.warning = tone(harmonize(70, h), 0.14, 52);
+      c.warningContainer = tone(harmonize(70, h), 0.06, 93);
+      c.onWarningContainer = tone(harmonize(70, h), 0.1, 35);
     } else {
-      c.primary = tone(h, C, 74);
-      c.onPrimary = tone(h, Math.min(C * 0.3, 0.04), 16);
-      c.primaryContainer = tone(h, Math.min(C * 0.45, 0.07), 27);
-      c.onPrimaryContainer = tone(h, Math.min(C * 0.6, 0.1), 88);
+      c.primary = tone(h, Math.min(C, 0.14), 80);
+      c.onPrimary = tone(h, Math.min(C, 0.1), 22);
+      c.primaryContainer = tone(h, Math.min(C * 0.6, 0.08), 32);
+      c.onPrimaryContainer = tone(h, Math.min(C * 0.6, 0.08), 92);
+      c.secondaryContainer = tone(h, sec, 32);
+      c.onSecondaryContainer = tone(h, sec, 90);
+      c.surface = tone(h, n, 15);
+      c.surfaceContainerLow = tone(h, n, 18);
+      c.surfaceContainer = tone(h, n, 21);
+      c.surfaceContainerHigh = tone(h, n, 25);
+      c.surfaceVariant = tone(h, nv, 28);
+      c.onSurface = tone(h, n, 91);
+      c.onSurfaceVariant = tone(h, nv, 80);
+      c.textMuted = tone(h, nv, 67);
+      c.outline = tone(h, nv, 45);
+      c.outlineVariant = tone(h, nv, 30);
+      c.error = tone(harmonize(27, h), 0.14, 75);
+      c.errorContainer = tone(harmonize(27, h), 0.07, 30);
+      c.onErrorContainer = tone(harmonize(27, h), 0.08, 90);
+      c.success = tone(harmonize(150, h), 0.13, 75);
+      c.warning = tone(harmonize(70, h), 0.13, 78);
+      c.warningContainer = tone(harmonize(70, h), 0.06, 30);
+      c.onWarningContainer = tone(harmonize(70, h), 0.08, 90);
     }
-    // The old secondary and tertiary roles were further shades of the accent.
-    // Where they marked something done they are now the success green, where
-    // they marked a warning the amber, and elsewhere a plain neutral.
-    c.secondary = c.success;
-    c.onSecondary = dark ? '#0F0F11' : '#FFFFFF';
-    c.secondaryContainer = c.surfaceContainerHigh;
-    c.onSecondaryContainer = c.onSurface;
+    c.secondary = c.primary;
+    c.onSecondary = dark ? c.onPrimary : '#FFFFFF';
     c.tertiary = c.warning;
     c.tertiaryContainer = c.warningContainer;
     c.onTertiaryContainer = c.onWarningContainer;
@@ -316,16 +301,29 @@
     return c;
   }
 
-  // Letter avatars take one of eight quiet hues from the name, so a person
-  // keeps their colour everywhere and it never follows the accent.
-  var AVATAR_HUES = [25, 70, 135, 175, 215, 255, 300, 345];
+  // Status and priority colours for a scheme, harmonized toward its seed.
+  // Status and priority in one colour family. The ring's shape already says
+  // how far along a task is (empty, half, three quarters, full), so colour
+  // only has to separate "not started" from "under way": grey for to do, the
+  // accent for everything after it. Red is kept for one thing - late work -
+  // so it still stands out. High priority is the accent; the rest are grey.
+  function statusColors(c) {
+    var on = { dot: c.primary, bg: c.secondaryContainer, color: c.onSecondaryContainer };
+    return {
+      status: {
+        todo: { dot: c.textMuted, bg: c.surfaceContainerHigh, color: c.onSurfaceVariant },
+        inprogress: on, review: on, done: on,
+        overdue: { dot: c.error, bg: c.errorContainer, color: c.onErrorContainer }
+      },
+      priority: { High: c.primary, Medium: c.onSurfaceVariant, Low: c.outline }
+    };
+  }
+
+  // Letter avatars all share the secondary container: a name tells people
+  // apart, a rainbow of circles only adds noise.
   function avatarColors(name, dark) {
-    var s = String(name || ''), hash = 0;
-    for (var i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) | 0;
-    var hue = AVATAR_HUES[Math.abs(hash) % AVATAR_HUES.length];
-    return dark
-      ? { bg: oklchToHex(0.34, 0.06, hue), color: oklchToHex(0.88, 0.07, hue) }
-      : { bg: oklchToHex(0.92, 0.045, hue), color: oklchToHex(0.38, 0.09, hue) };
+    var c = deriveColors(state.accent, !!dark);
+    return { bg: c.secondaryContainer, color: c.onSecondaryContainer };
   }
 
   var TAB_ORDER = ['all', 'todo', 'inprogress', 'review', 'done', 'overdue'];
@@ -341,7 +339,7 @@
   var LOCALE = LANG === 'ko' ? 'ko-KR' : 'en-US';
   function shortDate(d) { return d.toLocaleDateString(LOCALE, { month: 'short', day: 'numeric' }); }
   var CONTENT_OUT_MS = 90, CONTENT_IN_MS = 140, MODAL_CLOSE_MS = 160;
-  var ACCENT_PRESETS = ['#3451D1', '#0F766E', '#7C3AED', '#C2410C', '#BE185D'];
+  var ACCENT_PRESETS = ['#6750A4', '#006A6A', '#3A5BA9', '#8B5000', '#984061'];
   var ICON = {
     listView: '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 6h12M4 10h12M4 14h12"></path></svg>',
     gridView: '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="6" height="6" rx="1.3"></rect><rect x="11" y="3" width="6" height="6" rx="1.3"></rect><rect x="3" y="11" width="6" height="6" rx="1.3"></rect><rect x="11" y="11" width="6" height="6" rx="1.3"></rect></svg>',
@@ -423,7 +421,7 @@
     guideModalPhase: 'closed',
     displayNameDraft: '',
 
-    accent: '#3451D1',
+    accent: '#6750A4',
     accentPickerPhase: 'closed',
     themeMode: 'system',
     appName: 'Directive',
@@ -453,6 +451,8 @@
     searchQuery: '',
     viewMode: (function () { try { var v = localStorage.getItem('directive_view'); return /^(list|grid|calendar)$/.test(v || '') ? v : 'list'; } catch (e) { return 'list'; } })(),
     calMonth: '',
+    calWeekStart: '',
+    calSpan: '',
     selected: {},
     bulkBusy: false,
     paletteOpen: false,
@@ -1231,7 +1231,7 @@
     var cal = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="14" height="12" rx="2"></rect><path d="M3 8.5h14M7 2.5v4M13 2.5v4"></path></svg>';
     var label = value ? formatDue(value) + ' · ' + relativeDue(value, false) : T('No due date');
     if (value && relativeDue(value, false) === formatDue(value)) label = formatDue(value);
-    return '<div id="dp-trigger-' + field + '" class="' + (lock ? '' : 'interactive ') + 'date-trigger"' + (lock ? '' : ' data-action="toggleDatePicker" data-id="' + field + '"') + ' role="button" aria-haspopup="dialog" aria-label="' + T('Due Date') + '" style="display:flex; align-items:center; gap:8px; height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; background:' + c.surface + '; color:' + (value ? c.onSurface : c.textMuted) + '; font-size:14px;' + (lock ? ' opacity:.6;' : '') + '">'
+    return '<div id="dp-trigger-' + field + '" class="' + (lock ? '' : 'interactive ') + 'date-trigger"' + (lock ? '' : ' data-action="toggleDatePicker" data-id="' + field + '"') + ' role="button" aria-haspopup="dialog" aria-label="' + T('Due Date') + '" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 12px; border-radius:var(--r-xs); border:1px solid ' + c.outline + '; background:' + c.surface + '; color:' + (value ? c.onSurface : c.textMuted) + '; font-size:14px; line-height:20px;' + (lock ? ' opacity:.6;' : '') + '">'
       + '<span style="display:flex; color:' + c.onSurfaceVariant + ';">' + cal + '</span><span class="tnum" style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + esc(label) + '</span></div>';
   }
   function datePickerPopover(c) {
@@ -1246,8 +1246,8 @@
     for (var d = 1; d <= days; d++) {
       var iso = isoOf(new Date(y, mo, d));
       var sel = iso === value, isToday = iso === today;
-      cells += '<span class="interactive tnum" data-action="pickDate" data-id="' + iso + '" style="display:flex; align-items:center; justify-content:center; height:32px; border-radius:var(--r-sm); font-size:13px;'
-        + (sel ? ' background:' + c.primary + '; color:' + c.onPrimary + '; font-weight:600;' : (isToday ? ' color:' + c.primary + '; font-weight:600; box-shadow:inset 0 0 0 1px ' + c.primary + ';' : ' color:' + c.onSurface + ';')) + '">' + d + '</span>';
+      cells += '<span class="interactive tnum" data-action="pickDate" data-id="' + iso + '" style="display:flex; align-items:center; justify-content:center; height:40px; border-radius:var(--r-full); font-size:14px;'
+        + (sel ? ' background:' + c.primary + '; color:' + c.onPrimary + '; font-weight:500;' : (isToday ? ' color:' + c.primary + '; font-weight:500; box-shadow:inset 0 0 0 1px ' + c.primary + ';' : ' color:' + c.onSurface + ';')) + '">' + d + '</span>';
     }
     var quick = [['today', 'Today'], ['tomorrow', 'Tomorrow'], ['friday', 'This Friday'], ['monday', 'Next Monday'], ['none', 'No due date']].map(function (q) {
       return '<span class="interactive" data-action="quickDate" data-id="' + q[0] + '" style="display:flex; align-items:center; height:30px; padding:0 10px; border-radius:var(--r-sm); font-size:13px; color:' + (q[0] === 'none' ? c.onSurfaceVariant : c.onSurface) + ';">' + T(q[1]) + '</span>';
@@ -1258,7 +1258,7 @@
       + '<div style="display:flex; flex-direction:column; gap:1px; padding-bottom:6px; border-bottom:1px solid ' + c.outlineVariant + ';">' + quick + '</div>'
       + '<div style="display:flex; align-items:center; justify-content:space-between; padding:2px 2px 0;">'
       +   nav(-1, ICON.chevronLeft, 'Previous month')
-      +   '<span style="font-size:14px; font-weight:600;">' + esc(new Date(y, mo, 1).toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</span>'
+      +   '<span style="font-size:14px; font-weight:500;">' + esc(new Date(y, mo, 1).toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</span>'
       +   nav(1, ICON.chevronRight, 'Next month')
       + '</div>'
       + '<div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:2px;">' + week + cells + '</div>'
@@ -1809,7 +1809,7 @@
   }
 
   function listScrollKey() {
-    return 'list:' + state.selectedNode + ':' + state.activeTab + ':' + state.page + ':' + state.searchQuery.trim() + ':' + (isNarrowScreen() ? 'cards' : state.viewMode);
+    return 'list:' + state.selectedNode + ':' + state.activeTab + ':' + state.page + ':' + state.searchQuery.trim() + ':' + (useCardRows() ? 'cards' : state.viewMode);
   }
 
   function statusCount(id) {
@@ -2544,7 +2544,7 @@
         return '<span class="swatch' + (state.accent === hex ? ' active' : '') + oneShotClass('swatch:' + hex) + '" data-action="setAccent" data-hex="' + hex + '" title="' + hex + '" style="background:' + hex + ';"></span>';
       }).join('')
       + '<input type="color" id="accentColorInput" class="swatch swatch-custom' + (isPresetAccent(state.accent) ? '' : ' active') + '" value="' + esc(state.accent) + '" title="' + T('Pick any colour') + '" aria-label="' + T('Pick any colour') + '">'
-      + '<input id="accentHexInput" value="' + esc(state.accent) + '" spellcheck="false" maxlength="7" aria-label="' + T('Accent colour hex') + '" style="width:78px; height:26px; padding:0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; background:' + c.surface + '; color:' + c.onSurface + '; font-size:12px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;">';
+      + '<input id="accentHexInput" value="' + esc(state.accent) + '" spellcheck="false" maxlength="7" aria-label="' + T('Accent colour hex') + '" style="width:104px; height:40px; padding:0 12px; border-radius:var(--r-xs); border:1px solid ' + c.outline + '; background:transparent; color:' + c.onSurface + '; font-size:14px; line-height:20px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;">';
   }
 
   var THEME_MODE_ORDER = ['light', 'dark', 'system'];
@@ -2972,11 +2972,8 @@
 
   // ---- shared task view helpers ----
   function styleMaps(c) {
-    var mode = c.dark ? 'dark' : 'light';
-    return {
-      statusStyle: STATUS_COLORS[mode],
-      priorityColor: PRIORITY_COLORS[mode]
-    };
+    var sc = statusColors(c);
+    return { statusStyle: sc.status, priorityColor: sc.priority };
   }
 
   function taskView(t, maps, c) {
@@ -3001,7 +2998,7 @@
   // An assignee linked to an account gets their photo; a free-text one keeps
   // the initials circle it has always had.
   function assigneeAvatarHtml(t, v, sizePx) {
-    var fallback = '<div style="width:' + sizePx + 'px; height:' + sizePx + 'px; border-radius:50%; background:' + v.avatarBg + '; color:' + v.avatarColor + '; font-size:' + Math.max(12, Math.round(sizePx * 0.42)) + 'px; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0;">' + esc(computeInitials(t.assignee)) + '</div>';
+    var fallback = '<div style="width:' + sizePx + 'px; height:' + sizePx + 'px; border-radius:50%; background:' + v.avatarBg + '; color:' + v.avatarColor + '; font-size:' + Math.max(12, Math.round(sizePx * 0.42)) + 'px; line-height:1; font-weight:500; display:flex; align-items:center; justify-content:center; flex-shrink:0;">' + esc(computeInitials(t.assignee)) + '</div>';
     if (!t.assigneeId) return fallback;
     return withImageFallback('/api/users/' + t.assigneeId + '/avatar?v=' + state.avatarVersion, fallback, sizePx, '50%');
   }
@@ -3011,11 +3008,11 @@
     var out = '';
     if (t.checklistTotal) {
       var all = t.checklistDone === t.checklistTotal;
-      out += '<span title="' + T('{done} of {total} checklist items done', { done: t.checklistDone, total: t.checklistTotal }) + '" style="display:inline-flex; align-items:center; gap:3px; font-size:12px; font-weight:600; color:' + (all ? c.secondary : c.onSurfaceVariant) + ';">'
+      out += '<span class="t-label-m" title="' + T('{done} of {total} checklist items done', { done: t.checklistDone, total: t.checklistTotal }) + '" style="display:inline-flex; align-items:center; gap:4px; color:' + (all ? c.secondary : c.onSurfaceVariant) + ';">'
         + ICON.checklist + t.checklistDone + '/' + t.checklistTotal + '</span>';
     }
     if (t.attachmentCount) {
-      out += '<span title="' + T(t.attachmentCount === 1 ? '{n} attachment' : '{n} attachments', { n: t.attachmentCount }) + '" style="display:inline-flex; align-items:center; gap:3px; font-size:12px; font-weight:600; color:' + c.onSurfaceVariant + ';">'
+      out += '<span class="t-label-m" title="' + T(t.attachmentCount === 1 ? '{n} attachment' : '{n} attachments', { n: t.attachmentCount }) + '" style="display:inline-flex; align-items:center; gap:4px; color:' + c.onSurfaceVariant + ';">'
         + '<svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 9.5l-5.6 5.6a3.5 3.5 0 0 1-5-5L10.2 4a2.3 2.3 0 0 1 3.3 3.3L7.8 13a1.2 1.2 0 0 1-1.7-1.7l5.2-5.2"></path></svg>'
         + t.attachmentCount + '</span>';
     }
@@ -3027,7 +3024,7 @@
 
   function commentBadge(t, c) {
     if (!t.commentCount) return '';
-    return '<span title="' + T(t.commentCount === 1 ? '{n} comment' : '{n} comments', { n: t.commentCount }) + '" style="display:inline-flex; align-items:center; gap:3px; font-size:12px; font-weight:600; color:' + c.onSurfaceVariant + ';">'
+    return '<span class="t-label-m" title="' + T(t.commentCount === 1 ? '{n} comment' : '{n} comments', { n: t.commentCount }) + '" style="display:inline-flex; align-items:center; gap:4px; color:' + c.onSurfaceVariant + ';">'
       + '<svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5.5h12v8H8l-4 3v-11Z"></path></svg>'
       + t.commentCount + '</span>';
   }
@@ -3046,8 +3043,8 @@
       var needle = esc(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       text = text.replace(new RegExp(needle, 'gi'), function (x) { return '<mark style="background:' + c.primaryContainer + '; color:' + c.onPrimaryContainer + '; border-radius:3px; padding:0 1px;">' + x + '</mark>'; });
     }
-    return '<span class="search-match" style="display:block; font-size:12px; line-height:1.45; color:' + c.onSurfaceVariant + '; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'
-      + '<b style="font-weight:600;">' + esc(where) + '</b> · ' + text + '</span>';
+    return '<span class="search-match t-body-s" style="display:block; color:' + c.onSurfaceVariant + '; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'
+      + '<b style="font-weight:500;">' + esc(where) + '</b> · ' + text + '</span>';
   }
 
   // Status as a small ring that fills as work moves on: empty to do, half in
@@ -3079,8 +3076,8 @@
     var shown = t.overdue ? 'overdue' : t.status;
     var dot = (maps.statusStyle[t.status] || maps.statusStyle.todo).dot;
     var done = t.status === 'done';
-    var cell = 'display:flex; align-items:center; min-width:0; padding:0 12px; height:44px; border-bottom:1px solid ' + c.outlineVariant + ';';
-    var dept = t.deptId ? '<span style="display:inline-flex; align-items:center; gap:6px; max-width:100%; overflow:hidden; font-size:12px; font-weight:500; padding:2px 8px; border-radius:var(--r-xs); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';">' + deptDot(t.deptId, 7) + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span></span>' : '';
+    var cell = 'display:flex; align-items:center; min-width:0; padding:0 16px; height:52px;';
+    var dept = t.deptId ? '<span class="t-label-m" style="display:inline-flex; align-items:center; gap:4px; max-width:100%; overflow:hidden; padding:4px 8px; border-radius:var(--r-sm); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';"><span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span></span>' : '';
     // One row is one control: the cells sit on the table's own columns through
     // subgrid, so the whole row lights up under the pointer and takes a single
     // stop in the tab order, instead of six cells each reacting on their own.
@@ -3090,13 +3087,13 @@
       +   '<span class="status-ring">' + statusIconHtml(t.status, dot) + '</span><span style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0);">' + esc((STATUS_META[shown] || STATUS_META.todo).label) + '</span></div>'
       + '<div style="' + cell + ' gap:8px;">'
       +   taskIconHtml(t, 16)
-      +   '<span style="flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; font-weight:500; color:' + (done ? c.textMuted : c.onSurface) + ';">' + esc(t.title) + '</span>'
-      +   '<span style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0; font-size:12px; color:' + c.textMuted + ';">' + taskBadges(t, c) + (t.calendarVisible ? '<span title="' + T('Shown in calendar') + '" style="display:inline-flex; color:' + c.textMuted + ';"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="14" height="13" rx="2"></rect><path d="M3 8h14M7 2v4M13 2v4"></path></svg></span>' : '') + '</span>'
+      +   '<span class="t-body-l" style="flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:' + (done ? c.textMuted : c.onSurface) + ';">' + esc(t.title) + '</span>'
+      +   '<span class="t-label-m" style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0; color:' + c.textMuted + ';">' + taskBadges(t, c) + (t.calendarVisible ? '<span title="' + T('Shown in calendar') + '" style="display:inline-flex; color:' + c.textMuted + ';"><svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="14" height="13" rx="2"></rect><path d="M3 8h14M7 2v4M13 2v4"></path></svg></span>' : '') + '</span>'
       +   (t.match ? '<span style="flex:1; min-width:0;">' + searchMatchHtml(t, c) + '</span>' : '')
       + '</div>'
       + '<div style="' + cell + '">' + dept + '</div>'
-      + '<div style="' + cell + ' gap:8px;">' + (hasAssignee(t) ? assigneeAvatarHtml(t, v, 20) + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; color:' + c.onSurfaceVariant + ';">' + esc(t.assignee) + '</span>' : '<span style="font-size:13px; color:' + c.textMuted + ';">' + T('Unassigned') + '</span>') + '</div>'
-      + '<div class="tnum" style="' + cell + ' font-size:13px; white-space:nowrap; color:' + (t.overdue ? c.error : (t.dueDate ? c.onSurfaceVariant : c.textMuted)) + '; font-weight:' + (t.overdue ? 500 : 400) + ';">' + esc(t.dueDate ? relativeDue(t.dueDate, t.overdue) : '—') + '</div>'
+      + '<div style="' + cell + ' gap:8px;">' + (hasAssignee(t) ? assigneeAvatarHtml(t, v, 20) + '<span class="t-body-m" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:' + c.onSurfaceVariant + ';">' + esc(t.assignee) + '</span>' : '<span class="t-body-m" style="color:' + c.textMuted + ';">' + T('Unassigned') + '</span>') + '</div>'
+      + '<div class="tnum ' + (t.overdue ? 't-label-l' : 't-body-m') + '" style="' + cell + ' white-space:nowrap; color:' + (t.overdue ? c.error : (t.dueDate ? c.onSurfaceVariant : c.textMuted)) + ';">' + esc(t.dueDate ? relativeDue(t.dueDate, t.overdue) : '—') + '</div>'
       + '<div title="' + esc(T(t.priority)) + '" style="' + cell + ' justify-content:center;">' + priorityIconHtml(t.priority, v.priorityColor, c.outlineVariant) + '</div>'
       + '</div>';
   }
@@ -3109,29 +3106,29 @@
       icon = '<circle cx="21" cy="21" r="11"></circle><path d="M29 29l9 9"></path>';
       title = T('No results for “{q}”', { q: state.searchQuery.trim() });
       text = T('Search covers titles, descriptions, checklists, comments and file names.');
-      action = '<span class="interactive" data-action="clearSearch" style="height:32px; padding:0 14px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; display:inline-flex; align-items:center; font-size:13px; font-weight:500;">' + T('Clear search') + '</span>';
+      action = '<span class="interactive t-label-l" data-action="clearSearch" style="height:40px; padding:0 24px; border-radius:var(--r-full); border:1px solid ' + c.outline + '; display:inline-flex; align-items:center;">' + T('Clear search') + '</span>';
     } else if (filtersActive() || state.activeTab !== 'all') {
       icon = '<path d="M8 12h32M14 24h20M20 36h8"></path>';
       title = T('No tasks match');
       text = T('Nothing here with the current tab and filters.');
-      action = filtersActive() ? '<span class="interactive" data-action="clearFilters" style="height:32px; padding:0 14px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; display:inline-flex; align-items:center; font-size:13px; font-weight:500;">' + T('Clear filters') + '</span>' : '';
+      action = filtersActive() ? '<span class="interactive t-label-l" data-action="clearFilters" style="height:40px; padding:0 24px; border-radius:var(--r-full); border:1px solid ' + c.outline + '; display:inline-flex; align-items:center;">' + T('Clear filters') + '</span>' : '';
     } else {
       icon = '<rect x="9" y="8" width="30" height="34" rx="4"></rect><path d="M17 18h14M17 25h14M17 32h8"></path>';
       title = T('No tasks yet');
       text = T('Tasks added here show up for everyone in the department.');
-      action = canCreateTask() ? '<span class="interactive" data-action="openTaskModal" style="height:32px; padding:0 14px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:500;">' + ICON.plus + T('New Task') + '</span>' : '';
+      action = canCreateTask() ? '<span class="interactive t-label-l" data-action="openTaskModal" style="height:40px; padding:0 24px 0 16px; border-radius:var(--r-full); background:' + c.primary + '; color:' + c.onPrimary + '; display:inline-flex; align-items:center; gap:8px;">' + ICON.plus + T('New Task') + '</span>' : '';
     }
     return '<div style="grid-column:1 / -1; display:flex; flex-direction:column; align-items:center; gap:8px; padding:64px 16px; text-align:center;">'
       + '<svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="' + c.textMuted + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + icon + '</svg>'
-      + '<div style="font-size:15px; font-weight:600; margin-top:4px;">' + esc(title) + '</div>'
-      + '<div style="font-size:13px; color:' + c.onSurfaceVariant + '; max-width:340px; line-height:1.5;">' + esc(text) + '</div>'
-      + (action ? '<div style="margin-top:8px;">' + action + '</div>' : '')
+      + '<div class="t-title-m" style="margin-top:8px;">' + esc(title) + '</div>'
+      + '<div class="t-body-m" style="color:' + c.onSurfaceVariant + '; max-width:340px;">' + esc(text) + '</div>'
+      + (action ? '<div style="margin-top:16px;">' + action + '</div>' : '')
       + '</div>';
   }
   function skeletonRows(c, n) {
     var out = '';
     for (var i = 0; i < n; i++) {
-      out += '<div class="skeleton-row" style="grid-column:1 / -1; display:flex; align-items:center; gap:14px; height:44px; padding:0 12px; border-bottom:1px solid ' + c.outlineVariant + ';">'
+      out += '<div class="skeleton-row" style="grid-column:1 / -1; display:flex; align-items:center; gap:16px; height:52px; padding:0 16px;">'
         + '<span class="skeleton" style="width:16px; height:16px; border-radius:50%;"></span>'
         + '<span class="skeleton" style="width:' + (38 + (i * 13) % 30) + '%; height:12px;"></span>'
         + '<span style="flex:1;"></span><span class="skeleton" style="width:80px; height:12px;"></span></div>';
@@ -3140,21 +3137,22 @@
   }
 
   // On a phone each task is a two-line row: what it is, then where, who and when.
+  // A two-line M3 list item: 72 tall, 16 in from each side, a 24 leading
+  // icon, Body L headline over Body M supporting text.
   function taskMobileRow(t, maps, c) {
     var dot = (maps.statusStyle[t.status] || maps.statusStyle.todo).dot;
     var done = t.status === 'done';
     var bits = [];
-    if (t.deptId) bits.push(deptDot(t.deptId, 7).replace('style="', 'style="display:inline-block; margin-right:5px; vertical-align:1px; ') + esc(nodeLabel(t.deptId).split(' · ').pop()));
+    if (t.deptId) bits.push(esc(nodeLabel(t.deptId).split(' · ').pop()));
     if (hasAssignee(t)) bits.push(esc(t.assignee));
-    var due = t.dueDate ? '<span class="tnum" style="color:' + (t.overdue ? c.error : c.onSurfaceVariant) + '; font-weight:' + (t.overdue ? 500 : 400) + ';">' + esc(relativeDue(t.dueDate, t.overdue)) + '</span>' : '';
-    return '<div class="interactive task-row' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + '" data-action="openTask" data-id="' + t.id + '" style="display:flex; align-items:flex-start; gap:12px; padding:12px 4px; border-bottom:1px solid ' + c.outlineVariant + ';">'
-      + '<span style="padding-top:2px;">' + statusIconHtml(t.status, dot, 18) + '</span>'
-      + '<div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">'
-      +   '<div style="display:flex; align-items:center; gap:6px; min-width:0;">' + taskIconHtml(t, 16) + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:15px; font-weight:500; color:' + (done ? c.textMuted : c.onSurface) + ';">' + esc(t.title) + '</span></div>'
-      +   '<div style="display:flex; align-items:center; gap:8px; font-size:13px; color:' + c.onSurfaceVariant + '; min-width:0;"><span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + bits.join(' · ') + '</span>' + taskBadges(t, c) + '<span style="flex:1;"></span>' + due + '</div>'
+    var due = t.dueDate ? '<span class="tnum ' + (t.overdue ? 't-label-l' : 't-body-m') + '" style="flex-shrink:0; color:' + (t.overdue ? c.error : c.onSurfaceVariant) + ';">' + esc(relativeDue(t.dueDate, t.overdue)) + '</span>' : '';
+    return '<div class="interactive task-row' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + '" data-action="openTask" data-id="' + t.id + '" style="display:flex; align-items:center; gap:16px; min-height:72px; padding:8px 16px; border-radius:var(--r-l);">'
+      + '<span style="flex-shrink:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">' + statusIconHtml(t.status, dot, 20) + '</span>'
+      + '<div style="flex:1; min-width:0; display:flex; flex-direction:column;">'
+      +   '<div style="display:flex; align-items:center; gap:8px; min-width:0;">' + taskIconHtml(t, 16) + '<span class="t-body-l" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:' + (done ? c.textMuted : c.onSurface) + ';">' + esc(t.title) + '</span>' + due + '</div>'
+      +   '<div class="t-body-m" style="display:flex; align-items:center; gap:8px; color:' + c.onSurfaceVariant + '; min-width:0;"><span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + bits.join(' · ') + '</span>' + taskBadges(t, c) + '<span style="flex:1;"></span>' + priorityIconHtml(t.priority, maps.priorityColor[t.priority], c.outlineVariant) + '</div>'
       +   searchMatchHtml(t, c)
       + '</div>'
-      + '<span style="padding-top:3px;">' + priorityIconHtml(t.priority, maps.priorityColor[t.priority], c.outlineVariant) + '</span>'
       + '</div>';
   }
 
@@ -3234,7 +3232,7 @@
     var section = function (title, list, offset) { return list.length ? '<div style="padding:8px 10px 4px; font-size:12px; font-weight:500; color:' + c.textMuted + ';">' + T(title) + '</div>' + list.map(function (x, i) { return row(x, i + offset); }).join('') : ''; };
     var empty = !all.length ? '<div style="padding:24px; text-align:center; font-size:13px; color:' + c.textMuted + ';">' + T('Nothing matches.') + '</div>' : '';
     return '<div class="modal-overlay overlay-in" data-backdrop="closePalette" style="position:fixed; background:rgba(0,0,0,.25); display:flex; align-items:flex-start; justify-content:center; padding-top:14vh; z-index:97;">'
-      + '<div role="dialog" aria-modal="true" aria-label="' + T('Command menu') + '" class="card-in" style="width:560px; max-width:94vw; max-height:64vh; display:flex; flex-direction:column; background:' + c.surface + '; border-radius:var(--r-lg); box-shadow:var(--e3); overflow:hidden;">'
+      + '<div role="dialog" aria-modal="true" aria-label="' + T('Command menu') + '" class="card-in" style="width:560px; max-width:94vw; max-height:calc(64vh / var(--zoom, 1)); display:flex; flex-direction:column; background:' + c.surface + '; border-radius:var(--r-lg); box-shadow:var(--e3); overflow:hidden;">'
       +   '<div style="display:flex; align-items:center; gap:10px; padding:0 16px; border-bottom:1px solid ' + c.outlineVariant + ';"><span style="display:flex; color:' + c.textMuted + ';">' + ICON.search + '</span>'
       +     '<input id="paletteInput" role="combobox" aria-expanded="true" aria-controls="paletteList" aria-activedescendant="palette-opt-' + idx + '" autocomplete="off" value="' + esc(state.paletteQuery) + '" placeholder="' + T('Type a command or search tasks…') + '" style="flex:1; height:52px; border:none; outline:none; box-shadow:none !important; font-size:15px; background:transparent; color:' + c.onSurface + ';"></div>'
       +   '<div id="paletteList" role="listbox" style="flex:1; min-height:0; overflow-y:auto; padding:4px 8px 8px;">'
@@ -3310,7 +3308,7 @@
       return mSelectFrom('<select id="' + id + '" aria-label="' + T(label) + '" style="' + chip + '"><option value="" selected>' + T(label) + '</option>' + opts + '</select>', c, 'pill');
     };
     return '<div class="bulk-bar" role="toolbar" aria-label="' + T('Selected tasks') + '" style="position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:70; display:flex; align-items:center; gap:8px; padding:8px 8px 8px 14px; border-radius:var(--r-md); background:' + c.surface + '; box-shadow:var(--e3);' + (state.bulkBusy ? ' opacity:.6; pointer-events:none;' : '') + '">'
-      + '<span class="tnum" style="font-size:13px; font-weight:600; margin-right:4px; white-space:nowrap;">' + T('{n} selected', { n: ids.length }) + '</span>'
+      + '<span class="tnum" style="font-size:13px; font-weight:500; margin-right:4px; white-space:nowrap;">' + T('{n} selected', { n: ids.length }) + '</span>'
       + sel('bulkStatusSelect', 'Status', EDITABLE_STATUSES.map(function (st) { return '<option value="' + st + '">' + statusIconHtml(st, maps.statusStyle[st].dot, 14) + '<span style="margin-left:8px;">' + TAB_LABELS[st] + '</span></option>'; }).join(''))
       + sel('bulkPrioritySelect', 'Priority', ['High', 'Medium', 'Low'].map(function (p) { return '<option value="' + p + '">' + priorityIconHtml(p, maps.priorityColor[p], c.outlineVariant) + '<span style="margin-left:8px;">' + T(p) + '</span></option>'; }).join(''))
       + sel('bulkAssigneeSelect', 'Assignee', '<option value="0">' + T('Unassigned') + '</option>' + state.members.map(function (m) { return '<option value="' + m.id + '">' + esc(m.displayName) + '</option>'; }).join(''))
@@ -3328,14 +3326,50 @@
     if (/^\d{4}-\d{2}$/.test(state.calMonth)) return state.calMonth;
     return isoOf(new Date()).slice(0, 7);
   }
+  // Touch screens open on a week: seven tall days hold every task at a
+  // readable size, where a month squeezes six rows into the same height.
+  function calendarSpan() {
+    if (state.calSpan === 'week' || state.calSpan === 'month') return state.calSpan;
+    return isTouchScreen() ? 'week' : 'month';
+  }
+  function weekStartOf(d) { var s = new Date(d.getFullYear(), d.getMonth(), d.getDate()); s.setDate(s.getDate() - s.getDay()); return s; }
   function calendarRange() {
+    if (calendarSpan() === 'week') {
+      var ws = /^\d{4}-\d{2}-\d{2}$/.test(state.calWeekStart)
+        ? new Date(Number(state.calWeekStart.slice(0, 4)), Number(state.calWeekStart.slice(5, 7)) - 1, Number(state.calWeekStart.slice(8, 10)))
+        : weekStartOf(new Date());
+      var we = new Date(ws); we.setDate(ws.getDate() + 6);
+      return { week: true, days: 7, first: ws, start: ws, from: isoOf(ws), to: isoOf(we) };
+    }
     var m = calendarMonth();
     var first = new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1);
     var start = new Date(first); start.setDate(1 - first.getDay());
     var end = new Date(start); end.setDate(start.getDate() + 41);
-    return { first: first, start: start, from: isoOf(start), to: isoOf(end) };
+    return { days: 42, first: first, start: start, from: isoOf(start), to: isoOf(end) };
+  }
+  function setCalendarSpan(span) {
+    if (span === calendarSpan()) return;
+    // Keep the reader in the same place: a week lands in the month it is
+    // in, and a month opens on its first week (or this week, if current).
+    var r = calendarRange();
+    if (span === 'month') state.calMonth = isoOf(r.week ? new Date(r.start.getFullYear(), r.start.getMonth(), r.start.getDate() + 3) : r.first).slice(0, 7);
+    else {
+      var today = new Date();
+      state.calWeekStart = isoOf(weekStartOf(isoOf(today).slice(0, 7) === calendarMonth() ? today : r.first));
+    }
+    state.calSpan = span;
+    render();
+    fetchTasks().then(render);
   }
   function shiftCalendar(delta) {
+    if (calendarSpan() === 'week') {
+      var base = delta === 0 ? new Date() : calendarRange().start;
+      var ws = weekStartOf(base); ws.setDate(ws.getDate() + 7 * delta);
+      state.calWeekStart = isoOf(ws);
+      render();
+      fetchTasks().then(render);
+      return;
+    }
     var m = calendarMonth();
     var d = delta === 0 ? new Date() : new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1 + delta, 1);
     state.calMonth = isoOf(d).slice(0, 7);
@@ -3347,33 +3381,42 @@
     var byDay = {};
     items.forEach(function (t) { if (t.dueDate) (byDay[t.dueDate] = byDay[t.dueDate] || []).push(t); });
     var today = isoOf(new Date());
-    var month = r.first.getMonth();
+    var month = r.week ? -1 : r.first.getMonth();
+    var touch = isTouchScreen();
     var head = (LANG === 'ko' ? ['일', '월', '화', '수', '목', '금', '토'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']).map(function (x, i) {
-      return '<div style="padding:6px 8px; font-size:12px; font-weight:500; color:' + (i === 0 ? c.error : c.textMuted) + ';">' + x + '</div>';
+      return '<div class="t-label-m" style="padding:8px; color:' + (i === 0 ? c.error : c.onSurfaceVariant) + ';">' + x + '</div>';
     }).join('');
     var cells = '';
-    for (var i = 0; i < 42; i++) {
+    for (var i = 0; i < r.days; i++) {
       var d = new Date(r.start); d.setDate(r.start.getDate() + i);
-      var iso = isoOf(d), inMonth = d.getMonth() === month, list = byDay[iso] || [];
-      var shown = list.slice(0, 4);
-      cells += '<div class="cal-cell" style="min-width:0; min-height:112px; padding:6px; display:flex; flex-direction:column; gap:3px; border-right:1px solid ' + c.outlineVariant + '; border-bottom:1px solid ' + c.outlineVariant + '; background:' + (inMonth ? c.surface : c.surfaceContainerLow) + ';">'
-        + '<span class="tnum" style="align-self:flex-start; min-width:22px; height:22px; padding:0 6px; display:inline-flex; align-items:center; justify-content:center; border-radius:11px; font-size:12px; font-weight:' + (iso === today ? 600 : 400) + '; ' + (iso === today ? 'background:' + c.primary + '; color:' + c.onPrimary + ';' : 'color:' + (inMonth ? c.onSurfaceVariant : c.textMuted) + ';') + '">' + d.getDate() + '</span>'
+      var iso = isoOf(d), inMonth = r.week || d.getMonth() === month, list = byDay[iso] || [];
+      // A week shows every task; a month on a touch screen shows one per day
+      // and counts the rest, so the names that are there stay readable.
+      var shown = r.week ? list : list.slice(0, touch ? 1 : 4);
+      cells += '<div class="cal-cell" style="min-width:0; min-height:' + (r.week ? 'calc(100dvh - 304px)' : '120px') + '; padding:8px; display:flex; flex-direction:column; gap:4px; border-right:1px solid ' + c.outlineVariant + '; border-bottom:1px solid ' + c.outlineVariant + '; background:' + (inMonth ? c.surface : c.surfaceContainerLow) + ';">'
+        + '<span class="tnum t-label-m" style="align-self:flex-start; min-width:24px; height:24px; padding:0 4px; box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center; border-radius:var(--r-full); ' + (iso === today ? 'background:' + c.primary + '; color:' + c.onPrimary + ';' : 'color:' + (inMonth ? c.onSurfaceVariant : c.textMuted) + ';') + '">' + d.getDate() + '</span>'
         + shown.map(function (t) {
             var col = deptColor(t.deptId) || c.outline;
             var done = t.status === 'done';
-            return '<div class="interactive" data-action="openTask" data-id="' + t.id + '" title="' + esc(t.title) + '" style="display:flex; align-items:center; gap:5px; min-width:0; height:22px; padding:0 6px; border-radius:4px; font-size:12px; background:' + c.surfaceContainer + '; box-shadow:inset 3px 0 0 ' + col + '; color:' + (done ? c.textMuted : (t.overdue ? c.error : c.onSurface)) + ';">'
-              + statusIconHtml(t.status, (maps.statusStyle[t.status] || maps.statusStyle.todo).dot, 11)
-              + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;' + (done ? ' text-decoration:line-through;' : '') + '">' + esc(t.title) + '</span></div>';
+            return '<div data-action="openTask" data-id="' + t.id + '" title="' + esc(t.title) + '" class="interactive cal-chip ' + (r.week ? 't-body-m' : 't-body-s') + '" style="display:flex; align-items:center; gap:4px; min-width:0; ' + (r.week ? 'min-height:32px; padding:4px 8px; box-sizing:border-box; align-items:center;' : 'height:24px; padding:0 8px;') + ' border-radius:var(--r-xs); background:' + c.surfaceContainer + '; box-shadow:inset 3px 0 0 ' + col + '; color:' + (done ? c.textMuted : (t.overdue ? c.error : c.onSurface)) + ';">'
+              + '<span style="display:flex; flex-shrink:0; height:' + (r.week ? 20 : 16) + 'px; align-items:center;">' + statusIconHtml(t.status, (maps.statusStyle[t.status] || maps.statusStyle.todo).dot, 12) + '</span>'
+              + '<span style="overflow:hidden; text-overflow:ellipsis; ' + (r.week ? 'overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;' : 'white-space:nowrap;') + (done ? ' text-decoration:line-through;' : '') + '">' + esc(t.title) + '</span></div>';
           }).join('')
-        + (list.length > shown.length ? '<span title="' + esc(list.slice(shown.length).map(function (t) { return t.title; }).join('\n')) + '" style="font-size:12px; color:' + c.textMuted + '; padding-left:6px;">' + T('+{n} more', { n: list.length - shown.length }) + '</span>' : '')
+        + (list.length > shown.length ? '<span title="' + esc(list.slice(shown.length).map(function (t) { return t.title; }).join('\n')) + '" class="t-label-m" style="color:' + c.onSurfaceVariant + '; padding-left:8px;">' + T('+{n} more', { n: list.length - shown.length }) + '</span>' : '')
         + '</div>';
     }
-    var nav = function (delta, label, inner) { return '<span class="interactive" data-action="shiftCalendar" data-id="' + delta + '" aria-label="' + T(label) + '" style="display:inline-flex; align-items:center; justify-content:center; height:30px; min-width:30px; padding:0 8px; border-radius:var(--r-sm); font-size:13px; color:' + c.onSurfaceVariant + ';">' + inner + '</span>'; };
-    var undated = state.taskMeta.total >= 100 ? '<span style="font-size:12px; color:' + c.textMuted + ';">' + T('Showing the first 100 tasks due this month.') + '</span>' : '';
-    return '<div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">'
-      +   '<span style="font-size:15px; font-weight:600; margin-right:6px;">' + esc(r.first.toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</span>'
-      +   nav(-1, 'Previous month', ICON.chevronLeft) + nav(0, 'Today', T('Today')) + nav(1, 'Next month', ICON.chevronRight)
+    var nav = function (delta, label, inner) { return '<span class="interactive ' + (delta === 0 ? 'text-btn t-label-l' : 'icon-btn') + '" data-action="shiftCalendar" data-id="' + delta + '" aria-label="' + T(label) + '" style="color:' + (delta === 0 ? c.primary : c.onSurfaceVariant) + ';">' + inner + '</span>'; };
+    var undated = state.taskMeta.total >= 100 ? '<span class="t-body-s" style="color:' + c.onSurfaceVariant + ';">' + T('Showing the first 100 tasks due this month.') + '</span>' : '';
+    return '<div style="display:flex; align-items:center; gap:4px; margin-bottom:8px; flex-wrap:wrap;">'
+      +   '<span class="t-title-l" style="margin-right:8px;">' + esc(r.first.toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</span>'
+      +   nav(-1, r.week ? 'Previous week' : 'Previous month', ICON.chevronLeft) + nav(0, 'Today', T('Today')) + nav(1, r.week ? 'Next week' : 'Next month', ICON.chevronRight)
       +   '<span style="flex:1;"></span>' + undated
+      +   '<div role="group" aria-label="' + T('Calendar span') + '" style="display:inline-flex; height:40px; box-sizing:content-box; border:1px solid ' + c.outline + '; border-radius:var(--r-full); overflow:hidden;">'
+      +     [['week', 'Week'], ['month', 'Month']].map(function (p) {
+              var on = calendarSpan() === p[0];
+              return '<span class="interactive t-label-l" data-action="setCalendarSpan" data-id="' + p[0] + '" aria-pressed="' + on + '" style="display:inline-flex; align-items:center; padding:0 16px; background:' + (on ? c.secondaryContainer : 'transparent') + '; color:' + (on ? c.onSecondaryContainer : c.onSurface) + ';' + (p[0] === 'month' ? ' border-left:1px solid ' + c.outline + ';' : '') + '">' + T(p[1]) + '</span>';
+            }).join('')
+      +   '</div>'
       + '</div>'
       + '<div role="grid" aria-label="' + T('Calendar') + '" style="display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); border-top:1px solid ' + c.outlineVariant + '; border-left:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); overflow:hidden;">'
       +   head.replace(/<div style="/g, '<div style="border-right:1px solid ' + c.outlineVariant + '; border-bottom:1px solid ' + c.outlineVariant + '; background:' + c.surfaceContainerLow + '; ')
@@ -3387,10 +3430,10 @@
     var cols = EDITABLE_STATUSES.map(function (st) {
       var list = items.filter(function (t) { return t.status === st; });
       var dot = maps.statusStyle[st].dot;
-      return '<section class="board-col" data-drop-status="' + st + '" aria-label="' + esc(TAB_LABELS[st]) + '" style="flex:1 1 0; min-width:240px; display:flex; flex-direction:column; gap:8px; padding:8px; border-radius:var(--r-md); background:' + c.surfaceContainerLow + ';">'
-        + '<div style="display:flex; align-items:center; gap:8px; padding:4px 4px 2px;">' + statusIconHtml(st, dot, 14) + '<span style="font-size:13px; font-weight:600;">' + TAB_LABELS[st] + '</span><span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + list.length + '</span></div>'
+      return '<section class="board-col" data-drop-status="' + st + '" aria-label="' + esc(TAB_LABELS[st]) + '" style="flex:1 1 0; min-width:256px; display:flex; flex-direction:column; gap:8px; padding:8px; border-radius:var(--r-l); background:' + c.surfaceContainerLow + ';">'
+        + '<div style="display:flex; align-items:center; gap:8px; height:40px; padding:0 8px;">' + statusIconHtml(st, dot, 18) + '<span class="t-title-s">' + TAB_LABELS[st] + '</span><span class="tnum t-label-m" style="color:' + c.onSurfaceVariant + ';">' + list.length + '</span></div>'
         + list.map(function (t) { return taskCard(t, maps, c); }).join('')
-        + (list.length ? '' : '<div style="padding:16px 8px; text-align:center; font-size:12px; color:' + c.textMuted + ';">' + T('Drop a task here') + '</div>')
+        + (list.length ? '' : '<div class="t-body-m" style="padding:16px 8px; text-align:center; color:' + c.onSurfaceVariant + ';">' + T('Drop a task here') + '</div>')
         + '</section>';
     }).join('');
     return '<div style="display:flex; gap:12px; align-items:flex-start; min-width:min-content;">' + cols + '</div>';
@@ -3400,13 +3443,13 @@
     var v = taskView(t, maps, c);
     var writable = canWriteDept(t.deptId);
     var cls = 'interactive board-card' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + '';
-    return '<div class="' + cls + '"' + (writable ? ' draggable="true"' : '') + ' data-action="openTask" data-id="' + t.id + '" style="background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e1); padding:12px; min-width:0; display:flex; flex-direction:column; gap:8px;">'
-      + '<div style="display:flex; align-items:flex-start; gap:6px; font-size:14px; font-weight:500; line-height:1.4; color:' + (t.status === 'done' ? c.textMuted : c.onSurface) + ';">' + taskIconHtml(t, 16) + '<span style="min-width:0; overflow-wrap:anywhere;">' + esc(t.title) + '</span></div>'
-      + '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px; color:' + c.textMuted + ';">' + (t.deptId ? '<span style="display:inline-flex; align-items:center; gap:5px; font-weight:500; padding:1px 6px; border-radius:var(--r-xs); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';">' + deptDot(t.deptId, 6) + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span>' : '') + taskBadges(t, c) + '</div>'
+    return '<div class="' + cls + '"' + (writable ? ' draggable="true"' : '') + ' data-action="openTask" data-id="' + t.id + '" style="background:' + c.surface + '; border-radius:var(--r-md); padding:16px; min-width:0; display:flex; flex-direction:column; gap:12px;">'
+      + '<div class="t-body-l" style="display:flex; align-items:flex-start; gap:8px; color:' + (t.status === 'done' ? c.textMuted : c.onSurface) + ';">' + taskIconHtml(t, 16) + '<span style="min-width:0; overflow-wrap:anywhere;">' + esc(t.title) + '</span></div>'
+      + '<div class="t-label-m" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; color:' + c.onSurfaceVariant + ';">' + (t.deptId ? '<span style="display:inline-flex; align-items:center; gap:4px; padding:4px 8px; border-radius:var(--r-sm); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';">' + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span>' : '') + taskBadges(t, c) + '</div>'
       + searchMatchHtml(t, c)
-      + '<div style="display:flex; align-items:center; gap:6px;">'
-      +   (hasAssignee(t) ? assigneeAvatarHtml(t, v, 20) : '') + '<span style="flex:1;"></span>'
-      +   (t.dueDate ? '<span class="tnum" style="font-size:12px; color:' + (t.overdue ? c.error : c.onSurfaceVariant) + '; font-weight:' + (t.overdue ? 500 : 400) + ';">' + esc(relativeDue(t.dueDate, t.overdue)) + '</span>' : '')
+      + '<div style="display:flex; align-items:center; gap:8px;">'
+      +   (hasAssignee(t) ? assigneeAvatarHtml(t, v, 24) : '') + '<span style="flex:1;"></span>'
+      +   (t.dueDate ? '<span class="tnum ' + (t.overdue ? 't-label-m' : 't-body-s') + '" style="color:' + (t.overdue ? c.error : c.onSurfaceVariant) + ';">' + esc(relativeDue(t.dueDate, t.overdue)) + '</span>' : '')
       +   priorityIconHtml(t.priority, v.priorityColor, c.outlineVariant)
       + '</div>'
       + '</div>';
@@ -3449,10 +3492,10 @@
     try { document.body.style.background = c.surfaceContainerLow; } catch (e) {}
     try { document.documentElement.setAttribute('data-theme', c.dark ? 'dark' : 'light'); } catch (e) {}
     var title = isRegister ? (state.setupRequired ? T('Set up your workspace') : T('Create an account')) : T('Log in');
-    return '<div style="' + vars + 'min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px 16px; background:' + c.surfaceContainerLow + '; font-family:inherit;">'
+    return '<div style="' + vars + 'min-height:calc(100vh / var(--zoom, 1)); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px 16px; background:' + c.surfaceContainerLow + '; font-family:inherit;">'
       + '<div class="auth-card" style="width:360px; max-width:100%; display:flex; flex-direction:column; gap:16px;">'
-      +   '<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">' + brandIconHtml(c.primary, c.onPrimary, 32, false) + '<div style="font-size:15px; font-weight:600; color:' + c.onSurface + ';">' + esc(state.appName) + '</div></div>'
-      +   '<div><h1 class="page-title" style="margin:0 0 6px; font-size:24px; font-weight:600; color:' + c.onSurface + ';">' + esc(title) + '</h1>'
+      +   '<div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">' + brandIconHtml(c.primary, c.onPrimary, 32, false) + '<div style="font-size:16px; font-weight:500; color:' + c.onSurface + ';">' + esc(state.appName) + '</div></div>'
+      +   '<div><h1 class="page-title" style="margin:0 0 6px; font-size:28px; line-height:36px; font-weight:500; color:' + c.onSurface + ';">' + esc(title) + '</h1>'
       +   '<div style="font-size:13px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + esc(authBlurb(isRegister)) + '</div></div>'
       +   (state.authNotice ? '<div style="font-size:13px; line-height:1.45; color:' + c.onPrimaryContainer + '; background:' + c.primaryContainer + '; padding:10px 12px; border-radius:var(--r-sm);">' + esc(state.authNotice) + '</div>' : '')
       +   (isRegister ? inputField('authDisplayName', 'authForm', 'displayName', f.displayName, 'Display name', 'text', c) : '')
@@ -3473,7 +3516,7 @@
       var cssVar = '--' + k.replace(/([A-Z])/g, '-$1').toLowerCase();
       return cssVar + ':' + c[k] + ';';
     }).join('');
-    try { document.body.style.background = c.surface; } catch (e) {}
+    try { document.body.style.background = c.surfaceContainer; } catch (e) {}
     try { document.documentElement.setAttribute('data-theme', c.dark ? 'dark' : 'light'); } catch (e) {}
 
     // The scrim behind a mobile drawer has to stay put for the drawer's own
@@ -3483,7 +3526,7 @@
     var drawerOpenOrClosing = state.mobileNavOpen || state.mobileCalendarOpen || drawerClosing;
     var scrimClass = 'mobile-scrim ' + ((state.mobileNavOpen || state.mobileCalendarOpen) ? 'open' : 'closing');
 
-    return '<div class="' + oneShotClass('palette').trim() + '" style="' + vars + 'position:relative; display:flex; flex-direction:column; width:100%; height:100vh; height:100dvh; background:' + c.surface + '; color:' + c.onSurface + '; overflow:hidden;">'
+    return '<div class="' + oneShotClass('palette').trim() + '" style="' + vars + 'position:relative; display:flex; flex-direction:column; width:100%; height:calc(100vh / var(--zoom, 1)); height:calc(100dvh / var(--zoom, 1)); background:' + c.surfaceContainer + '; color:' + c.onSurface + '; overflow:hidden;">'
       + '<a class="skip-link" href="#task-list">' + T('Skip to tasks') + '</a>'
       + topBar(c)
       + '<div style="flex:1; min-height:0; display:flex; overflow:hidden; position:relative;">'
@@ -3511,7 +3554,7 @@
       + mSelectMenu(c)
       + datePickerPopover(c)
       + (canCreateTask()
-        ? '<div class="interactive fab-new-task" data-action="openTaskModal" aria-label="' + T('New task') + '" style="position:fixed; right:18px; bottom:calc(18px + env(safe-area-inset-bottom, 0px)); z-index:45; align-items:center; justify-content:center; width:56px; height:56px; border-radius:50%; background:' + c.primary + '; color:' + c.onPrimary + '; box-shadow:var(--e2);">' + ICON.plus.replace('width="17" height="17"', 'width="24" height="24"') + '</div>'
+        ? '<div class="interactive fab-new-task" data-action="openTaskModal" aria-label="' + T('New task') + '" style="position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom, 0px)); z-index:45; align-items:center; justify-content:center; width:56px; height:56px; border-radius:var(--r-l); background:' + c.primary + '; color:' + c.onPrimary + '; box-shadow:var(--e2);">' + ICON.plus.replace('width="17" height="17"', 'width="24" height="24"') + '</div>'
         : '')
       + '</div>';
   }
@@ -3521,10 +3564,10 @@
   function brandMenu(c) {
     if (!state.brandOpen && state.dropdownClosing !== 'brand') return '';
     var item = function (action, label, color) {
-      return '<div class="interactive" role="menuitem" data-action="' + action + '" style="padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + color + ';">' + T(label) + '</div>';
+      return '<div class="interactive t-label-l" role="menuitem" data-action="' + action + '" style="display:flex; align-items:center; min-height:48px; padding:0 12px; border-radius:var(--r-sm); color:' + color + ';">' + T(label) + '</div>';
     };
-    return '<div class="' + dropdownClass('brand') + '" role="menu" style="' + dropdownStyle('brand') + 'transform-origin:top left; position:absolute; top:46px; left:0; width:220px; background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:60; display:flex; flex-direction:column; gap:2px;">'
-      + '<div style="padding:6px 10px 4px 10px; font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('App icon (also used as the favicon)') + '</div>'
+    return '<div class="' + dropdownClass('brand') + '" role="menu" style="' + dropdownStyle('brand') + 'transform-origin:top left; position:absolute; top:48px; left:0; width:240px; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:60; display:flex; flex-direction:column; gap:0;">'
+      + '<div class="t-title-s" style="padding:8px 12px; color:' + c.onSurfaceVariant + ';">' + T('App icon (also used as the favicon)') + '</div>'
       + item('pickAppIcon', 'Upload image', c.onSurface)
       + item('removeAppIcon', 'Use the default icon', c.onSurface)
       + '</div>';
@@ -3532,7 +3575,7 @@
 
   function topBar(c) {
     var searchClear = state.searchQuery
-      ? '<span class="interactive" data-action="clearSearch" style="display:flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
+      ? '<span class="interactive icon-btn" data-action="clearSearch" aria-label="' + T('Clear search') + '" style="margin-right:-12px; color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
       : '';
 
     // On a narrow screen the always-open 420px search field left no room for
@@ -3546,10 +3589,10 @@
         : motion('search:in', true, 'mobile-search-bar-open', 300);
       if (state.mobileSearchClosing) motion('search:in', false); else motion('search:out', false);
       return '<div class="top-bar ' + sm.cls + '" style="' + sm.style + 'flex-shrink:0; display:flex; align-items:center; gap:10px; background:' + c.surface + '; border-bottom:1px solid ' + c.outlineVariant + ';">'
-        + '<span class="interactive" data-action="closeMobileSearch" title="' + T('Back') + '" style="display:flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; color:' + c.onSurfaceVariant + '; flex-shrink:0;">' + ICON.chevronLeft + '</span>'
-        + '<div style="flex:1; display:flex; align-items:center; gap:8px; height:40px; padding:0 14px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">'
+        + '<span class="interactive icon-btn" data-action="closeMobileSearch" title="' + T('Back') + '" aria-label="' + T('Back') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.chevronLeft + '</span>'
+        + '<div style="flex:1; display:flex; align-items:center; gap:12px; height:48px; padding:0 16px; border-radius:var(--r-full); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">'
         +   ICON.search
-        +   '<input id="mobileSearchInput" data-field="searchQuery" value="' + esc(state.searchQuery) + '" placeholder="' + T('Search tasks, comments, files') + '" style="border:none; outline:none; background:transparent; flex:1; font-size:14px; color:inherit;"></input>'
+        +   '<input id="mobileSearchInput" data-field="searchQuery" value="' + esc(state.searchQuery) + '" placeholder="' + T('Search tasks, comments, files') + '" style="border:none; outline:none; padding:0; background:transparent; flex:1; min-width:0; font-size:16px; line-height:24px; color:inherit;"></input>'
         +   searchClear
         + '</div>'
       + '</div>';
@@ -3561,8 +3604,8 @@
     var mineTab = state.bellTab === 'mine';
     var bellTabBtn = function (id, label, count) {
       var on = state.bellTab === id;
-      return '<span class="interactive" role="tab" aria-selected="' + (on ? 'true' : 'false') + '" data-action="setBellTab" data-id="' + id + '" style="display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 2px; margin-bottom:-1px; font-size:13px; font-weight:' + (on ? 600 : 400) + '; color:' + (on ? c.onSurface : c.onSurfaceVariant) + '; border-bottom:2px solid ' + (on ? c.primary : 'transparent') + ';">' + label
-        + (count > 0 ? '<span class="tnum" style="font-size:12px; font-weight:600; min-width:18px; padding:0 5px; border-radius:9px; text-align:center; background:' + c.error + '; color:#fff;">' + count + '</span>' : '') + '</span>';
+      return '<span class="interactive t-title-s" role="tab" aria-selected="' + (on ? 'true' : 'false') + '" data-action="setBellTab" data-id="' + id + '" style="display:inline-flex; align-items:center; justify-content:center; gap:4px; flex:1; height:48px; box-sizing:border-box; margin-bottom:-1px; color:' + (on ? c.primary : c.onSurfaceVariant) + '; border-bottom:2px solid ' + (on ? c.primary : 'transparent') + ';">' + label
+        + (count > 0 ? '<span class="tnum t-label-s" style="min-width:16px; height:16px; padding:0 4px; box-sizing:border-box; border-radius:var(--r-full); text-align:center; background:' + c.error + '; color:#fff;">' + count + '</span>' : '') + '</span>';
     };
     // Lists are grouped under Today, Yesterday and Earlier.
     var dayGroup = function (iso) {
@@ -3576,101 +3619,99 @@
       var last = '', out = '';
       items.forEach(function (x) {
         var g = dayGroup(when(x));
-        if (g !== last) { out += '<div style="padding:10px 6px 4px; font-size:12px; font-weight:500; color:' + c.textMuted + ';">' + esc(g) + '</div>'; last = g; }
+        if (g !== last) { out += '<div class="t-title-s" style="display:flex; align-items:center; height:40px; padding:0 16px; color:' + c.onSurfaceVariant + ';">' + esc(g) + '</div>'; last = g; }
         out += draw(x);
       });
       return out;
     };
-    var unreadDot = function (on) { return '<span aria-hidden="true" style="width:6px; height:6px; margin-top:8px; border-radius:50%; flex-shrink:0; background:' + (on ? c.primary : 'transparent') + ';"></span>'; };
+    var unreadDot = function (on) { return '<span aria-hidden="true" style="position:absolute; left:4px; top:50%; width:8px; height:8px; margin-top:-4px; border-radius:50%; background:' + (on ? c.primary : 'transparent') + ';"></span>'; };
     var personAvatar = function (name, size) {
       var col = avatarColors(name, c.dark);
-      return '<span style="display:flex; align-items:center; justify-content:center; width:' + size + 'px; height:' + size + 'px; border-radius:50%; flex-shrink:0; background:' + col.bg + '; color:' + col.color + '; font-size:12px; font-weight:600;">' + esc(computeInitials(name)) + '</span>';
+      return '<span style="display:flex; align-items:center; justify-content:center; width:' + size + 'px; height:' + size + 'px; border-radius:50%; flex-shrink:0; background:' + col.bg + '; color:' + col.color + '; font-size:' + (size >= 32 ? 14 : 12) + 'px; line-height:1; font-weight:500;">' + esc(computeInitials(name)) + '</span>';
     };
     var notifKindIcon = function (kind) {
-      if (kind === 'dueToday' || kind === 'dueTomorrow') return '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10.5" r="6.5"></circle><path d="M10 7v3.5l2.5 1.5"></path></svg>';
+      if (kind === 'dueToday' || kind === 'dueTomorrow') return '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10.5" r="6.5"></circle><path d="M10 7v3.5l2.5 1.5"></path></svg>';
       return '';
     };
     var mineList = state.notifications.length === 0
-      ? '<div style="padding:28px 12px; text-align:center; font-size:13px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('Nothing for you yet. You will hear here when someone assigns you a task, mentions you with @, or comments on your work, and on the morning a task of yours is due.') + '</div>'
+      ? '<div class="t-body-m" style="padding:32px 24px; text-align:center; color:' + c.onSurfaceVariant + ';">' + T('Nothing for you yet. You will hear here when someone assigns you a task, mentions you with @, or comments on your work, and on the morning a task of yours is due.') + '</div>'
       : grouped(state.notifications, function (n) { return n.createdAt; }, function (n) {
           var lead = (n.kind === 'dueToday' || n.kind === 'dueTomorrow')
-            ? '<span style="display:flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; flex-shrink:0; background:' + c.warningContainer + '; color:' + c.onWarningContainer + ';">' + notifKindIcon(n.kind) + '</span>'
-            : personAvatar(n.actorName || '?', 24);
-          return '<div class="interactive" data-action="openNotification" data-id="' + n.id + '" style="display:flex; align-items:flex-start; gap:8px; padding:8px 6px; border-radius:var(--r-sm); opacity:' + (n.taskGone ? '.6' : '1') + ';">'
+            ? '<span style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:50%; flex-shrink:0; background:' + c.warningContainer + '; color:' + c.onWarningContainer + ';">' + notifKindIcon(n.kind) + '</span>'
+            : personAvatar(n.actorName || '?', 40);
+          return '<div class="interactive" data-action="openNotification" data-id="' + n.id + '" style="position:relative; display:flex; align-items:center; gap:16px; min-height:72px; padding:8px 16px; box-sizing:border-box; border-radius:var(--r-l); opacity:' + (n.taskGone ? '.6' : '1') + ';">'
             + unreadDot(!n.read) + lead
-            + '<span style="display:flex; flex-direction:column; gap:2px; min-width:0;">'
-            +   '<span style="font-size:13px; line-height:1.45; color:' + (n.read ? c.onSurfaceVariant : c.onSurface) + ';">' + esc(notificationLine(n)) + '</span>'
-            +   '<span style="font-size:12px; color:' + c.textMuted + ';">' + esc(formatStamp(n.createdAt)) + (n.taskGone ? ' &middot; ' + T('deleted') : '') + '</span>'
+            + '<span style="flex:1; display:flex; flex-direction:column; min-width:0;">'
+            +   '<span class="t-body-m" style="color:' + (n.read ? c.onSurfaceVariant : c.onSurface) + ';">' + esc(notificationLine(n)) + '</span>'
+            +   '<span class="t-body-s" style="color:' + c.onSurfaceVariant + ';">' + esc(formatStamp(n.createdAt)) + (n.taskGone ? ' &middot; ' + T('deleted') : '') + '</span>'
             + '</span>'
             + '</div>';
         });
     // Your own actions are left out unless asked for: you know what you did.
     var activityItems = state.activity.filter(function (a) { return state.activityIncludeMine || !(state.user && a.actorId === state.user.id); });
     var activityList = (activityItems.length === 0
-      ? '<div style="padding:28px 12px; text-align:center; font-size:13px; color:' + c.onSurfaceVariant + ';">' + T(state.activity.length ? 'Nobody else has done anything yet.' : 'Nothing has happened yet.') + '</div>'
+      ? '<div class="t-body-m" style="padding:32px 24px; text-align:center; color:' + c.onSurfaceVariant + ';">' + T(state.activity.length ? 'Nobody else has done anything yet.' : 'Nothing has happened yet.') + '</div>'
       : grouped(activityItems, function (a) { return a.at; }, function (a) {
           var fresh = !state.activitySeen || a.at > state.activitySeen;
-          return '<div style="display:flex; align-items:flex-start; gap:8px; padding:8px 6px;">'
-            + unreadDot(fresh) + personAvatar(a.actorName || '?', 24)
-            + '<span style="display:flex; flex-direction:column; gap:2px; min-width:0;">'
-            +   '<span style="font-size:13px; line-height:1.45; color:' + c.onSurface + ';">' + esc(activityLine(a)) + '</span>'
-            +   '<span style="font-size:12px; color:' + c.textMuted + ';">' + esc(formatStamp(a.at)) + '</span>'
+          return '<div style="position:relative; display:flex; align-items:center; gap:16px; min-height:72px; padding:8px 16px; box-sizing:border-box;">'
+            + unreadDot(fresh) + personAvatar(a.actorName || '?', 40)
+            + '<span style="flex:1; display:flex; flex-direction:column; min-width:0;">'
+            +   '<span class="t-body-m" style="color:' + c.onSurface + ';">' + esc(activityLine(a)) + '</span>'
+            +   '<span class="t-body-s" style="color:' + c.onSurfaceVariant + ';">' + esc(formatStamp(a.at)) + '</span>'
             + '</span>'
             + '</div>';
         }))
-      + '<label class="interactive" style="display:flex; align-items:center; gap:8px; margin:6px 0 2px; padding:6px; border-radius:var(--r-sm); font-size:12px; color:' + c.onSurfaceVariant + '; cursor:pointer;"><input type="checkbox" data-action="toggleActivityMine"' + (state.activityIncludeMine ? ' checked' : '') + '>' + T('Include my own actions') + '</label>';
+      + '<label class="interactive t-body-m" style="display:flex; align-items:center; gap:4px; min-height:48px; margin-top:8px; padding:0 16px 0 4px; border-radius:var(--r-full); color:' + c.onSurfaceVariant + '; cursor:pointer;"><span class="cb-target"><input type="checkbox" data-action="toggleActivityMine"' + (state.activityIncludeMine ? ' checked' : '') + '></span>' + T('Include my own actions') + '</label>';
     var canMarkRead = mineTab ? bellCount > 0 : unread > 0;
     var alertsSupported = typeof window.Notification === 'function';
 
     var notifPanel = (state.notifOpen || state.dropdownClosing === 'notif')
-      ? '<div class="' + dropdownClass('notif') + ' bell-panel" style="' + dropdownStyle('notif') + 'position:absolute; top:46px; right:0; width:380px; max-height:520px; display:flex; flex-direction:column; background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e2); z-index:60;">'
-        + '<div style="display:flex; align-items:center; gap:18px; padding:4px 14px 0; border-bottom:1px solid ' + c.outlineVariant + ';" role="tablist" aria-label="' + T('Notifications') + '">'
+      ? '<div class="' + dropdownClass('notif') + ' bell-panel" style="' + dropdownStyle('notif') + 'position:absolute; top:48px; right:0; width:400px; max-height:560px; display:flex; flex-direction:column; background:' + c.surfaceContainer + '; border-radius:var(--r-l); box-shadow:var(--e2); z-index:60; overflow:hidden;">'
+        + '<div style="display:flex; align-items:center; gap:0; padding:0 8px 0 0; border-bottom:1px solid ' + c.outlineVariant + ';" role="tablist" aria-label="' + T('Notifications') + '">'
         +   bellTabBtn('mine', T('For you'), bellCount) + bellTabBtn('activity', T('Activity'), 0)
-        +   (canMarkRead ? '<span class="interactive" data-action="markAllNotifsRead" style="margin-left:auto; font-size:12px; color:' + c.primary + '; font-weight:500;">' + T('Mark all read') + '</span>' : '')
+        +   (canMarkRead ? '<span class="interactive text-btn t-label-l" data-action="markAllNotifsRead" style="color:' + c.primary + ';">' + T('Mark all read') + '</span>' : '')
         + '</div>'
-        + '<div data-scroll-key="' + (mineTab ? 'bell-mine' : 'activity') + '" style="flex:1; min-height:0; overflow-y:auto; padding:0 8px 8px 8px;">' + (mineTab ? mineList : activityList) + '</div>'
+        + '<div data-scroll-key="' + (mineTab ? 'bell-mine' : 'activity') + '" style="flex:1; min-height:0; overflow-y:auto; padding:0 8px 8px;">' + (mineTab ? mineList : activityList) + '</div>'
         + (mineTab && alertsSupported
-          ? '<div style="display:flex; align-items:center; gap:8px; padding:8px 14px; border-top:1px solid ' + c.outlineVariant + '; font-size:12px; color:' + c.onSurfaceVariant + ';">'
+          ? '<div class="t-body-m" style="display:flex; align-items:center; gap:16px; min-height:56px; padding:8px 16px 8px 24px; box-sizing:border-box; border-top:1px solid ' + c.outlineVariant + '; color:' + c.onSurfaceVariant + ';">'
             + '<span style="flex:1;">' + T('Desktop alerts when this tab is in the background') + '</span>'
-            + '<span class="interactive" data-action="toggleDesktopAlerts" role="switch" aria-checked="' + (state.desktopAlerts ? 'true' : 'false') + '" title="' + T('Desktop alerts') + '" style="position:relative; width:34px; height:20px; border-radius:var(--r-sm); flex-shrink:0; background:' + (state.desktopAlerts ? c.primary : c.surfaceContainerHigh) + '; border:1px solid ' + (state.desktopAlerts ? c.primary : c.outline) + ';"><span style="position:absolute; top:2px; left:' + (state.desktopAlerts ? 16 : 2) + 'px; width:14px; height:14px; border-radius:50%; background:' + (state.desktopAlerts ? c.onPrimary : c.outline) + '; transition:left .2s;"></span></span>'
+            + '<span class="interactive" data-action="toggleDesktopAlerts" role="switch" aria-checked="' + (state.desktopAlerts ? 'true' : 'false') + '" title="' + T('Desktop alerts') + '" style="position:relative; width:52px; height:32px; box-sizing:border-box; border-radius:var(--r-full); flex-shrink:0; background:' + (state.desktopAlerts ? c.primary : c.surfaceContainerHigh) + '; border:2px solid ' + (state.desktopAlerts ? c.primary : c.outline) + ';"><span style="position:absolute; top:50%; left:' + (state.desktopAlerts ? 22 : 6) + 'px; width:' + (state.desktopAlerts ? 24 : 16) + 'px; height:' + (state.desktopAlerts ? 24 : 16) + 'px; transform:translateY(-50%); border-radius:50%; background:' + (state.desktopAlerts ? c.onPrimary : c.outline) + '; transition:left .2s, width .2s, height .2s;"></span></span>'
             + '</div>'
           : '')
         + '</div>'
       : '';
 
     var accountPanel = (state.accountOpen || state.dropdownClosing === 'account')
-      ? '<div class="' + dropdownClass('account') + '" style="' + dropdownStyle('account') + 'position:absolute; top:46px; right:0; width:260px; background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:60; display:flex; flex-direction:column; gap:2px;">'
-        + '<div style="padding:8px 10px 6px 10px; display:flex; align-items:center; gap:10px;">'
-          +   avatarHtml(avatarColors(state.user.displayName, c.dark).bg, avatarColors(state.user.displayName, c.dark).color, 44)
-          +   '<div style="min-width:0;"><div style="font-size:13px; font-weight:600;">' + esc(state.user.displayName) + '</div><div style="font-size:12px; color:' + c.onSurfaceVariant + ';">@' + esc(state.user.username) + ' · ' + esc(T(state.user.role)) + '</div></div>'
+      ? '<div class="' + dropdownClass('account') + ' account-panel" style="' + dropdownStyle('account') + 'position:absolute; top:56px; right:0; width:288px; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:60; display:flex; flex-direction:column; gap:0;">'
+        + '<div style="padding:8px 12px; display:flex; align-items:center; gap:12px;">'
+          +   avatarHtml(avatarColors(state.user.displayName, c.dark).bg, avatarColors(state.user.displayName, c.dark).color, 40)
+          +   '<div style="min-width:0;"><div class="t-title-s">' + esc(state.user.displayName) + '</div><div class="t-body-s" style="color:' + c.onSurfaceVariant + ';">@' + esc(state.user.username) + ' · ' + esc(T(state.user.role)) + '</div></div>'
         + '</div>'
-        + '<div style="padding:4px 10px 10px;">' + themeSegmented(c) + '</div>'
-        + '<div style="height:1px; background:' + c.outlineVariant + '; margin:2px 0;"></div>'
-        + '<div class="interactive" data-action="openSettings" style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + c.onSurface + ';"><span>' + T('Settings') + '</span>'
-        +   (isAdmin() && pendingUserCount() > 0 ? '<span class="tnum" style="font-size:12px; font-weight:600; min-width:18px; padding:0 5px; text-align:center; border-radius:9px; background:' + c.error + '; color:#fff;">' + pendingUserCount() + '</span>' : '')
+        + '<div style="padding:8px 12px 12px;">' + themeSegmented(c) + '</div>'
+        + '<div class="interactive t-label-l" data-action="openSettings" style="display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:48px; padding:0 12px; border-radius:var(--r-sm); color:' + c.onSurface + ';"><span>' + T('Settings') + '</span>'
+        +   (isAdmin() && pendingUserCount() > 0 ? '<span class="tnum t-label-s" style="min-width:16px; height:16px; padding:0 4px; box-sizing:border-box; text-align:center; border-radius:var(--r-full); background:' + c.error + '; color:#fff;">' + pendingUserCount() + '</span>' : '')
         + '</div>'
-        + '<div class="interactive" data-action="openGuide" style="padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + c.onSurface + ';">' + T('Guide') + '</div>'
-        + '<div class="interactive" data-action="logout" style="padding:9px 10px; border-radius:var(--r-sm); font-size:13px; color:' + c.error + ';">' + T('Log out') + '</div>'
+        + '<div class="interactive t-label-l" data-action="openGuide" style="display:flex; align-items:center; min-height:48px; padding:0 12px; border-radius:var(--r-sm); color:' + c.onSurface + ';">' + T('Guide') + '</div>'
+        + '<div class="interactive t-label-l" data-action="logout" style="display:flex; align-items:center; min-height:48px; padding:0 12px; border-radius:var(--r-sm); color:' + c.error + ';">' + T('Log out') + '</div>'
         + '</div>'
       : '';
 
-    return '<header class="top-bar" style="flex-shrink:0; display:flex; align-items:center; gap:16px; background:' + c.surface + '; border-bottom:1px solid ' + c.outlineVariant + ';">'
-      + '<div class="interactive hamburger-btn" data-action="toggleSidebar" title="' + T('Departments') + '" style="align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; color:' + c.onSurfaceVariant + '; flex-shrink:0;">' + ICON.hamburger + '</div>'
-      + '<div style="display:flex; align-items:center; gap:10px;">'
+    return '<header class="top-bar" style="flex-shrink:0; display:flex; align-items:center; gap:16px; background:transparent;">'
+      + '<div class="interactive hamburger-btn icon-btn" data-action="toggleSidebar" title="' + T('Departments') + '" aria-label="' + T('Departments') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.hamburger + '</div>'
+      + '<div style="display:flex; align-items:center; gap:12px;">'
       +   (state.user.role === 'admin'
-            ? '<div data-dropdown="brand" style="position:relative; display:flex;">' + brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 36, 'edit') + brandMenu(c) + '</div>'
-            : brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 36, 'guide'))
-      +   '<div class="app-name-text" style="font-size:18px; font-weight:500; white-space:nowrap;">' + esc(state.appName) + '</div>'
+            ? '<div data-dropdown="brand" style="position:relative; display:flex;">' + brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 40, 'edit') + brandMenu(c) + '</div>'
+            : brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 40, 'guide'))
+      +   '<div class="app-name-text t-title-l" style="white-space:nowrap;">' + esc(state.appName) + '</div>'
       + '</div>'
-      + '<div class="mobile-page-title" style="min-width:0; font-size:17px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + esc(currentPageTitle()) + '</div>'
+      + '<div class="mobile-page-title t-title-l" style="min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + esc(currentPageTitle()) + '</div>'
       + '<div class="topbar-center" style="flex:1; display:flex; justify-content:center;">'
-      +   '<div class="desktop-search-bar" style="align-items:center; gap:8px; width:420px; max-width:100%; height:40px; padding:0 14px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">'
+      +   '<div class="desktop-search-bar" style="align-items:center; gap:12px; width:520px; max-width:100%; height:48px; padding:0 16px; border-radius:var(--r-full); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">'
       +     ICON.search
-      +     '<input id="searchInput" data-field="searchQuery" value="' + esc(state.searchQuery) + '" placeholder="' + T('Search tasks, comments, files') + '" style="border:none; outline:none; background:transparent; flex:1; font-size:14px; color:inherit;"></input>'
-      +     (state.searchQuery ? '' : '<span class="interactive" data-action="openPalette" title="' + T('Command menu') + '" style="flex-shrink:0; font-size:12px; padding:1px 6px; border-radius:var(--r-xs); border:1px solid ' + c.outlineVariant + '; color:' + c.textMuted + ';">' + (/Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘K' : 'Ctrl K') + '</span>')
+      +     '<input id="searchInput" data-field="searchQuery" value="' + esc(state.searchQuery) + '" placeholder="' + T('Search tasks, comments, files') + '" style="border:none; outline:none; padding:0; background:transparent; flex:1; min-width:0; font-size:16px; line-height:24px; color:inherit;"></input>'
       +     searchClear
       +   '</div>'
-      +   '<div class="interactive mobile-search-btn" data-action="openMobileSearch" title="' + T('Search') + '" style="align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; color:' + c.onSurfaceVariant + ';">' + ICON.search + '</div>'
+      +   '<div class="interactive mobile-search-btn icon-btn" data-action="openMobileSearch" title="' + T('Search') + '" aria-label="' + T('Search') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.search + '</div>'
       + '</div>'
       + '<div class="appearance-controls" style="display:flex; align-items:center; gap:10px;">'
       +   '<div data-dropdown="accent" style="position:relative; width:36px; height:36px;">'
@@ -3687,22 +3728,22 @@
       +   '</div>'
       + '</div>'
       + '<div class="topbar-divider" style="width:1px; height:26px; background:' + c.outlineVariant + ';"></div>'
-      + '<div style="display:flex; align-items:center; gap:14px;">'
+      + '<div style="display:flex; align-items:center; gap:4px;">'
       +   '<div data-dropdown="notif" style="position:relative;">'
-      +     '<div class="interactive" data-action="toggleNotif" title="' + T('Notifications') + '" style="position:relative; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:' + c.onSurfaceVariant + ';">'
-      +       '<svg width="21" height="21" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8a5 5 0 0 1 10 0c0 4 1.5 5 1.5 5h-13S5 12 5 8Z"></path><path d="M8.3 16a1.8 1.8 0 0 0 3.4 0"></path></svg>'
+      +     '<div class="interactive icon-btn" data-action="toggleNotif" title="' + T('Notifications') + '" aria-label="' + T('Notifications') + '" style="position:relative; color:' + c.onSurfaceVariant + ';">'
+      +       '<svg width="24" height="24" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8a5 5 0 0 1 10 0c0 4 1.5 5 1.5 5h-13S5 12 5 8Z"></path><path d="M8.3 16a1.8 1.8 0 0 0 3.4 0"></path></svg>'
       +       (bellCount > 0
-                ? '<span aria-label="' + T('{n} unread', { n: bellCount }) + '" style="position:absolute; top:2px; right:1px; min-width:17px; height:17px; padding:0 4px; border-radius:9px; background:' + c.error + '; color:#fff; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; border:1.5px solid ' + c.surface + ';">' + (bellCount > 99 ? '99+' : bellCount) + '</span>'
-                : (unread > 0 ? '<span style="position:absolute; top:6px; right:7px; width:7px; height:7px; border-radius:50%; background:' + c.outline + '; border:1.5px solid ' + c.surface + ';"></span>' : ''))
+                ? '<span class="tnum t-label-s" aria-label="' + T('{n} unread', { n: bellCount }) + '" style="position:absolute; top:4px; right:4px; min-width:16px; height:16px; padding:0 4px; box-sizing:border-box; border-radius:var(--r-full); background:' + c.error + '; color:#fff; display:flex; align-items:center; justify-content:center;">' + (bellCount > 99 ? '99+' : bellCount) + '</span>'
+                : (unread > 0 ? '<span style="position:absolute; top:8px; right:8px; width:8px; height:8px; border-radius:50%; background:' + c.outline + ';"></span>' : ''))
       +     '</div>'
       +     notifPanel
       +   '</div>'
-      +   '<div class="interactive calendar-drawer-btn" data-action="toggleMobileCalendar" title="' + T('Calendar') + '" style="align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; color:' + c.onSurfaceVariant + ';">' + ICON.calendarView + '</div>'
+      +   '<div class="interactive calendar-drawer-btn icon-btn" data-action="toggleMobileCalendar" title="' + T('Calendar') + '" aria-label="' + T('Calendar') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.calendarView + '</div>'
       +   '<div data-dropdown="account" style="position:relative;">'
-      +     '<div class="interactive" data-action="toggleAccount" style="display:flex; align-items:center; gap:9px; border-radius:var(--r-sm); padding:4px 8px 4px 4px;">'
-      +       avatarHtml(avatarColors(state.user.displayName, c.dark).bg, avatarColors(state.user.displayName, c.dark).color, 34)
-      +       '<div class="account-meta" style="line-height:1.25;"><div style="font-size:13px; font-weight:500;">' + esc(state.user.displayName) + '</div><div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + esc(T(state.user.role)) + '</div></div>'
-      +       '<svg class="account-meta" width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" style="color:' + c.onSurfaceVariant + ';"><path d="M6 8l4 4 4-4"></path></svg>'
+      +     '<div class="interactive" data-action="toggleAccount" aria-label="' + T('Account') + '" style="display:flex; align-items:center; gap:8px; height:48px; box-sizing:border-box; border-radius:var(--r-full); padding:4px 12px 4px 4px; margin-left:4px;">'
+      +       avatarHtml(avatarColors(state.user.displayName, c.dark).bg, avatarColors(state.user.displayName, c.dark).color, 40)
+      +       '<div class="account-meta"><div class="t-label-l">' + esc(state.user.displayName) + '</div><div class="t-body-s" style="color:' + c.onSurfaceVariant + ';">' + esc(T(state.user.role)) + '</div></div>'
+      +       '<svg class="account-meta" width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" style="color:' + c.onSurfaceVariant + ';"><path d="M6 8l4 4 4-4"></path></svg>'
       +     '</div>'
       +     accountPanel
       +   '</div>'
@@ -3733,21 +3774,21 @@
       var childrenHtml = d.children.map(function (child) {
         var childSelected = state.selectedNode === child.id;
         var childCount = state.summary.byDept[child.id] || 0;
-        return '<div class="interactive' + (childSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="' + esc(child.id) + '"' + (childSelected ? ' aria-current="true"' : '') + ' style="display:flex; align-items:center; padding:7px 10px; font-size:13px; font-weight:' + (childSelected ? 600 : 400) + '; border-radius:var(--r-sm); background:' + (childSelected ? c.surfaceContainerHigh : 'transparent') + '; color:' + (childSelected ? c.onSurface : c.onSurfaceVariant) + ';">'
-          + (child.color ? '<span style="margin-right:8px; display:flex;">' + deptDot(child.id, 8) + '</span>' : '') + '<span style="flex:1;">' + esc(child.name) + '</span>'
-          + '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + childCount + '</span>'
+        return '<div class="interactive nav-item t-label-l' + (childSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="' + esc(child.id) + '"' + (childSelected ? ' aria-current="true"' : '') + ' style="display:flex; align-items:center; gap:12px; padding:0 24px 0 16px; border-radius:var(--r-full); background:' + (childSelected ? c.secondaryContainer : 'transparent') + '; color:' + (childSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
+          + (child.color ? '<span style="display:flex;">' + deptDot(child.id, 8) + '</span>' : '') + '<span style="flex:1;">' + esc(child.name) + '</span>'
+          + '<span class="tnum t-label-m" style="color:' + c.onSurfaceVariant + ';">' + childCount + '</span>'
           + '</div>';
       }).join('');
 
-      return '<div class="dept-row' + (selected ? oneShotClass('node') : '') + '" style="display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:var(--r-sm); background:' + (selected ? c.surfaceContainerHigh : 'transparent') + '; margin-top:2px;">'
-        + '<svg class="interactive tree-chevron' + (expanded ? ' expanded' : '') + (anim ? ' ' + anim : '') + '" data-action="toggleExpand" data-id="' + esc(d.id) + '" role="button" aria-expanded="' + (expanded ? 'true' : 'false') + '" aria-controls="subtree-' + esc(d.id) + '" aria-label="' + (expanded ? 'Collapse ' : 'Expand ') + esc(d.name) + '" width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 5l6 5-6 5"></path></svg>'
-        + '<span class="interactive" data-action="selectNode" data-id="' + esc(d.id) + '" style="display:flex; align-items:center; gap:6px; flex:1; min-width:0; border-radius:var(--r-sm);">'
-        +   deptDot(d.id, 8) + '<span style="font-size:14px; font-weight:' + (selected ? 600 : 400) + ';">' + esc(d.name) + '</span>'
+      return '<div class="dept-row nav-item' + (selected ? oneShotClass('node') : '') + '" style="display:flex; align-items:center; gap:0; padding:0 4px; border-radius:var(--r-full); background:' + (selected ? c.secondaryContainer : 'transparent') + '; color:' + (selected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
+        + '<svg class="interactive tree-chevron tree-chevron-btn' + (expanded ? ' expanded' : '') + (anim ? ' ' + anim : '') + '" data-action="toggleExpand" data-id="' + esc(d.id) + '" role="button" aria-expanded="' + (expanded ? 'true' : 'false') + '" aria-controls="subtree-' + esc(d.id) + '" aria-label="' + (expanded ? 'Collapse ' : 'Expand ') + esc(d.name) + '" width="40" height="40" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 5l6 5-6 5"></path></svg>'
+        + '<span class="interactive t-label-l" data-action="selectNode" data-id="' + esc(d.id) + '" style="display:flex; align-items:center; gap:8px; flex:1; min-width:0; align-self:stretch; padding-left:4px; border-radius:var(--r-full);">'
+        +   deptDot(d.id, 8) + '<span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(d.name) + '</span>'
+        +   '<span class="tnum t-label-m" style="color:' + c.onSurfaceVariant + ';' + (isAdmin() ? '' : ' padding-right:20px;') + '">' + deptCount + '</span>'
         + '</span>'
-        + '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + deptCount + '</span>'
-        + (isAdmin() ? '<span class="interactive dept-more" data-action="openMapping" data-id="' + esc(d.id) + '" title="' + T('Department settings') + '" style="display:flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:var(--r-sm); flex-shrink:0; color:' + c.onSurfaceVariant + ';">' + ICON.more + '</span>' : '')
+        + (isAdmin() ? '<span class="interactive dept-more icon-btn" data-action="openMapping" data-id="' + esc(d.id) + '" title="' + T('Department settings') + '" aria-label="' + T('Department settings') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.more + '</span>' : '')
         + '</div>'
-        + '<div class="tree-children' + (expanded ? ' expanded' : '') + (anim ? ' ' + anim : '') + '" id="subtree-' + esc(d.id) + '" style="padding-left:34px;">'
+        + '<div class="tree-children' + (expanded ? ' expanded' : '') + (anim ? ' ' + anim : '') + '" id="subtree-' + esc(d.id) + '" style="padding-left:32px;">'
         +   '<div class="tree-children-inner" role="group" aria-label="' + esc(T('{name} sub-departments', { name: d.name })) + '">' + childrenHtml + '</div>'
         + '</div>';
     }).join('');
@@ -3755,28 +3796,28 @@
     // Closed, the drawer is off screen and out of the reading order; it is
     // still rendered so it can slide in and out.
     var hidden = !isWideScreen() && !state.mobileNavOpen && state.mobileNavAnim !== 'anim-close';
-    return '<nav class="no-scrollbar ' + drawerClass('left-nav', state.mobileNavOpen, state.mobileNavAnim) + '" aria-label="' + T('Departments') + '" aria-hidden="' + (hidden ? 'true' : 'false') + '"' + (hidden ? ' inert' : '') + ' data-scroll-key="sidebar" style="min-height:0; background:' + c.surfaceContainerLow + '; overflow-y:auto; overflow-x:hidden; padding:18px 12px; display:flex; flex-direction:column; gap:2px;">'
-      + '<div style="display:flex; align-items:center; justify-content:space-between; padding:0 8px 10px 8px;">'
-      +   '<span style="font-size:12px; font-weight:500; color:' + c.textMuted + ';">' + T('Departments') + '</span>'
-      +   (isAdmin() ? '<span class="interactive" data-action="openAddDept" title="' + T('Add Department') + '" aria-label="' + T('Add Department') + '" style="display:flex; align-items:center; justify-content:center; width:24px; height:24px; margin-left:auto; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.plus + '</span>' : '')
-      +   '<span class="interactive drawer-close-btn" data-action="closeMobileNav" title="' + T('Close') + '" style="align-items:center; justify-content:center; width:26px; height:26px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
+    return '<nav class="no-scrollbar ' + drawerClass('left-nav', state.mobileNavOpen, state.mobileNavAnim) + '" aria-label="' + T('Departments') + '" aria-hidden="' + (hidden ? 'true' : 'false') + '"' + (hidden ? ' inert' : '') + ' data-scroll-key="sidebar" style="min-height:0; background:' + c.surfaceContainer + '; overflow-y:auto; overflow-x:hidden; padding:12px; display:flex; flex-direction:column; gap:0;">'
+      + '<div style="display:flex; align-items:center; gap:0; min-height:48px; padding:0 4px 0 16px;">'
+      +   '<span class="t-title-s" style="flex:1; color:' + c.onSurfaceVariant + ';">' + T('Departments') + '</span>'
+      +   (isAdmin() ? '<span class="interactive icon-btn" data-action="openAddDept" title="' + T('Add Department') + '" aria-label="' + T('Add Department') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.plus + '</span>' : '')
+      +   '<span class="interactive drawer-close-btn icon-btn" data-action="closeMobileNav" title="' + T('Close') + '" aria-label="' + T('Close') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
       + '</div>'
-      + '<div class="interactive' + (allSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="all" style="display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:var(--r-sm); background:' + (allSelected ? c.surfaceContainerHigh : 'transparent') + '; color:' + c.onSurfaceVariant + ';">'
+      + '<div class="interactive nav-item t-label-l' + (allSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="all" style="display:flex; align-items:center; gap:12px; padding:0 24px 0 16px; border-radius:var(--r-full); background:' + (allSelected ? c.secondaryContainer : 'transparent') + '; color:' + (allSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
       +   '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l1-4h10l1 4"></path><path d="M3 8h14v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8Z"></path><path d="M8 11h4"></path></svg>'
-      +   '<span style="flex:1; font-size:14px;">' + T('All Tasks') + '</span>'
-      +   '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + allCount + '</span>'
+      +   '<span style="flex:1;">' + T('All Tasks') + '</span>'
+      +   '<span class="tnum t-label-m" style="color:' + c.onSurfaceVariant + ';">' + allCount + '</span>'
       + '</div>'
-      + '<div class="interactive' + (mineSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="mine" style="display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:var(--r-sm); background:' + (mineSelected ? c.surfaceContainerHigh : 'transparent') + '; color:' + c.onSurfaceVariant + ';">'
+      + '<div class="interactive nav-item t-label-l' + (mineSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="mine" style="display:flex; align-items:center; gap:12px; padding:0 24px 0 16px; border-radius:var(--r-full); background:' + (mineSelected ? c.secondaryContainer : 'transparent') + '; color:' + (mineSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
       +   '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="3"></circle><path d="M4 16a6 6 0 0 1 12 0"></path></svg>'
-      +   '<span style="flex:1; font-size:14px; font-weight:' + (mineSelected ? 600 : 400) + ';">' + T('My Tasks') + '</span>'
-      +   '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + state.summary.mine + '</span>'
+      +   '<span style="flex:1;">' + T('My Tasks') + '</span>'
+      +   '<span class="tnum t-label-m" style="color:' + c.onSurfaceVariant + ';">' + state.summary.mine + '</span>'
       + '</div>'
       + deptsHtml
       + '<div style="flex:1;"></div>'
-      + '<div class="interactive" data-action="openTrash" style="display:flex; align-items:center; gap:9px; padding:9px 10px; margin-top:10px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">'
+      + '<div class="interactive nav-item t-label-l" data-action="openTrash" style="display:flex; align-items:center; gap:12px; padding:0 24px 0 16px; margin-top:8px; border-radius:var(--r-full); color:' + c.onSurfaceVariant + ';">'
       +   ICON.trash
-      +   '<span style="flex:1; font-size:14px;">' + T('Trash') + '</span>'
-      +   (state.summary.trash ? '<span class="tnum" style="font-size:12px; color:' + c.textMuted + ';">' + state.summary.trash + '</span>' : '')
+      +   '<span style="flex:1;">' + T('Trash') + '</span>'
+      +   (state.summary.trash ? '<span class="tnum t-label-m" style="color:' + c.onSurfaceVariant + ';">' + state.summary.trash + '</span>' : '')
       + '</div>'
       + '</nav>';
   }
@@ -3803,10 +3844,10 @@
       var count = statusCount(id);
       var active = state.activeTab === id;
       var bg = 'transparent';
-      var color = active ? c.onSurface : (id === 'overdue' && count ? c.error : c.onSurfaceVariant);
+      var color = active ? c.primary : (id === 'overdue' && count ? c.error : c.onSurfaceVariant);
       var underline = active ? c.primary : 'transparent';
-      return '<div class="interactive' + (active ? oneShotClass('tab') : '') + '" data-action="setTab" data-id="' + id + '" role="tab" aria-selected="' + (active ? 'true' : 'false') + '" aria-label="' + TAB_LABELS[id] + ', ' + T(count === 1 ? '{n} task' : '{n} tasks', { n: count }) + '" style="display:flex; align-items:center; gap:6px; height:38px; padding:0 4px; margin-bottom:-1px; border-radius:0; background:' + bg + '; color:' + color + '; font-size:14px; font-weight:' + (active ? 600 : 400) + '; border-bottom:2px solid ' + underline + ';">'
-        + '<span>' + TAB_LABELS[id] + '</span><span style="font-size:12px; font-weight:500; color:' + (active ? c.onSurfaceVariant : c.textMuted) + ';">' + count + '</span></div>';
+      return '<div class="interactive t-title-s' + (active ? oneShotClass('tab') : '') + '" data-action="setTab" data-id="' + id + '" role="tab" aria-selected="' + (active ? 'true' : 'false') + '" aria-label="' + TAB_LABELS[id] + ', ' + T(count === 1 ? '{n} task' : '{n} tasks', { n: count }) + '" style="display:flex; align-items:center; gap:4px; height:48px; padding:0 4px; margin-bottom:-1px; border-radius:0; background:' + bg + '; color:' + color + '; border-bottom:3px solid ' + underline + '; box-sizing:border-box;">'
+        + '<span>' + TAB_LABELS[id] + '</span><span class="tnum" style="color:' + (active ? c.onSurfaceVariant : c.textMuted) + ';">' + count + '</span></div>';
     }).join('');
 
     var maps = styleMaps(c);
@@ -3814,38 +3855,40 @@
     var page = clamp(meta.page || 1, 1, totalPages);
     var pageItems = state.tasks;
 
-    var filterField = 'height:36px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:13px; background:' + c.surface + '; color:' + c.onSurface + ';';
+    var filterField = 'height:40px; padding:0 12px; border-radius:var(--r-xs); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';';
     var filterPanel = (state.filterOpen || state.dropdownClosing === 'filter')
-      ? '<div class="' + dropdownClass('filter') + '" style="' + dropdownStyle('filter') + 'position:absolute; top:46px; right:0; width:240px; background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:14px; z-index:60; display:flex; flex-direction:column; gap:12px;">'
-        + '<div><div style="font-size:12px; font-weight:600; letter-spacing:.03em; color:' + c.onSurfaceVariant + '; margin-bottom:6px;">' + T('SORT BY') + '</div>'
+      ? '<div class="' + dropdownClass('filter') + '" style="' + dropdownStyle('filter') + 'position:absolute; top:48px; right:0; width:256px; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:16px; z-index:60; display:flex; flex-direction:column; gap:16px;">'
+        + '<div><div class="t-title-s" style="color:' + c.onSurfaceVariant + '; margin-bottom:8px;">' + T('SORT BY') + '</div>'
         +   mSelectFrom('<select id="filterSortSelect" aria-label="' + T('Sort by') + '" style="' + filterField + '">'
               + TASK_SORTS.map(function (o) { return '<option value="' + o[0] + '"' + (state.taskSort === o[0] ? ' selected' : '') + '>' + T(o[1]) + '</option>'; }).join('')
               + '</select>', c)
         + '</div>'
-        + '<div><div style="font-size:12px; font-weight:600; letter-spacing:.03em; color:' + c.onSurfaceVariant + '; margin-bottom:6px;">' + T('ASSIGNEE') + '</div>'
+        + '<div><div class="t-title-s" style="color:' + c.onSurfaceVariant + '; margin-bottom:8px;">' + T('ASSIGNEE') + '</div>'
         +   mSelectFrom('<select id="filterAssigneeSelect" aria-label="' + T('Assignee') + '" style="' + filterField + '">'
               + [['', T('Anyone')], ['none', T('Unassigned')]].concat(state.members.map(function (m) { return [String(m.id), esc(m.displayName)]; }))
                   .map(function (o) { return '<option value="' + o[0] + '"' + (state.filterAssignee === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('')
               + '</select>', c)
         + '</div>'
-        + '<div><div style="font-size:12px; font-weight:600; letter-spacing:.03em; color:' + c.onSurfaceVariant + '; margin-bottom:6px;">' + T('PRIORITY') + '</div>'
+        + '<div><div class="t-title-s" style="color:' + c.onSurfaceVariant + '; margin-bottom:8px;">' + T('PRIORITY') + '</div>'
         + ['High', 'Medium', 'Low'].map(function (p) {
-            return '<label class="interactive" style="display:flex; align-items:center; gap:8px; padding:5px 4px; border-radius:var(--r-sm); font-size:13px; cursor:pointer;"><input type="checkbox" data-action="toggleFilterPriority" data-id="' + p + '" ' + (state.filterPriority[p] ? 'checked' : '') + '></input>' + T(p) + '</label>';
+            return '<label class="interactive t-body-m" style="display:flex; align-items:center; gap:12px; min-height:40px; padding:0 8px; border-radius:var(--r-sm); cursor:pointer;"><input type="checkbox" data-action="toggleFilterPriority" data-id="' + p + '" ' + (state.filterPriority[p] ? 'checked' : '') + '></input>' + T(p) + '</label>';
           }).join('')
         + '</div>'
-        + '<div><div style="font-size:12px; font-weight:600; letter-spacing:.03em; color:' + c.onSurfaceVariant + '; margin-bottom:6px;">' + T('CALENDAR') + '</div>'
+        + '<div><div class="t-title-s" style="color:' + c.onSurfaceVariant + '; margin-bottom:8px;">' + T('CALENDAR') + '</div>'
         + [['all', 'All'], ['shown', 'In calendar'], ['hidden', 'Not in calendar']].map(function (pair) {
-            return '<label class="interactive" style="display:flex; align-items:center; gap:8px; padding:5px 4px; border-radius:var(--r-sm); font-size:13px; cursor:pointer;"><input type="radio" name="filterCalendar" data-action="setFilterCalendar" data-id="' + pair[0] + '" ' + (state.filterCalendar === pair[0] ? 'checked' : '') + '></input>' + T(pair[1]) + '</label>';
+            return '<label class="interactive t-body-m" style="display:flex; align-items:center; gap:12px; min-height:40px; padding:0 8px; border-radius:var(--r-sm); cursor:pointer;"><input type="radio" name="filterCalendar" data-action="setFilterCalendar" data-id="' + pair[0] + '" ' + (state.filterCalendar === pair[0] ? 'checked' : '') + '></input>' + T(pair[1]) + '</label>';
           }).join('')
         + '</div>'
-        + (filtersActive() ? '<span class="interactive" data-action="clearFilters" style="align-self:flex-end; font-size:12px; font-weight:600; color:' + c.primary + ';">' + T('Clear filters') + '</span>' : '')
+        + (filtersActive() ? '<span class="interactive t-label-l" data-action="clearFilters" style="align-self:flex-end; display:inline-flex; align-items:center; height:40px; padding:0 12px; border-radius:var(--r-full); color:' + c.primary + ';">' + T('Clear filters') + '</span>' : '')
         + '</div>'
       : '';
 
     var bodyHtml;
     var loadingNow = !state.tasksLoaded;
-    if (isNarrowScreen()) {
-      bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" style="flex:1; min-height:0; overflow:auto;"><div style="display:flex; flex-direction:column; border-top:1px solid ' + c.outlineVariant + ';">'
+    if (useCardRows()) {
+      // Wider than a phone, the rows stop at a readable width so each date
+      // stays near its title instead of at the far edge of the screen.
+      bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" style="flex:1; min-height:0; overflow:auto;"><div style="display:flex; flex-direction:column; max-width:720px;">'
         + (loadingNow ? skeletonRows(c, 6) : (pageItems.length ? pageItems.map(function (t) { return taskMobileRow(t, maps, c); }).join('') : emptyStateHtml(c)))
         + '</div></div>';
     } else if (state.viewMode === 'calendar') {
@@ -3858,14 +3901,14 @@
       var rowsHtml = pageItems.map(function (t) { return taskRow(t, maps, c); }).join('');
       var emptyHtml = loadingNow ? skeletonRows(c, 8) : (pageItems.length === 0 ? emptyStateHtml(c) : '');
       bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" class="' + (selectedIds().length ? 'selecting' : '') + '" style="flex:1; min-height:0; overflow:auto;">'
-        + '<div role="table" style="display:grid; grid-template-columns:36px minmax(240px,1fr) 140px 168px 112px 52px; min-width:760px;">'
+        + '<div role="table" style="display:grid; grid-template-columns:40px minmax(240px,1fr) 144px 176px 120px 56px; min-width:776px;">'
         +   [['', T('Status')], [T('Task'), '', 'title'], [T('Department')], [T('Assignee')], [T('Due Date'), '', 'due'], ['', T('Priority'), 'priority']].map(function (h, i) {
               // Columns the server can sort by sort when their heading is
               // clicked; clicking the active one goes back to the default order.
               var key = h[2], on = key && state.taskSort === key;
               var arrow = on ? '<svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4v12M5 11l5 5 5-5"></path></svg>' : '';
               var name = h[0] || h[1];
-              return '<div role="columnheader"' + (key ? ' class="interactive" data-action="sortByColumn" data-id="' + key + '" aria-sort="' + (on ? 'ascending' : 'none') + '" title="' + esc(T(on ? 'Back to the default order' : 'Sort by {col}', { col: name })) + '"' : '') + (h[1] ? ' aria-label="' + esc(h[1]) + '"' : '') + ' style="position:sticky; top:0; z-index:1; display:flex; align-items:center; gap:4px; height:32px; padding:0 12px; background:' + c.surface + '; font-size:12px; font-weight:' + (on ? 600 : 500) + '; color:' + (on ? c.onSurface : c.textMuted) + '; border-bottom:1px solid ' + c.outlineVariant + ';' + (i === 0 || i === 5 ? ' justify-content:center;' : '') + '">' + (i === 5 && !on ? '' : h[0]) + arrow + (i === 5 && !arrow ? '<svg width="12" height="12" viewBox="0 0 20 18" aria-hidden="true"><rect x="3" y="11" width="3.5" height="4" rx="1" fill="currentColor"></rect><rect x="8" y="7" width="3.5" height="8" rx="1" fill="currentColor"></rect><rect x="13" y="3" width="3.5" height="12" rx="1" fill="currentColor"></rect></svg>' : '') + '</div>';
+              return '<div role="columnheader"' + (key ? ' class="interactive" data-action="sortByColumn" data-id="' + key + '" aria-sort="' + (on ? 'ascending' : 'none') + '" title="' + esc(T(on ? 'Back to the default order' : 'Sort by {col}', { col: name })) + '"' : '') + (h[1] ? ' aria-label="' + esc(h[1]) + '"' : '') + ' style="position:sticky; top:0; z-index:1; display:flex; align-items:center; gap:4px; height:48px; padding:0 16px; background:' + c.surface + '; font-size:14px; line-height:20px; font-weight:500; color:' + (on ? c.primary : c.onSurfaceVariant) + ';' + (i === 0 || i === 5 ? ' justify-content:center;' : '') + '">' + (i === 5 && !on ? '' : h[0]) + arrow + (i === 5 && !arrow ? '<svg width="12" height="12" viewBox="0 0 20 18" aria-hidden="true"><rect x="3" y="11" width="3.5" height="4" rx="1" fill="currentColor"></rect><rect x="8" y="7" width="3.5" height="8" rx="1" fill="currentColor"></rect><rect x="13" y="3" width="3.5" height="12" rx="1" fill="currentColor"></rect></svg>' : '') + '</div>';
             }).join('')
         +   rowsHtml + emptyHtml
         + '</div></div>';
@@ -3875,34 +3918,37 @@
     var rangeEnd = (page - 1) * meta.pageSize + pageItems.length;
     var animClass = state.contentAnim === 'out' ? 'content-out' : (state.contentAnim === 'in' ? 'content-in' : '');
 
-    return '<main id="task-list" tabindex="-1" class="' + animClass + '" style="flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; padding:22px 26px; gap:14px;">'
-      + '<div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px;">'
-      +   '<div style="min-width:0; flex:1;"><div style="font-size:12px; color:' + c.onSurfaceVariant + '; margin-bottom:3px;">' + esc(pathLabel) + '</div><div class="page-title" title="' + esc(titleLabel) + '" style="font-size:24px; font-weight:600;">' + esc(titleLabel) + '</div></div>'
+    var narrow = isNarrowScreen();
+    var filterHtml = '<div data-dropdown="filter" style="position:relative;' + (narrow ? ' flex-shrink:0;' : '') + '">'
+      +   '<div class="interactive filter-btn t-label-l" data-action="toggleFilterOpen" title="' + T('Filter') + '" style="position:relative; display:flex; align-items:center; gap:8px; height:40px; padding:0 24px 0 16px; border-radius:var(--r-full); border:1px solid ' + (filtersActive() ? c.primary : c.outline) + '; color:' + (filtersActive() ? c.primary : c.onSurfaceVariant) + ';">' + ICON.filter + '<span class="btn-label">' + T('Filter') + '</span>'
+      +     (filtersActive() ? '<span aria-label="' + T('Filters on') + '" style="position:absolute; top:6px; right:8px; width:7px; height:7px; border-radius:50%; background:' + c.primary + ';"></span>' : '') + '</div>'
+      +   filterPanel
+      + '</div>';
+    var tablistHtml = '<div role="tablist" aria-label="' + T('Filter by status') + '" data-scroll-key="tabs" style="display:flex; align-items:center; gap:24px; flex-wrap:wrap; border-bottom:1px solid ' + c.outlineVariant + ';' + (narrow ? ' flex:1; min-width:0;' : '') + '">' + tabsHtml + '</div>';
+    return '<main id="task-list" tabindex="-1" class="content-sheet ' + animClass + '" style="flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; padding:24px 24px 16px; gap:16px; background:' + c.surface + ';">'
+      + '<div style="display:' + (narrow ? 'none' : 'flex') + '; align-items:flex-start; justify-content:space-between; gap:16px;">'
+      +   '<div style="min-width:0; flex:1;"><div class="t-body-s" style="color:' + c.onSurfaceVariant + '; margin-bottom:4px;">' + esc(pathLabel) + '</div><div class="page-title t-headline-m" title="' + esc(titleLabel) + '">' + esc(titleLabel) + '</div></div>'
       +   '<div style="display:flex; align-items:center; gap:8px;">'
-      +     '<div class="view-toggle" role="radiogroup" aria-label="' + T('View') + '" style="display:flex; align-items:center; gap:2px; padding:3px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + ';">'
+      +     '<div class="view-toggle" role="radiogroup" aria-label="' + T('View') + '" style="display:flex; align-items:center; gap:4px; height:40px; box-sizing:border-box; padding:4px; border-radius:var(--r-full); background:' + c.surfaceContainerHigh + ';">'
       +       [['list', 'List', ICON.listView], ['grid', 'Board', ICON.gridView], ['calendar', 'Calendar', ICON.calendarView.replace('width="19" height="19"', 'width="16" height="16"')]].map(function (v) {
                 var on = state.viewMode === v[0];
-                return '<div class="interactive" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setViewMode" data-id="' + v[0] + '" title="' + T(v[1]) + '" aria-label="' + T(v[1]) + '" style="width:30px; height:30px; border-radius:4px; display:flex; align-items:center; justify-content:center; color:' + (on ? c.onSurface : c.onSurfaceVariant) + '; background:' + (on ? c.surface : 'transparent') + ';' + (on ? ' box-shadow:var(--e1);' : '') + '">' + v[2] + '</div>';
+                return '<div class="interactive" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setViewMode" data-id="' + v[0] + '" title="' + T(v[1]) + '" aria-label="' + T(v[1]) + '" style="width:40px; height:32px; border-radius:var(--r-full); display:flex; align-items:center; justify-content:center; color:' + (on ? c.onSurface : c.onSurfaceVariant) + '; background:' + (on ? c.surface : 'transparent') + ';' + (on ? ' box-shadow:var(--e1);' : '') + '">' + v[2] + '</div>';
               }).join('')
       +     '</div>'
-      +     '<div data-dropdown="filter" style="position:relative;">'
-      +       '<div class="interactive filter-btn" data-action="toggleFilterOpen" title="' + T('Filter') + '" style="position:relative; display:flex; align-items:center; gap:6px; height:40px; padding:0 16px; border-radius:var(--r-sm); border:1px solid ' + (filtersActive() ? c.primary : c.outline) + '; color:' + (filtersActive() ? c.primary : c.onSurfaceVariant) + '; font-size:14px; font-weight:500;">' + ICON.filter + '<span class="btn-label">' + T('Filter') + '</span>'
-      +         (filtersActive() ? '<span aria-label="' + T('Filters on') + '" style="position:absolute; top:6px; right:8px; width:7px; height:7px; border-radius:50%; background:' + c.primary + ';"></span>' : '') + '</div>'
-      +       filterPanel
-      +     '</div>'
-      +     (canCreateTask()
-              ? '<div class="interactive new-task-inline" data-action="openTaskModal" style="display:flex; align-items:center; gap:7px; height:40px; padding:0 18px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; font-weight:600;">' + ICON.plus + '<span>' + T('New Task') + '</span></div>'
-              : '<div class="new-task-inline" title="' + T('An administrator has to put your account in a department first') + '" style="display:flex; align-items:center; gap:7px; height:40px; padding:0 18px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + '; font-size:14px; font-weight:600; opacity:.7;">' + ICON.plus + '<span>' + T('New Task') + '</span></div>')
+      +     (narrow ? '' : filterHtml)
+            +     (canCreateTask()
+              ? '<div class="interactive new-task-inline t-label-l" data-action="openTaskModal" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 24px 0 16px; border-radius:var(--r-full); background:' + c.primary + '; color:' + c.onPrimary + ';">' + ICON.plus + '<span>' + T('New Task') + '</span></div>'
+              : '<div class="new-task-inline t-label-l" title="' + T('An administrator has to put your account in a department first') + '" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 24px 0 16px; border-radius:var(--r-full); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + '; opacity:.7;">' + ICON.plus + '<span>' + T('New Task') + '</span></div>')
       +   '</div>'
       + '</div>'
-      + '<div role="tablist" aria-label="' + T('Filter by status') + '" data-scroll-key="tabs" style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; border-bottom:1px solid ' + c.outlineVariant + ';">' + tabsHtml + '</div>'
+      + (narrow ? '<div style="display:flex; align-items:center; gap:4px;">' + tablistHtml + filterHtml + '</div>' : tablistHtml)
       + bodyHtml
-      + '<div style="flex-shrink:0; display:flex; align-items:center; justify-content:space-between; font-size:13px; color:' + c.onSurfaceVariant + ';">'
+      + '<div class="t-body-m" style="flex-shrink:0; display:flex; align-items:center; justify-content:space-between; min-height:40px; color:' + c.onSurfaceVariant + ';">'
       +   '<span aria-live="polite">' + (meta.total ? T('Showing {a}-{b} of {n}', { a: rangeStart, b: rangeEnd, n: meta.total }) : '') + '</span>'
-      +   '<div style="display:' + (totalPages > 1 ? 'flex' : 'none') + '; align-items:center; gap:14px;"><span>' + T('Page {p} of {n}', { p: page, n: totalPages }) + '</span>'
+      +   '<div style="display:' + (totalPages > 1 ? 'flex' : 'none') + '; align-items:center; gap:16px;"><span>' + T('Page {p} of {n}', { p: page, n: totalPages }) + '</span>'
       +     '<div style="display:flex; align-items:center; gap:4px;">'
-      +       '<div class="interactive" data-action="prevPage" aria-label="' + T('Previous page') + '" aria-disabled="' + (page <= 1 ? 'true' : 'false') + '" style="width:28px; height:28px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; color:' + c.onSurfaceVariant + '; opacity:' + (page <= 1 ? '.4' : '1') + '; pointer-events:' + (page <= 1 ? 'none' : 'auto') + ';">' + ICON.chevronLeft + '</div>'
-      +       '<div class="interactive" data-action="nextPage" aria-label="' + T('Next page') + '" aria-disabled="' + (page >= totalPages ? 'true' : 'false') + '" style="width:28px; height:28px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; color:' + c.onSurfaceVariant + '; opacity:' + (page >= totalPages ? '.4' : '1') + '; pointer-events:' + (page >= totalPages ? 'none' : 'auto') + ';">' + ICON.chevronRight + '</div>'
+      +       '<div class="interactive" data-action="prevPage" aria-label="' + T('Previous page') + '" aria-disabled="' + (page <= 1 ? 'true' : 'false') + '" style="width:40px; height:40px; border-radius:var(--r-full); display:flex; align-items:center; justify-content:center; color:' + c.onSurfaceVariant + '; opacity:' + (page <= 1 ? '.4' : '1') + '; pointer-events:' + (page <= 1 ? 'none' : 'auto') + ';">' + ICON.chevronLeft + '</div>'
+      +       '<div class="interactive" data-action="nextPage" aria-label="' + T('Next page') + '" aria-disabled="' + (page >= totalPages ? 'true' : 'false') + '" style="width:40px; height:40px; border-radius:var(--r-full); display:flex; align-items:center; justify-content:center; color:' + c.onSurfaceVariant + '; opacity:' + (page >= totalPages ? '.4' : '1') + '; pointer-events:' + (page >= totalPages ? 'none' : 'auto') + ';">' + ICON.chevronRight + '</div>'
       +     '</div>'
       +   '</div>'
       + '</div>'
@@ -3918,14 +3964,14 @@
     for (var i = 0; i < firstWeekday; i++) dayCells.push('<div></div>');
     for (var d = 1; d <= daysInMonth; d++) {
       if (d === todayDate) {
-        dayCells.push('<div style="display:flex; align-items:center; justify-content:center;"><span style="display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:' + c.primary + '; color:' + c.onPrimary + '; font-size:12px; font-weight:600;">' + d + '</span></div>');
+        dayCells.push('<div style="display:flex; align-items:center; justify-content:center;"><span style="display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:' + c.primary + '; color:' + c.onPrimary + '; font-size:12px; font-weight:500;">' + d + '</span></div>');
       } else {
         dayCells.push('<div style="display:flex; align-items:center; justify-content:center; font-size:12px;">' + d + '</div>');
       }
     }
     var trailing = (7 - (dayCells.length % 7)) % 7;
     for (var j = 0; j < trailing; j++) dayCells.push('<div></div>');
-    return '<div><div style="font-size:13px; font-weight:600; margin-bottom:8px;">' + esc(new Date(year, month, 1).toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</div>'
+    return '<div><div style="font-size:13px; font-weight:500; margin-bottom:8px;">' + esc(new Date(year, month, 1).toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</div>'
       + '<div style="display:grid; grid-template-columns:repeat(7,1fr); gap:4px; font-size:12px; color:' + c.onSurfaceVariant + '; text-align:center; margin-bottom:4px;">'
       + (LANG === 'ko' ? ['일', '월', '화', '수', '목', '금', '토'] : ['S', 'M', 'T', 'W', 'T', 'F', 'S']).map(function (x) { return '<div>' + x + '</div>'; }).join('')
       + '</div>'
@@ -3944,8 +3990,8 @@
       var check = done ? '<svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="' + c.onSecondary + '" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10l3.5 3.5L15 6.5"></path></svg>' : '';
       var tickable = canWriteDept(t.deptId);
       var when = t.overdue
-        ? '<span style="font-size:12px; font-weight:600; color:' + c.error + ';">' + T('Overdue') + ' &middot; ' + esc(formatDue(t.dueDate)) + '</span>'
-        : '<span style="font-size:12px; font-weight:600; color:' + c.onSurfaceVariant + ';">' + T('Today') + '</span>';
+        ? '<span style="font-size:12px; font-weight:500; color:' + c.error + ';">' + T('Overdue') + ' &middot; ' + esc(formatDue(t.dueDate)) + '</span>'
+        : '<span style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Today') + '</span>';
       return '<div class="' + oneShotClass('todayLeave:' + t.id).trim() + '" style="display:flex; align-items:flex-start; gap:9px; border-radius:var(--r-sm);">'
         +   (tickable
               ? '<div class="interactive' + oneShotClass('today:' + t.id) + '" data-action="toggleTodayTask" data-id="' + t.id + '" title="' + T(done ? 'Mark not done' : 'Mark done') + '" style="width:16px; height:16px; margin-top:1px; border-radius:var(--r-xs); background:' + boxBg + '; border:1.6px solid ' + boxBorder + '; display:flex; align-items:center; justify-content:center; flex-shrink:0;">' + check + '</div>'
@@ -3953,7 +3999,7 @@
         +   '<div class="interactive" data-action="openTask" data-id="' + t.id + '" style="flex:1; min-width:0;">'
         +     '<div style="display:flex; align-items:center; gap:5px; font-size:13px; color:' + textColor + '; text-decoration:' + (done ? 'line-through' : 'none') + ';">' + taskIconHtml(t, 14) + '<span>' + esc(t.title) + '</span></div>'
         +     '<div style="display:flex; align-items:center; gap:6px; margin-top:3px; flex-wrap:wrap;">' + when
-        +       (t.deptId ? '<span style="font-size:12px; font-weight:600; color:' + c.onSurfaceVariant + '; background:' + c.surfaceVariant + '; padding:1px 8px; border-radius:var(--r-sm);">' + esc(nodeLabel(t.deptId)) + '</span>' : '')
+        +       (t.deptId ? '<span style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + '; background:' + c.surfaceVariant + '; padding:1px 8px; border-radius:var(--r-sm);">' + esc(nodeLabel(t.deptId)) + '</span>' : '')
         +     '</div>'
         +   '</div>'
         + '</div>';
@@ -3985,21 +4031,21 @@
 
     return '<div class="' + drawerClass('right-panel', state.mobileCalendarOpen, state.mobileCalendarAnim) + '" data-scroll-key="schedule" style="width:320px; flex-shrink:0; min-height:0; background:' + c.surfaceContainerLow + '; border-left:1px solid ' + c.outlineVariant + '; overflow-y:auto; padding:20px 16px; display:flex; flex-direction:column; gap:16px;">'
       + '<div class="drawer-header-row" style="align-items:center; justify-content:space-between;">'
-      +   '<span style="font-size:15px; font-weight:600;">' + T('Schedule') + '</span>'
+      +   '<span style="font-size:16px; font-weight:500;">' + T('Schedule') + '</span>'
       +   '<span class="interactive drawer-close-btn" data-action="closeMobileCalendar" title="' + T('Close') + '" style="align-items:center; justify-content:center; width:26px; height:26px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
       + '</div>'
       + '<div style="background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); padding:16px; display:flex; flex-direction:column; gap:12px;">'
-      +   '<span style="font-size:14px; font-weight:600;">' + T('Calendar') + '</span>'
+      +   '<span style="font-size:14px; font-weight:500;">' + T('Calendar') + '</span>'
       +   miniCalendar(c)
       + '</div>'
       + '<div style="background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); padding:16px; display:flex; flex-direction:column; gap:11px;">'
-      +   '<span style="font-size:14px; font-weight:600;">' + T('Due Today') + (state.todayTasks.length ? ' <span style="font-size:12px; font-weight:600; padding:1px 7px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">' + state.todayTasks.length + '</span>' : '') + '</span>' + todayHtml + todayEmpty
+      +   '<span style="font-size:14px; font-weight:500;">' + T('Due Today') + (state.todayTasks.length ? ' <span style="font-size:12px; font-weight:500; padding:1px 7px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">' + state.todayTasks.length + '</span>' : '') + '</span>' + todayHtml + todayEmpty
       + '</div>'
       + '<div style="background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); padding:16px; display:flex; flex-direction:column; gap:12px;">'
-      +   '<span class="interactive" data-action="toggleFeeds" role="button" aria-expanded="' + (state.feedsOpen ? 'true' : 'false') + '" aria-controls="feed-list" style="display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600;">'
+      +   '<span class="interactive" data-action="toggleFeeds" role="button" aria-expanded="' + (state.feedsOpen ? 'true' : 'false') + '" aria-controls="feed-list" style="display:flex; align-items:center; gap:8px; font-size:14px; font-weight:500;">'
       +     '<svg class="tree-chevron' + (state.feedsOpen ? ' expanded' : '') + oneShotClass('feeds') + '" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 5l6 5-6 5"></path></svg>'
       +     '<span style="flex:1;">' + T('Department Calendars') + '</span>'
-      +     (flatOpts.length ? '<span style="font-size:12px; font-weight:600; padding:1px 7px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">' + flatOpts.length + '</span>' : '')
+      +     (flatOpts.length ? '<span style="font-size:12px; font-weight:500; padding:1px 7px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">' + flatOpts.length + '</span>' : '')
       +   '</span>'
       +   '<div class="tree-children' + (state.feedsOpen ? ' expanded' : '') + oneShotClass('feeds') + '" id="feed-list">'
       +     '<div class="tree-children-inner" style="gap:12px;">' + mappingRows + mappingEmpty + '</div>'
@@ -4022,13 +4068,13 @@
     var lock = readOnly ? ' disabled' : '';
     var stacked = state.detailPhase === 'open' && !!state.detailTaskId;
     var maps = styleMaps(c);
-    var chip = 'height:32px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outlineVariant + '; font-size:13px; background:' + c.surface + '; color:' + c.onSurface + ';';
-    var withIcon = function (icon, text) { return icon + '<span style="margin-left:6px;">' + text + '</span>'; };
-    var personIcon = '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="7" r="3"></circle><path d="M4 16a6 6 0 0 1 12 0"></path></svg>';
-    var deptIcon = '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 6a1 1 0 0 1 1-1h4l1.5 2H16a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6Z"></path></svg>';
+    var chip = 'height:32px; padding:0 12px 0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outlineVariant + '; font-size:14px; line-height:20px; font-weight:500; background:transparent; color:' + c.onSurface + ';';
+    var withIcon = function (icon, text) { return icon + '<span style="margin-left:8px;">' + text + '</span>'; };
+    var personIcon = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="7" r="3"></circle><path d="M4 16a6 6 0 0 1 12 0"></path></svg>';
+    var deptIcon = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 6a1 1 0 0 1 1-1h4l1.5 2H16a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6Z"></path></svg>';
 
     var statusChip = editing ? mSelectFrom('<select' + lock + ' id="newTaskStatusSelect" data-form="newTaskForm" data-field="status" aria-label="' + T('Status') + '" style="' + chip + '">'
-      + EDITABLE_STATUSES.map(function (id) { return '<option value="' + id + '"' + (id === f.status ? ' selected' : '') + '>' + withIcon(statusIconHtml(id, maps.statusStyle[id].dot, 14), TAB_LABELS[id]) + '</option>'; }).join('')
+      + EDITABLE_STATUSES.map(function (id) { return '<option value="' + id + '"' + (id === f.status ? ' selected' : '') + '>' + withIcon(statusIconHtml(id, maps.statusStyle[id].dot, 18), TAB_LABELS[id]) + '</option>'; }).join('')
       + '</select>', c, 'pill') : '';
     var current = assigneeSelectValue(f);
     var assigneeChip = mSelectFrom('<select' + lock + ' id="newTaskAssigneeSelect" data-form="newTaskForm" data-field="assigneeId" aria-label="' + T('Assignee') + '" style="' + chip + '">'
@@ -4039,33 +4085,33 @@
     var priorityChip = mSelectFrom('<select' + lock + ' id="newTaskPrioritySelect" data-form="newTaskForm" data-field="priority" aria-label="' + T('Priority') + '" style="' + chip + '">'
       + ['High', 'Medium', 'Low'].map(function (p) { return '<option value="' + p + '"' + (p === f.priority ? ' selected' : '') + '>' + withIcon(priorityIconHtml(p, maps.priorityColor[p], c.outlineVariant), T(p)) + '</option>'; }).join('')
       + '</select>', c, 'pill');
-    var dueChip = dateTriggerHtml('newTask', f.due, c, lock).replace('height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline, 'height:32px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outlineVariant).replace('font-size:14px;', 'font-size:13px; display:inline-flex !important;');
+    var dueChip = dateTriggerHtml('newTask', f.due, c, lock).replace('height:40px; padding:0 12px; border-radius:var(--r-xs); border:1px solid ' + c.outline, 'height:32px; padding:0 12px 0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outlineVariant).replace('font-size:14px; line-height:20px;', 'font-size:14px; line-height:20px; font-weight:500; display:inline-flex !important;').replace('background:' + c.surface + ';', 'background:transparent;');
     var deptChip = mSelectFrom('<select' + lock + ' id="newTaskDeptSelect" data-form="newTaskForm" data-field="deptId" aria-label="' + T('Department') + '" style="' + chip + '">'
       + '<option value="">' + withIcon(deptIcon, T('No department')) + '</option>'
       + flattenDeptOptions().map(function (o) { return '<option value="' + esc(o.id) + '"' + (o.id === f.deptId ? ' selected' : '') + '>' + withIcon(deptIcon, esc(o.label)) + '</option>'; }).join('')
       + '</select>', c, 'pill');
-    var repeatChip = repeatControl(f, c, lock).split('height:38px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px;').join(chip.replace(/background:[^;]*;\s*color:[^;]*;/, ''));
-    var calChip = '<label class="interactive" title="' + T('Include this task in the department calendar feed') + '" style="display:inline-flex; align-items:center; gap:8px; ' + chip + ' cursor:pointer;"><input type="checkbox"' + lock + ' data-action="toggleTaskCalendar"' + (f.calendarVisible ? ' checked' : '') + '>' + T('In calendar') + '</label>';
+    var repeatChip = repeatControl(f, c, lock).split('height:40px; padding:0 12px; border-radius:var(--r-xs); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px;').join(chip);
+    var calChip = '<label class="interactive form-chip" title="' + T('Include this task in the department calendar feed') + '" style="display:inline-flex; align-items:center; gap:8px; ' + chip + ' cursor:pointer;"><input type="checkbox"' + lock + ' data-action="toggleTaskCalendar"' + (f.calendarVisible ? ' checked' : '') + '>' + T('In calendar') + '</label>';
 
     var title = T(readOnly ? 'Task' : (editing ? 'Edit Task' : 'New Task'));
-    return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="closeTaskModal" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,' + (stacked ? '.25' : '.4') + '); display:flex; align-items:flex-start; justify-content:center; padding-top:12vh; z-index:55;">'
-      + '<div role="dialog" class="task-form ' + mo.card + '" data-scroll-key="' + esc('task:' + (state.editingTaskId || 'new')) + '" aria-modal="true" aria-label="' + esc(title) + '" tabindex="-1" style="' + mo.cardStyle + 'width:600px; max-width:94vw; max-height:80vh; overflow-y:auto; background:' + c.surface + '; border-radius:var(--r-lg); padding:20px 24px; display:flex; flex-direction:column; gap:12px; box-shadow:var(--e3);">'
-      +   '<div style="display:flex; align-items:center; gap:8px; font-size:12px; color:' + c.textMuted + ';"><span>' + esc(title) + '</span>'
-      +     '<span class="interactive" data-action="closeTaskModal" aria-label="' + T('Close') + '" style="margin-left:auto; display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span></div>'
-      +   (readOnly ? '<div style="font-size:13px; line-height:1.45; color:' + c.onSurfaceVariant + '; background:' + c.surfaceContainerHigh + '; padding:9px 11px; border-radius:var(--r-sm);">' + esc(T('This task belongs to {dept}, so it is read-only for you.', { dept: nodeLabel(editedTask.deptId) })) + '</div>' : '')
-      +   '<input' + lock + ' id="newTaskTitleInput" class="bare-field" data-form="newTaskForm" data-field="title" value="' + esc(f.title) + '" placeholder="' + T('Task title') + '" aria-label="' + T('Title') + '" style="height:40px; padding:0; border:none; font-size:20px; font-weight:600; letter-spacing:-0.01em; background:transparent; color:' + c.onSurface + ';"></input>'
-      +   '<textarea' + lock + ' id="newTaskDescInput" class="bare-field autosize" data-form="newTaskForm" data-field="description" rows="2" placeholder="' + T('Add a description…') + '" aria-label="' + T('Description') + '" style="min-height:44px; max-height:240px; padding:0; border:none; font-size:14px; line-height:1.6; font-family:inherit; resize:none; background:transparent; color:' + c.onSurface + ';">' + esc(f.description || '') + '</textarea>'
-      +   '<div class="task-form-chips" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">'
+    return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="closeTaskModal" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,' + (stacked ? '.24' : '.32') + '); display:flex; align-items:flex-start; justify-content:center; padding-top:12vh; z-index:55;">'
+      + '<div role="dialog" class="task-form ' + mo.card + '" data-scroll-key="' + esc('task:' + (state.editingTaskId || 'new')) + '" aria-modal="true" aria-label="' + esc(title) + '" tabindex="-1" style="' + mo.cardStyle + 'width:600px; max-width:94vw; max-height:80vh; overflow-y:auto; background:' + c.surfaceContainerHigh + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:16px; box-shadow:var(--e3);">'
+      +   '<div style="display:flex; align-items:center; gap:8px; margin:-8px -12px -8px 0;"><span class="t-title-s" style="color:' + c.onSurfaceVariant + ';">' + esc(title) + '</span>'
+      +     '<span class="interactive icon-btn" data-action="closeTaskModal" aria-label="' + T('Close') + '" style="margin-left:auto; border-radius:var(--r-full) !important; color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span></div>'
+      +   (readOnly ? '<div class="t-body-m" style="color:' + c.onSurfaceVariant + '; background:' + c.surface + '; padding:12px 16px; border-radius:var(--r-md);">' + esc(T('This task belongs to {dept}, so it is read-only for you.', { dept: nodeLabel(editedTask.deptId) })) + '</div>' : '')
+      +   '<input' + lock + ' id="newTaskTitleInput" class="bare-field" data-form="newTaskForm" data-field="title" value="' + esc(f.title) + '" placeholder="' + T('Task title') + '" aria-label="' + T('Title') + '" style="height:32px; padding:0; border:none; font-size:24px; line-height:32px; font-weight:400; background:transparent; color:' + c.onSurface + ';"></input>'
+      +   '<textarea' + lock + ' id="newTaskDescInput" class="bare-field autosize" data-form="newTaskForm" data-field="description" rows="2" placeholder="' + T('Add a description…') + '" aria-label="' + T('Description') + '" style="min-height:48px; max-height:240px; padding:0; border:none; font-size:16px; line-height:24px; font-family:inherit; resize:none; background:transparent; color:' + c.onSurface + ';">' + esc(f.description || '') + '</textarea>'
+      +   '<div class="task-form-chips" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">'
       +     statusChip + assigneeChip + priorityChip + dueChip + repeatChip + deptChip + (editing ? calChip : '')
       +   '</div>'
-      +   (current === '-1' ? '<input' + lock + ' id="newTaskAssigneeInput" data-form="newTaskForm" data-field="assignee" value="' + esc(f.assignee) + '" placeholder="' + T('Name') + '" aria-label="' + T('Assignee') + '" style="height:36px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"></input>' : '')
-      +   (f.recurrence ? '<div style="font-size:12px; line-height:1.45; color:' + c.onSurfaceVariant + ';">' + esc(T('{rule}, counting from the due date. Finishing it files the next one.', { rule: describeRepeat(f.recurrence) })) + '</div>' : '')
-      +   (editing ? '' : '<div style="padding-top:4px;">' + checklistSection(c, false, false) + '</div>')
-      +   '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:4px; padding-top:12px; border-top:1px solid ' + c.outlineVariant + ';">'
-      +     (editing && !readOnly ? '<div class="interactive" data-action="deleteTask" style="font-size:13px; font-weight:500; color:' + c.error + '; padding:6px 8px; border-radius:var(--r-sm);">' + T('Delete') + '</div>' : '<span style="font-size:12px; color:' + c.textMuted + ';">' + (readOnly ? '' : T(/Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘ Enter to save' : 'Ctrl Enter to save')) + '</span>')
-      +     '<div style="display:flex; gap:8px;">'
-      +       '<div class="interactive" data-action="closeTaskModal" style="display:flex; align-items:center; justify-content:center; height:36px; padding:0 14px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + '; font-size:13px; font-weight:500;">' + T(readOnly ? 'Close' : 'Cancel') + '</div>'
-      +       (readOnly ? '' : '<div class="interactive" data-action="saveTask" style="display:flex; align-items:center; justify-content:center; height:36px; padding:0 16px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:13px; font-weight:600;">' + (editing ? T('Save Changes') : T('Create Task')) + '</div>')
+      +   (current === '-1' ? '<input' + lock + ' id="newTaskAssigneeInput" data-form="newTaskForm" data-field="assignee" value="' + esc(f.assignee) + '" placeholder="' + T('Name') + '" aria-label="' + T('Assignee') + '" style="height:40px; padding:0 12px; border-radius:var(--r-xs); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';"></input>' : '')
+      +   (f.recurrence ? '<div class="t-body-s" style="color:' + c.onSurfaceVariant + ';">' + esc(T('{rule}, counting from the due date. Finishing it files the next one.', { rule: describeRepeat(f.recurrence) })) + '</div>' : '')
+      +   (editing ? '' : checklistSection(c, false, false))
+      +   '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px;">'
+      +     (editing && !readOnly ? '<div class="interactive text-btn t-label-l" data-action="deleteTask" style="margin-left:-12px; color:' + c.error + ';">' + T('Delete') + '</div>' : '<span class="kbd-hint t-body-s" style="color:' + c.onSurfaceVariant + ';">' + (readOnly ? '' : T(/Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘ Enter to save' : 'Ctrl Enter to save')) + '</span>')
+      +     '<div style="display:flex; gap:8px; margin-left:auto;">'
+      +       '<div class="interactive text-btn t-label-l" data-action="closeTaskModal" style="color:' + c.primary + ';">' + T(readOnly ? 'Close' : 'Cancel') + '</div>'
+      +       (readOnly ? '' : '<div class="interactive t-label-l" data-action="saveTask" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 24px; border-radius:var(--r-full); background:' + c.primary + '; color:' + c.onPrimary + ';">' + (editing ? T('Save Changes') : T('Create Task')) + '</div>')
       +     '</div>'
       +   '</div>'
       + '</div></div>';
@@ -4074,18 +4120,18 @@
 
   function repeatControl(f, c, lock) {
     var r = parseRepeat(f.recurrence);
-    var fieldStyle = 'height:38px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';';
+    var fieldStyle = 'height:40px; padding:0 12px; border-radius:var(--r-xs); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';';
     var opts = REPEAT_OPTIONS.map(function (o) {
       return '<option value="' + o[0] + '"' + (o[0] === r.freq ? ' selected' : '') + '>' + o[1] + '</option>';
     }).join('') + (r.freq === 'custom' ? '<option value="custom" selected>' + T('Custom (set on a phone)') + '</option>' : '');
     var select = mSelectFrom('<select' + lock + ' id="newTaskRepeatSelect" style="' + fieldStyle + '">' + opts + '</select>', c);
     if (!REPEAT_UNITS[r.freq]) return select;
     var unit = REPEAT_UNITS[r.freq];
-    return '<div style="display:flex; gap:6px; align-items:center;">'
+    return '<div style="display:flex; gap:8px; align-items:center;">'
       + '<div style="flex:1; min-width:0;">' + select.replace('style="', 'style="width:100%; ') + '</div>'
-      + (LANG === 'ko' ? '' : '<span style="font-size:12px; color:' + c.onSurfaceVariant + ';">every</span>')
-      + '<input' + lock + ' id="newTaskRepeatInterval" type="number" min="1" max="999" value="' + r.interval + '" aria-label="' + T('Repeat every how many ' + unit[1]) + '" style="width:52px; ' + fieldStyle + ' padding:0 6px;"></input>'
-      + (LANG === 'ko' ? '<span style="font-size:12px; color:' + c.onSurfaceVariant + '; white-space:nowrap;">' + { day: '일', week: '주', month: '개월', year: '년' }[unit[0]] + '마다</span>' : '')
+      + (LANG === 'ko' ? '' : '<span class="t-body-m" style="color:' + c.onSurfaceVariant + ';">every</span>')
+      + '<input' + lock + ' id="newTaskRepeatInterval" type="number" min="1" max="999" value="' + r.interval + '" aria-label="' + T('Repeat every how many ' + unit[1]) + '" style="width:56px; ' + fieldStyle + ' padding:0 8px;"></input>'
+      + (LANG === 'ko' ? '<span class="t-body-m" style="color:' + c.onSurfaceVariant + '; white-space:nowrap;">' + { day: '일', week: '주', month: '개월', year: '년' }[unit[0]] + '마다</span>' : '')
       + '</div>';
   }
 
@@ -4098,34 +4144,34 @@
     var done = items.filter(function (x) { return x.done; }).length;
     var rows = items.map(function (it, i) {
       var box = editing
-        ? '<input type="checkbox"' + (readOnly ? ' disabled' : '') + ' data-action="toggleChecklistItem" data-id="' + it.id + '"' + (it.done ? ' checked' : '') + ' aria-label="' + esc(it.body) + '" style="flex-shrink:0;"></input>'
-        : '<span style="width:6px; height:6px; border-radius:50%; background:' + c.outline + '; flex-shrink:0; margin:0 5px;"></span>';
+        ? '<label class="cb-target"><input type="checkbox"' + (readOnly ? ' disabled' : '') + ' data-action="toggleChecklistItem" data-id="' + it.id + '"' + (it.done ? ' checked' : '') + ' aria-label="' + esc(it.body) + '"></input></label>'
+        : '<span class="cb-target"><span style="width:6px; height:6px; border-radius:50%; background:' + c.outline + ';"></span></span>';
       var tools = readOnly ? '' : (
         (editing && items.length > 1
-          ? '<span class="interactive checklist-tool" data-action="moveChecklistUp" data-id="' + it.id + '" title="' + T('Move up') + '"' + (i === 0 ? ' style="visibility:hidden;"' : '') + '>' + '<svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12l5-5 5 5"></path></svg></span>'
-          + '<span class="interactive checklist-tool" data-action="moveChecklistDown" data-id="' + it.id + '" title="' + T('Move down') + '"' + (i === items.length - 1 ? ' style="visibility:hidden;"' : '') + '>' + '<svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 8l5 5 5-5"></path></svg></span>'
+          ? '<span class="interactive checklist-tool" data-action="moveChecklistUp" data-id="' + it.id + '" title="' + T('Move up') + '"' + (i === 0 ? ' style="visibility:hidden;"' : '') + '>' + '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 12l5-5 5 5"></path></svg></span>'
+          + '<span class="interactive checklist-tool" data-action="moveChecklistDown" data-id="' + it.id + '" title="' + T('Move down') + '"' + (i === items.length - 1 ? ' style="visibility:hidden;"' : '') + '>' + '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 8l5 5 5-5"></path></svg></span>'
           : '')
         + '<span class="interactive checklist-tool" data-action="deleteChecklistItem" data-id="' + it.id + '" title="' + T('Remove') + '">' + ICON.close + '</span>');
-      return '<div class="checklist-row' + oneShotClass('check:' + it.id) + '" style="display:flex; align-items:center; gap:9px; padding:5px 2px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">'
+      return '<div class="checklist-row' + oneShotClass('check:' + it.id) + '" style="display:flex; align-items:center; gap:4px; min-height:40px; margin-left:-12px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">'
         + box
-        + '<span style="flex:1; min-width:0; font-size:13px; line-height:1.4; overflow-wrap:anywhere; color:' + (it.done ? c.onSurfaceVariant : c.onSurface) + '; text-decoration:' + (it.done ? 'line-through' : 'none') + ';">' + esc(it.body) + '</span>'
+        + '<span class="t-body-m" style="flex:1; min-width:0; padding:8px 0; overflow-wrap:anywhere; color:' + (it.done ? c.onSurfaceVariant : c.onSurface) + '; text-decoration:' + (it.done ? 'line-through' : 'none') + ';">' + esc(it.body) + '</span>'
         + tools
         + '</div>';
     }).join('');
     var pct = items.length ? Math.round(done / items.length * 100) : 0;
-    return '<div style="display:flex; flex-direction:column; gap:4px;">'
-      + '<div style="display:flex; align-items:center; gap:8px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Checklist') + '</label>'
-      +   (items.length && editing ? '<span style="font-size:12px; font-weight:600; color:' + c.onSurfaceVariant + ';">' + done + '/' + items.length + '</span>'
+    return '<div style="display:flex; flex-direction:column; gap:0;">'
+      + '<div style="display:flex; align-items:center; gap:12px; min-height:40px;"><label class="t-title-m" style="color:' + c.onSurface + ';">' + T('Checklist') + '</label>'
+      +   (items.length && editing ? '<span class="t-label-m tnum" style="color:' + c.onSurfaceVariant + ';">' + done + '/' + items.length + '</span>'
           + '<span style="flex:1; height:4px; border-radius:2px; background:' + c.surfaceContainerHigh + '; overflow:hidden;"><span style="display:block; height:100%; width:' + pct + '%; background:' + c.secondary + '; transition:width .3s;"></span></span>' : '')
       + '</div>'
       + rows
-      + (readOnly ? (items.length ? '' : '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T('No checklist.') + '</div>')
+      + (readOnly ? (items.length ? '' : '<div class="t-body-m" style="color:' + c.onSurfaceVariant + ';">' + T('No checklist.') + '</div>')
         // A quiet "+ Add item" line rather than a boxed field: it reads as the
         // next row of the list, and takes a border only while typing in it.
-        : '<div class="checklist-add" style="display:flex; align-items:center; gap:4px; margin-top:2px;">'
-          + '<span aria-hidden="true" style="display:flex; color:' + c.textMuted + '; padding-left:2px;">' + ICON.plus + '</span>'
-          + '<input id="checklistDraftInput" data-field="checklistDraft" value="' + esc(state.checklistDraft || '') + '" maxlength="500" placeholder="' + T('Add item') + '" aria-label="' + T('Add a step and press Enter') + '" style="flex:1; min-width:0; height:32px; padding:0 8px; border-radius:var(--r-sm); border:1px solid transparent; font-size:14px; background:transparent; color:' + c.onSurface + ';"></input>'
-          + '<div class="interactive" data-action="addChecklistItem" style="display:flex; align-items:center; justify-content:center; height:28px; padding:0 10px; border-radius:var(--r-sm); color:' + c.primary + '; font-size:13px; font-weight:500; flex-shrink:0;">' + T('Add') + '</div>'
+        : '<div class="checklist-add" style="display:flex; align-items:center; gap:4px; margin-left:-12px;">'
+          + '<span class="cb-target" aria-hidden="true" style="color:' + c.textMuted + ';">' + ICON.plus + '</span>'
+          + '<input id="checklistDraftInput" data-field="checklistDraft" value="' + esc(state.checklistDraft || '') + '" maxlength="500" placeholder="' + T('Add item') + '" aria-label="' + T('Add a step and press Enter') + '" style="flex:1; min-width:0; height:40px; padding:0 8px; margin-left:-8px; border-radius:var(--r-xs); border:1px solid transparent; font-size:14px; line-height:20px; background:transparent; color:' + c.onSurface + ';"></input>'
+          + '<div class="interactive text-btn t-label-l" data-action="addChecklistItem" style="color:' + c.primary + ';">' + T('Add') + '</div>'
           + '</div>')
       + '</div>';
   }
@@ -4154,37 +4200,37 @@
     var all = events.concat(comments).sort(function (x, y) { return new Date(x.at) - new Date(y.at); });
     var avatar = function (name, size) {
       var col = avatarColors(name, c.dark);
-      return '<span style="display:flex; align-items:center; justify-content:center; width:' + size + 'px; height:' + size + 'px; border-radius:50%; flex-shrink:0; background:' + col.bg + '; color:' + col.color + '; font-size:12px; font-weight:600;">' + esc(computeInitials(name)) + '</span>';
+      return '<span style="display:flex; align-items:center; justify-content:center; width:' + size + 'px; height:' + size + 'px; border-radius:50%; flex-shrink:0; background:' + col.bg + '; color:' + col.color + '; font-size:' + (size >= 32 ? 14 : 12) + 'px; line-height:1; font-weight:500;">' + esc(computeInitials(name)) + '</span>';
     };
     var items = all.map(function (x) {
       if (x.kind === 'event') {
-        return '<div style="display:flex; align-items:center; gap:10px; padding:4px 0 4px 8px; font-size:12px; color:' + c.textMuted + ';">'
-          + '<span aria-hidden="true" style="width:8px; height:8px; border-radius:50%; flex-shrink:0; background:' + c.outline + ';"></span>'
+        return '<div class="t-body-s" style="display:flex; align-items:center; gap:12px; min-height:24px; padding:4px 0; color:' + c.onSurfaceVariant + ';">'
+          + '<span aria-hidden="true" style="display:flex; align-items:center; justify-content:center; width:32px; flex-shrink:0;"><span style="width:8px; height:8px; border-radius:50%; background:' + c.outline + ';"></span></span>'
           + '<span style="min-width:0;">' + esc(taskEventText(x.a)) + ' · ' + esc(formatStamp(x.at)) + '</span></div>';
       }
       var cm = x.cm;
-      return '<div class="' + oneShotClass('comment:' + cm.id).trim() + '" style="display:flex; gap:10px; padding:8px 0;">'
-        + avatar(cm.authorName || '?', 24)
-        + '<div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">'
-        +   '<div style="display:flex; align-items:center; gap:8px;">'
-        +     '<span style="font-size:13px; font-weight:600;">' + esc(cm.authorName) + '</span>'
-        +     '<span style="font-size:12px; color:' + c.textMuted + ';">' + esc(formatStamp(cm.createdAt)) + '</span>'
-        +     ((cm.mine || isAdmin()) ? '<span class="interactive" data-action="deleteComment" data-id="' + cm.id + '" title="' + T('Delete comment') + '" style="margin-left:auto; display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:var(--r-sm); color:' + c.textMuted + ';">' + ICON.close + '</span>' : '')
+      return '<div class="' + oneShotClass('comment:' + cm.id).trim() + '" style="display:flex; gap:12px; padding:8px 0;">'
+        + avatar(cm.authorName || '?', 32)
+        + '<div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">'
+        +   '<div style="display:flex; align-items:center; gap:8px; min-height:32px;">'
+        +     '<span class="t-label-l">' + esc(cm.authorName) + '</span>'
+        +     '<span class="t-body-s" style="color:' + c.onSurfaceVariant + ';">' + esc(formatStamp(cm.createdAt)) + '</span>'
+        +     ((cm.mine || isAdmin()) ? '<span class="interactive icon-btn" data-action="deleteComment" data-id="' + cm.id + '" title="' + T('Delete comment') + '" aria-label="' + T('Delete comment') + '" style="margin:-4px -8px -4px auto; color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>' : '')
         +   '</div>'
-        +   '<div style="font-size:14px; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; color:' + c.onSurface + ';">' + renderCommentBody(cm.body, c) + '</div>'
+        +   '<div class="t-body-m" style="white-space:pre-wrap; overflow-wrap:anywhere; color:' + c.onSurface + ';">' + renderCommentBody(cm.body, c) + '</div>'
         + '</div></div>';
     }).join('');
     var me = state.user ? state.user.displayName : '';
-    return '<div style="display:flex; flex-direction:column; gap:2px; padding-top:16px; border-top:1px solid ' + c.outlineVariant + ';">'
-      + '<span style="font-size:14px; font-weight:600; margin-bottom:6px;">' + T('Activity') + (state.comments.length ? ' <span class="tnum" style="font-weight:400; color:' + c.textMuted + ';">· ' + T(state.comments.length === 1 ? '{n} comment' : '{n} comments', { n: state.comments.length }) + '</span>' : '') + '</span>'
-      + (all.length ? items : '<div style="font-size:13px; color:' + c.textMuted + '; padding:4px 0 8px 0;">' + T('No comments yet.') + '</div>')
+    return '<div style="display:flex; flex-direction:column; gap:4px;">'
+      + '<span class="t-title-m" style="display:flex; align-items:center; min-height:40px;">' + T('Activity') + (state.comments.length ? '&nbsp;<span class="tnum t-body-m" style="color:' + c.onSurfaceVariant + ';">· ' + T(state.comments.length === 1 ? '{n} comment' : '{n} comments', { n: state.comments.length }) + '</span>' : '') + '</span>'
+      + (all.length ? items : '<div class="t-body-m" style="color:' + c.onSurfaceVariant + ';">' + T('No comments yet.') + '</div>')
       + '</div>'
-      + '<div class="comment-composer" style="position:sticky; bottom:-28px; margin:8px -24px -28px; padding:12px 24px 20px; background:' + c.surface + '; border-top:1px solid ' + c.outlineVariant + '; display:flex; gap:10px; align-items:flex-start;">'
-      +   avatar(me || '?', 28)
-      +   '<div style="position:relative; flex:1; min-width:0; display:flex; flex-direction:column; gap:6px;">'
-      +     '<textarea id="commentDraftInput" data-field="commentDraft" rows="2" placeholder="' + T('Add a comment - type @ to notify someone') + '" aria-autocomplete="list" style="width:100%; min-height:40px; max-height:160px; padding:9px 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:1.5; font-family:inherit; resize:none; background:' + c.surface + '; color:' + c.onSurface + ';">' + esc(state.commentDraft || '') + '</textarea>'
-      +     '<div style="display:flex; align-items:center; justify-content:flex-end; gap:10px;"><span style="font-size:12px; color:' + c.textMuted + ';">' + T(/Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘ Enter to post' : 'Ctrl Enter to post') + '</span>'
-      +       '<div class="interactive" data-action="postComment" style="display:flex; align-items:center; justify-content:center; height:32px; padding:0 14px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:13px; font-weight:500; flex-shrink:0;">' + T('Post') + '</div></div>'
+      + '<div class="comment-composer" style="position:sticky; bottom:calc(-1 * var(--pad)); margin:0 calc(-1 * var(--pad)) calc(-1 * var(--pad)); padding:12px var(--pad) 16px; background:' + c.surface + '; border-top:1px solid ' + c.outlineVariant + '; display:flex; gap:12px; align-items:flex-start;">'
+      +   '<span style="padding-top:8px;">' + avatar(me || '?', 32) + '</span>'
+      +   '<div style="position:relative; flex:1; min-width:0; display:flex; flex-direction:column; gap:8px;">'
+      +     '<textarea id="commentDraftInput" data-field="commentDraft" rows="1" placeholder="' + T('Add a comment - type @ to notify someone') + '" aria-autocomplete="list" style="width:100%; min-height:48px; max-height:160px; padding:12px 16px; border-radius:var(--r-xs); border:1px solid ' + c.outline + '; font-size:16px; line-height:24px; font-family:inherit; resize:none; background:' + c.surface + '; color:' + c.onSurface + ';">' + esc(state.commentDraft || '') + '</textarea>'
+      +     '<div style="display:flex; align-items:center; justify-content:flex-end; gap:12px;"><span class="kbd-hint t-body-s" style="color:' + c.onSurfaceVariant + ';">' + T(/Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘ Enter to post' : 'Ctrl Enter to post') + '</span>'
+      +       '<div class="interactive t-label-l" data-action="postComment" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 24px; border-radius:var(--r-full); background:' + c.primary + '; color:' + c.onPrimary + '; flex-shrink:0;">' + T('Post') + '</div></div>'
       +     mentionPicker(c)
       +   '</div>'
       + '</div>';
@@ -4199,14 +4245,14 @@
     if (!list.length) return '';
     var items = list.map(function (m, i) {
       var active = i === state.mention.index;
-      return '<div class="interactive" role="option" aria-selected="' + (active ? 'true' : 'false') + '" data-action="pickMention" data-id="' + m.id + '" style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:var(--r-sm); font-size:13px; background:' + (active ? c.primaryContainer : 'transparent') + '; color:' + (active ? c.onPrimaryContainer : c.onSurface) + ';">'
+      return '<div class="interactive t-body-m" role="option" aria-selected="' + (active ? 'true' : 'false') + '" data-action="pickMention" data-id="' + m.id + '" style="display:flex; align-items:center; gap:12px; min-height:48px; padding:0 12px; border-radius:var(--r-sm); background:' + (active ? c.primaryContainer : 'transparent') + '; color:' + (active ? c.onPrimaryContainer : c.onSurface) + ';">'
         + withImageFallback('/api/users/' + m.id + '/avatar?v=' + state.avatarVersion,
-            '<div style="width:22px; height:22px; border-radius:50%; background:' + c.tertiaryContainer + '; color:' + c.onTertiaryContainer + '; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center;">' + esc(computeInitials(m.displayName)) + '</div>', 22, '50%')
+            '<div style="width:22px; height:22px; border-radius:50%; background:' + c.tertiaryContainer + '; color:' + c.onTertiaryContainer + '; font-size:12px; font-weight:500; display:flex; align-items:center; justify-content:center;">' + esc(computeInitials(m.displayName)) + '</div>', 22, '50%')
         + '<span>' + esc(m.displayName) + '</span>'
-        + (m.deptId ? '<span style="margin-left:auto; font-size:12px; color:' + c.onSurfaceVariant + ';">' + esc(nodeLabel(m.deptId)) + '</span>' : '')
+        + (m.deptId ? '<span class="t-body-s" style="margin-left:auto; color:' + c.onSurfaceVariant + ';">' + esc(nodeLabel(m.deptId)) + '</span>' : '')
         + '</div>';
     }).join('');
-    return '<div role="listbox" aria-label="' + T('People to mention') + '" style="position:absolute; left:0; bottom:calc(100% + 6px); width:260px; max-width:100%; background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:5px; z-index:5;">' + items + '</div>';
+    return '<div role="listbox" aria-label="' + T('People to mention') + '" style="position:absolute; left:0; bottom:calc(100% + 6px); width:260px; max-width:100%; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:5;">' + items + '</div>';
   }
 
   // Comment stamps are stored UTC; show them in the reader's own time.
@@ -4223,12 +4269,12 @@
   function resetResultBox(c) {
     var r = state.resetResult;
     if (!r) return '';
-    return '<div class="' + oneShotClass('resetResult').trim() + '" style="display:flex; flex-direction:column; gap:7px; padding:13px; border-radius:var(--r-md); background:' + c.primaryContainer + '; color:' + c.onPrimaryContainer + ';">'
-      + '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:13px; font-weight:600; flex:1;">' + esc(T('Temporary password for {name}', { name: r.name })) + '</span>'
+    return '<div class="' + oneShotClass('resetResult').trim() + '" style="display:flex; flex-direction:column; gap:8px; padding:12px; border-radius:var(--r-md); background:' + c.primaryContainer + '; color:' + c.onPrimaryContainer + ';">'
+      + '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:14px; line-height:20px; font-weight:500; flex:1;">' + esc(T('Temporary password for {name}', { name: r.name })) + '</span>'
       +   '<span class="interactive" data-action="dismissResetResult" title="' + T('Done') + '" style="display:flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%;">' + ICON.close + '</span></div>'
-      + '<div style="display:flex; align-items:center; gap:8px;"><code style="flex:1; font-size:18px; letter-spacing:.06em; font-weight:600; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;">' + esc(r.temp) + '</code>'
-      +   '<span class="interactive" data-action="copyResetPassword" title="' + T('Copy') + '" style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:var(--r-sm);">' + (state.copiedToken === 'reset-pw' ? '<span class="anim-copied" style="display:flex;">' + ICON.check + '</span>' : ICON.copy) + '</span></div>'
-      + '<div style="font-size:12px; line-height:1.45;">' + T('Give it to them in person or over a trusted channel. It is shown only now. They sign in with it and are asked for a password of their own straight away; it does not work for phone sync.') + '</div>'
+      + '<div style="display:flex; align-items:center; gap:8px;"><code style="flex:1; font-size:22px; line-height:28px; letter-spacing:.06em; font-weight:500; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;">' + esc(r.temp) + '</code>'
+      +   '<span class="interactive" data-action="copyResetPassword" title="' + T('Copy') + '" style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:var(--r-sm);">' + (state.copiedToken === 'reset-pw' ? '<span class="anim-copied" style="display:flex;">' + ICON.check + '</span>' : ICON.copy) + '</span></div>'
+      + '<div style="font-size:12px; line-height:16px;">' + T('Give it to them in person or over a trusted channel. It is shown only now. They sign in with it and are asked for a password of their own straight away; it does not work for phone sync.') + '</div>'
       + '</div>';
   }
 
@@ -4246,7 +4292,7 @@
       var badgeFg = pending ? c.onErrorContainer : (disabled ? c.onSurfaceVariant : c.onSecondaryContainer);
       var badgeText = pending ? T('Waiting') : (disabled ? T('Disabled') : T('Active'));
 
-      var deptSelect = mSelectFrom('<select data-user-dept="' + u.id + '" style="height:30px; padding:0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:12px; background:' + c.surface + '; color:' + c.onSurface + ';">'
+      var deptSelect = mSelectFrom('<select data-user-dept="' + u.id + '" style="height:40px; padding:0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:12px; line-height:16px; background:' + c.surface + '; color:' + c.onSurface + ';">'
         + '<option value="">' + T('- No department -') + '</option>'
         + deptOpts.map(function (o) {
             return '<option value="' + esc(o.id) + '"' + (o.id === u.deptId ? ' selected' : '') + '>' + esc(o.label) + '</option>';
@@ -4254,27 +4300,27 @@
         + '</select>', c);
 
       var roleControl = isSelf
-        ? '<span style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + esc(T(u.role === 'admin' ? 'admin (you)' : 'member (you)')) + '</span>'
-        : '<span class="interactive" data-action="setUserRole" data-id="' + u.id + '" data-value="' + (u.role === 'admin' ? 'member' : 'admin') + '" style="font-size:12px; font-weight:500; color:' + c.primary + ';">'
+        ? '<span style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + ';">' + esc(T(u.role === 'admin' ? 'admin (you)' : 'member (you)')) + '</span>'
+        : '<span class="interactive text-btn t-label-l" data-action="setUserRole" data-id="' + u.id + '" data-value="' + (u.role === 'admin' ? 'member' : 'admin') + '" style="color:' + c.primary + ';">'
           + (u.role === 'admin' ? T('Make member') : T('Make admin')) + '</span>';
 
       var resetControl = isSelf ? ''
-        : '<span class="interactive" data-action="resetUserPassword" data-id="' + u.id + '" style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Reset password') + '</span>';
+        : '<span class="interactive text-btn t-label-l" data-action="resetUserPassword" data-id="' + u.id + '" style="color:' + c.onSurfaceVariant + ';">' + T('Reset password') + '</span>';
 
       var statusControl = pending
-        ? '<span class="interactive" data-action="approveUser" data-id="' + u.id + '" style="font-size:12px; font-weight:600; color:' + c.primary + ';">' + T('Approve') + '</span>'
+        ? '<span class="interactive text-btn t-label-l" data-action="approveUser" data-id="' + u.id + '" style="color:' + c.primary + ';">' + T('Approve') + '</span>'
         : (isSelf ? ''
-          : '<span class="interactive" data-action="setUserStatus" data-id="' + u.id + '" data-value="' + (disabled ? 'active' : 'disabled') + '" style="font-size:12px; font-weight:500; color:' + (disabled ? c.primary : c.error) + ';">'
+          : '<span class="interactive text-btn t-label-l" data-action="setUserStatus" data-id="' + u.id + '" data-value="' + (disabled ? 'active' : 'disabled') + '" style="color:' + (disabled ? c.primary : c.error) + ';">'
             + (disabled ? T('Re-enable') : T('Disable')) + '</span>');
 
-      return '<div style="display:flex; flex-direction:column; gap:7px; padding:12px 0; border-bottom:1px solid ' + c.outlineVariant + ';">'
+      return '<div style="display:flex; flex-direction:column; gap:8px; padding:12px 0; ">'
         + '<div style="display:flex; align-items:center; gap:8px;">'
-        +   '<span style="font-size:13px; font-weight:500;">' + esc(u.displayName) + '</span>'
-        +   '<span style="font-size:12px; color:' + c.onSurfaceVariant + ';">@' + esc(u.username) + '</span>'
-        +   (u.mustChangePassword ? '<span style="margin-left:auto; font-size:12px; font-weight:600; padding:2px 8px; border-radius:var(--r-sm); background:' + c.tertiaryContainer + '; color:' + c.onTertiaryContainer + ';">' + T('Needs new password') + '</span>' : '')
-        +   '<span style="' + (u.mustChangePassword ? '' : 'margin-left:auto; ') + 'font-size:12px; font-weight:600; padding:2px 8px; border-radius:var(--r-sm); background:' + badgeBg + '; color:' + badgeFg + ';">' + badgeText + '</span>'
+        +   '<span style="font-size:14px; line-height:20px; font-weight:500;">' + esc(u.displayName) + '</span>'
+        +   '<span style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + ';">@' + esc(u.username) + '</span>'
+        +   (u.mustChangePassword ? '<span style="margin-left:auto; font-size:12px; line-height:16px; font-weight:500; padding:4px 8px; border-radius:var(--r-sm); background:' + c.tertiaryContainer + '; color:' + c.onTertiaryContainer + ';">' + T('Needs new password') + '</span>' : '')
+        +   '<span style="' + (u.mustChangePassword ? '' : 'margin-left:auto; ') + 'font-size:12px; line-height:16px; font-weight:500; padding:4px 8px; border-radius:var(--r-sm); background:' + badgeBg + '; color:' + badgeFg + ';">' + badgeText + '</span>'
         + '</div>'
-        + '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">'
+        + '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">'
         +   deptSelect
         +   '<span style="display:flex; align-items:center; gap:12px; margin-left:auto; flex-wrap:wrap; justify-content:flex-end;">' + roleControl + resetControl + statusControl + '</span>'
         + '</div>'
@@ -4283,16 +4329,16 @@
 
     var waiting = pendingUserCount();
     return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="closeUsers" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:50;">'
-      + '<div role="dialog" data-scroll-key="accounts" aria-modal="true" aria-label="' + esc(T('Accounts')) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:520px; max-width:94vw; max-height:88vh; overflow-y:auto; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:10px; box-shadow:var(--e3);">'
-      +   '<span style="font-size:18px; font-weight:600;">' + T('Accounts') + '</span>'
-      +   '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">'
+      + '<div role="dialog" data-scroll-key="accounts" aria-modal="true" aria-label="' + esc(T('Accounts')) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:520px; max-width:94vw; max-height:calc(88vh / var(--zoom, 1)); overflow-y:auto; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:8px; box-shadow:var(--e3);">'
+      +   '<span style="font-size:24px; line-height:32px; font-weight:400;">' + T('Accounts') + '</span>'
+      +   '<div style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + ';">'
       +     (waiting > 0 ? T(waiting === 1 ? '{n} account waiting for approval.' : '{n} accounts waiting for approval.', { n: waiting }) + ' ' : '')
       +     T('A member can only add or change work in their own department, so give each person a department before approving them.')
       +   '</div>'
       +   resetResultBox(c)
-      +   (state.users.length === 0 ? '<div style="font-size:13px; color:' + c.onSurfaceVariant + '; padding:12px 0;">' + T('No accounts yet.') + '</div>' : rows)
+      +   (state.users.length === 0 ? '<div style="font-size:14px; line-height:20px; color:' + c.onSurfaceVariant + '; padding:12px 0;">' + T('No accounts yet.') + '</div>' : rows)
       +   '<div style="display:flex; justify-content:flex-end; margin-top:8px;">'
-      +     '<div class="interactive" data-action="closeUsers" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 20px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; font-weight:600;">' + T('Done') + '</div>'
+      +     '<div class="interactive" data-action="closeUsers" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 20px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; line-height:20px; font-weight:500;">' + T('Done') + '</div>'
       +   '</div>'
       + '</div></div>';
   }
@@ -4554,7 +4600,7 @@
       + '<div role="dialog" aria-modal="true" aria-label="' + esc(T('How to use {app}', { app: state.appName })) + '" tabindex="-1" class="guide-card ' + mo.card + '" style="' + mo.cardStyle + 'background:' + c.surface + '; color:' + c.onSurface + '; --guide-rule:' + c.outlineVariant + '; --guide-code-bg:' + c.surfaceContainerHigh + ';">'
       +   '<div style="display:flex; align-items:center; gap:12px; padding:22px 24px 10px 24px;">'
       +     brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 32, 'none')
-      +     '<div style="flex:1; min-width:0;"><div style="font-size:18px; font-weight:600;">' + esc(T('How to use {app}', { app: state.appName })) + '</div>'
+      +     '<div style="flex:1; min-width:0;"><div style="font-size:20px; font-weight:500;">' + esc(T('How to use {app}', { app: state.appName })) + '</div>'
       +       '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + esc(state.user ? state.user.displayName : '') + ' · ' + esc(guideLang() === 'ko' ? (state.user && state.user.role === 'admin' ? '관리자' : '멤버') : (state.user && state.user.role === 'admin' ? 'administrator' : 'member')) + '</div></div>'
       +     '<span class="interactive" data-action="closeGuide" title="' + T('Close') + '" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:50%; color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
       +   '</div>'
@@ -4571,7 +4617,7 @@
     var writable = canWriteDept(t.deptId);
     var maps = styleMaps(c);
     var v = taskView(t, maps, c);
-    var pencil = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 3.5l3 3L7 16l-3.5.5L4 13z"></path><path d="M11.5 5.5l3 3"></path></svg>';
+    var pencil = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 3.5l3 3L7 16l-3.5.5L4 13z"></path><path d="M11.5 5.5l3 3"></path></svg>';
 
     // With no icon yet, the same spot holds a faint placeholder that adds one.
     var smiley = '<svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="10" cy="10" r="7.5"></circle><path d="M7 12c.8 1 1.8 1.5 3 1.5s2.2-.5 3-1.5"></path><path d="M7.5 8h.01M12.5 8h.01" stroke-width="2.2"></path></svg>';
@@ -4583,8 +4629,8 @@
 
     // Properties as a two-column list, each value changeable where it is shown.
     var dot = (maps.statusStyle[t.status] || maps.statusStyle.todo).dot;
-    var fieldStyle = 'height:32px; padding:0 8px; border-radius:var(--r-sm); border:1px solid transparent; font-size:14px; background:transparent; color:' + c.onSurface + ';';
-    var plain = function (inner) { return '<span style="display:flex; align-items:center; gap:8px; min-height:32px; padding:0 8px; font-size:14px; color:' + c.onSurface + ';">' + inner + '</span>'; };
+    var fieldStyle = 'height:40px; padding:0 8px; border-radius:var(--r-xs); border:1px solid transparent; font-size:14px; line-height:20px; background:transparent; color:' + c.onSurface + ';';
+    var plain = function (inner) { return '<span class="prop-plain t-body-m" style="display:flex; align-items:center; gap:8px; min-height:40px; padding:0 8px; color:' + c.onSurface + ';">' + inner + '</span>'; };
     var statusValue = writable
       ? mSelectFrom('<select id="detailStatusSelect" aria-label="' + T('Status') + '" style="' + fieldStyle + '">'
         + EDITABLE_STATUSES.map(function (s) { return '<option value="' + s + '"' + (s === t.status ? ' selected' : '') + '>' + statusIconHtml(s, maps.statusStyle[s].dot, 14) + '<span style="margin-left:8px;">' + TAB_LABELS[s] + '</span>' + '</option>'; }).join('')
@@ -4603,7 +4649,7 @@
         + '</select>', c)
       : plain(priorityIconHtml(t.priority, v.priorityColor, c.outlineVariant) + esc(T(t.priority)));
     var dueValue = writable
-      ? '<div style="display:flex; align-items:center; gap:8px;">' + dateTriggerHtml('detail', t.dueDate, c, '').replace('border:1px solid ' + c.outline, 'border:1px solid transparent').replace('height:38px', 'height:32px; padding:0 8px') + (t.overdue ? '<span style="font-size:13px; font-weight:500; color:' + c.error + ';">' + esc(relativeDue(t.dueDate, true)) + '</span>' : '') + '</div>'
+      ? '<div style="display:flex; align-items:center; gap:8px;">' + dateTriggerHtml('detail', t.dueDate, c, '').replace('border:1px solid ' + c.outline, 'border:1px solid transparent').replace('height:40px; padding:0 12px', 'height:40px; padding:0 8px') + (t.overdue ? '<span class="t-label-l" style="color:' + c.error + ';">' + esc(relativeDue(t.dueDate, true)) + '</span>' : '') + '</div>'
       : plain('<span style="color:' + v.dueColor + ';">' + esc(t.dueDate ? formatDue(t.dueDate) : T('No due date')) + '</span>');
     var repeatValue = plain(t.recurrence ? ICON.repeat + esc(describeRepeat(t.recurrence)) : '<span style="color:' + c.textMuted + ';">' + T('Does not repeat') + '</span>');
     var deptValue = writable && isAdmin()
@@ -4613,12 +4659,12 @@
         + '</select>', c)
       : plain(t.deptId ? esc(nodeLabel(t.deptId)) : '<span style="color:' + c.textMuted + ';">' + T('No department') + '</span>');
     var calValue = writable
-      ? '<label class="interactive" style="display:flex; align-items:center; gap:8px; min-height:32px; padding:0 8px; border-radius:var(--r-sm); font-size:14px; cursor:pointer;"><input type="checkbox" data-action="toggleDetailCalendar"' + (t.calendarVisible ? ' checked' : '') + '>' + T('Show in the department calendar') + '</label>'
+      ? '<label class="interactive prop-plain t-body-m" style="display:flex; align-items:center; gap:12px; min-height:40px; padding:0 8px; border-radius:var(--r-xs); cursor:pointer;"><input type="checkbox" data-action="toggleDetailCalendar"' + (t.calendarVisible ? ' checked' : '') + '>' + T('Show in the department calendar') + '</label>'
       : plain(T(t.calendarVisible ? 'Shown in calendar' : 'Not in calendar'));
     var row = function (label, value) {
-      return '<div style="display:grid; grid-template-columns:96px minmax(0,1fr); align-items:center; gap:8px;"><span style="font-size:13px; color:' + c.onSurfaceVariant + ';">' + T(label) + '</span><div style="min-width:0;">' + value + '</div></div>';
+      return '<div style="display:grid; grid-template-columns:112px minmax(0,1fr); align-items:center; gap:8px;"><span class="t-body-m" style="color:' + c.onSurfaceVariant + ';">' + T(label) + '</span><div style="min-width:0;">' + value + '</div></div>';
     };
-    var meta = '<div class="detail-props" style="display:flex; flex-direction:column; gap:2px;">'
+    var meta = '<div class="detail-props" style="display:flex; flex-direction:column; gap:0;">'
       + row('Status', statusValue) + row('Assignee', assigneeValue) + row('Priority', priorityValue)
       + row('Due Date', dueValue) + row('Repeat', repeatValue) + row('Department', deptValue) + row('Calendar', calValue)
       + '</div>';
@@ -4627,19 +4673,18 @@
     var mo = modalMotion('detail', closing);
     return '<div class="modal-overlay detail-overlay ' + mo.dim + '" data-backdrop="closeTaskDetail" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,.18); display:flex; align-items:stretch; justify-content:flex-end; z-index:50;">'
       + '<div role="dialog" id="taskDetailDialog" data-scroll-key="' + esc('detail:' + t.id) + '" aria-modal="true" aria-label="' + esc(t.title) + '" tabindex="-1" class="task-detail ' + mo.card + (state.dragOver ? ' drag-over' : '') + '" style="' + mo.cardStyle + 'background:' + c.surface + '; --drop:' + c.primary + ';">'
-      +   '<div style="display:flex; align-items:center; gap:10px;">'
-      +     '<div style="flex:1; min-width:0; display:flex; align-items:center; gap:10px; position:relative;">'
+      +   '<div style="display:flex; align-items:center; gap:4px; margin-right:-8px;">'
+      +     '<div style="flex:1; min-width:0; display:flex; align-items:center; gap:12px; position:relative;">'
       +       iconBlock
       +       ((state.iconPickerOpen || state.iconPickerClosing) && writable ? iconPicker(c, t) : '')
-      +       '<h2 style="flex:1; min-width:0; margin:0; font-size:18px; line-height:1.4; font-weight:600; overflow-wrap:anywhere; color:' + v.titleColor + '; text-decoration:' + v.titleDeco + ';">' + esc(t.title) + '</h2>'
+      +       '<h2 class="t-title-l" style="flex:1; min-width:0; margin:0; overflow-wrap:anywhere; color:' + v.titleColor + '; text-decoration:' + v.titleDeco + ';">' + esc(t.title) + '</h2>'
       +     '</div>'
-      +     (writable ? '<span class="interactive" data-action="editFromDetail" title="' + T('Edit title, description and repeat') + '" aria-label="' + T('Edit task') + '" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--r-sm); flex-shrink:0; color:' + c.onSurfaceVariant + ';">' + pencil + '</span>' : '')
-      +     '<span class="interactive" data-action="closeTaskDetail" title="' + T('Close') + '" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--r-sm); flex-shrink:0; color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
+      +     (writable ? '<span class="interactive icon-btn" data-action="editFromDetail" title="' + T('Edit title, description and repeat') + '" aria-label="' + T('Edit task') + '" style="color:' + c.onSurfaceVariant + ';">' + pencil + '</span>' : '')
+      +     '<span class="interactive icon-btn" data-action="closeTaskDetail" title="' + T('Close') + '" aria-label="' + T('Close') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
       +   '</div>'
       +   meta
-      +   (writable ? '' : '<div style="font-size:12px; line-height:1.45; color:' + c.onSurfaceVariant + '; background:' + c.surfaceContainerHigh + '; padding:8px 11px; border-radius:var(--r-sm);">This task belongs to ' + esc(nodeLabel(t.deptId) || 'no department') + ', so you can read and comment on it but not change it.</div>')
-      +   '<div class="detail-body" style="color:' + (t.description ? c.onSurface : c.onSurfaceVariant) + ';">' + (t.description ? linkify(t.description) : (writable ? '<span class="interactive" data-action="editFromDetail" style="display:inline-block; padding:2px 0; color:' + c.textMuted + ';">' + T('Add a description…') + '</span>' : T('No description.'))) + '</div>'
-      +   '<div style="height:1px; background:' + c.outlineVariant + ';"></div>'
+      +   (writable ? '' : '<div class="t-body-m" style="color:' + c.onSurfaceVariant + '; background:' + c.surfaceContainerHigh + '; padding:12px 16px; border-radius:var(--r-md);">This task belongs to ' + esc(nodeLabel(t.deptId) || 'no department') + ', so you can read and comment on it but not change it.</div>')
+      +   '<div class="detail-body" style="color:' + (t.description ? c.onSurface : c.onSurfaceVariant) + ';">' + (t.description ? linkify(t.description) : (writable ? '<span class="interactive" data-action="editFromDetail" style="display:inline-block; color:' + c.textMuted + ';">' + T('Add a description…') + '</span>' : T('No description.'))) + '</div>'
       +   checklistSection(c, true, !writable)
       +   attachmentsSection(c, writable)
       // Who made it and when it last changed are in the timeline now.
@@ -4674,10 +4719,10 @@
     var exit = motion('icon:out', closing, 'dropdown-out', ICON_PICKER_OUT_MS, true);
     var m = closing ? exit : enter;
     return '<div class="icon-picker ' + m.cls + '" data-dropdown="icon" style="' + m.style + 'background:' + c.surface + '; border:1px solid ' + c.outlineVariant + ';">'
-      + '<div style="display:flex; align-items:center; gap:10px; padding:2px 4px 8px 4px;">'
-      +   '<span style="font-size:12px; font-weight:600; flex:1;">' + T('Icon') + '</span>'
-      +   '<span class="interactive" data-action="uploadTaskIcon" style="font-size:12px; font-weight:600; color:' + c.primary + ';">' + T('Upload image') + '</span>'
-      +   (t.icon ? '<span class="interactive" data-action="removeTaskIcon" style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Remove') + '</span>' : '')
+      + '<div style="display:flex; align-items:center; gap:4px; padding:0 0 8px 4px;">'
+      +   '<span class="t-title-s" style="flex:1;">' + T('Icon') + '</span>'
+      +   '<span class="interactive text-btn t-label-l" data-action="uploadTaskIcon" style="color:' + c.primary + ';">' + T('Upload image') + '</span>'
+      +   (t.icon ? '<span class="interactive text-btn t-label-l" data-action="removeTaskIcon" style="color:' + c.onSurfaceVariant + ';">' + T('Remove') + '</span>' : '')
       + '</div>'
       + '<div class="emoji-tabs" style="border-bottom:1px solid ' + c.outlineVariant + ';">' + tabs + '</div>'
       + '<div class="emoji-grid" data-scroll-key="emoji-grid">' + grid + '</div>'
@@ -4704,23 +4749,23 @@
       return '<div class="att-row' + oneShotClass('att:' + a.id) + '" style="border:1px solid ' + c.outlineVariant + ';">'
         + '<span style="color:' + c.primary + '; display:flex;">' + fileIcon() + '</span>'
         + '<a href="/api/attachments/' + a.id + '?download=1" download="' + esc(a.name) + '" style="flex:1; min-width:0; color:' + c.onSurface + '; text-decoration:none;">'
-        +   '<div style="font-size:13px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(a.name) + '</div>'
-        +   '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + formatBytes(a.size) + ' &middot; ' + esc(a.uploaderName) + ' &middot; ' + esc(formatStamp(a.createdAt)) + '</div>'
+        +   '<div class="t-label-l" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(a.name) + '</div>'
+        +   '<div class="t-body-s" style="color:' + c.onSurfaceVariant + ';">' + formatBytes(a.size) + ' &middot; ' + esc(a.uploaderName) + ' &middot; ' + esc(formatStamp(a.createdAt)) + '</div>'
         + '</a>'
         + del(a)
         + '</div>';
     }).join('');
-    var busy = state.uploading > 0 ? '<span style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T(state.uploading === 1 ? 'Uploading {n} file…' : 'Uploading {n} files…', { n: state.uploading }) + '</span>' : '';
+    var busy = state.uploading > 0 ? '<span class="t-body-s" style="color:' + c.onSurfaceVariant + ';">' + T(state.uploading === 1 ? 'Uploading {n} file…' : 'Uploading {n} files…', { n: state.uploading }) + '</span>' : '';
     return '<div style="display:flex; flex-direction:column; gap:8px;">'
-      + '<div style="display:flex; align-items:center; gap:10px;">'
-      +   '<label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Attachments') + (state.attachments.length ? ' (' + state.attachments.length + ')' : '') + '</label>'
+      + '<div style="display:flex; align-items:center; gap:12px; min-height:40px;">'
+      +   '<label class="t-title-m" style="color:' + c.onSurface + ';">' + T('Attachments') + (state.attachments.length ? ' (' + state.attachments.length + ')' : '') + '</label>'
       +   busy
-      +   (writable ? '<span class="interactive" data-action="pickAttachments" style="margin-left:auto; font-size:13px; font-weight:600; color:' + c.primary + ';">' + T('+ Add files') + '</span>' : '')
+      +   (writable ? '<span class="interactive text-btn t-label-l" data-action="pickAttachments" style="margin-left:auto; margin-right:-12px; color:' + c.primary + ';">' + T('+ Add files') + '</span>' : '')
       + '</div>'
       + (tiles ? '<div class="att-grid">' + tiles + '</div>' : '')
       + rows
       + (!state.attachments.length
-          ? '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + (writable ? T('No files yet. Drop files here, paste an image, or use Add files (up to 20 MB each).') : T('No files.')) + '</div>'
+          ? '<div class="t-body-m" style="color:' + c.onSurfaceVariant + ';">' + (writable ? T('No files yet. Drop files here, paste an image, or use Add files (up to 20 MB each).') : T('No files.')) + '</div>'
           : '')
       + '</div>';
   }
@@ -4743,20 +4788,20 @@
     var f = state.pwForm;
     var field = function (id, key, label, value, auto) {
       label = T(label);
-      return '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + label + '</label>'
-        + '<input id="' + id + '" type="password" data-form="pwForm" data-field="' + key + '" value="' + esc(value) + '" autocomplete="' + auto + '" style="height:40px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>';
+      return '<div style="display:flex; flex-direction:column; gap:4px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + label + '</label>'
+        + '<input id="' + id + '" type="password" data-form="pwForm" data-field="' + key + '" value="' + esc(value) + '" autocomplete="' + auto + '" style="height:40px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>';
     };
     return field('pwCurrentInput', 'current', forced ? 'Temporary password' : 'Current password', f.current, 'current-password')
       + field('pwNewInput', 'next', 'New password (at least 8 characters)', f.next, 'new-password')
       + field('pwConfirmInput', 'confirm', 'New password again', f.confirm, 'new-password')
-      + (state.pwError ? '<div role="alert" style="font-size:13px; color:' + c.error + ';">' + esc(state.pwError) + '</div>' : '');
+      + (state.pwError ? '<div role="alert" style="font-size:14px; line-height:20px; color:' + c.error + ';">' + esc(state.pwError) + '</div>' : '');
   }
 
   function passwordModal(c) {
     if (state.passwordModalPhase === 'closed') return '';
     return modalShell('password', state.passwordModalPhase, c, 'Change password', 400,
-      '<span style="font-size:18px; font-weight:600;">' + T('Change password') + '</span>'
-      + '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('Your other sign-ins - other browsers and phones using this password - are signed out. App passwords for phone sync keep working.') + '</div>'
+      '<span style="font-size:24px; line-height:32px; font-weight:400;">' + T('Change password') + '</span>'
+      + '<div style="font-size:14px; line-height:20px; color:' + c.onSurfaceVariant + ';">' + T('Your other sign-ins - other browsers and phones using this password - are signed out. App passwords for phone sync keep working.') + '</div>'
       + passwordFields(c, false)
       + '<div style="display:flex; justify-content:flex-end; gap:8px; margin-top:4px;">' + pillButton('closePasswordModal', 'Cancel', c, false) + pillButton('submitPasswordChange', 'Change password', c, true) + '</div>');
   }
@@ -4768,9 +4813,9 @@
     var vars = Object.keys(c).map(function (k) { return '--' + k.replace(/([A-Z])/g, '-$1').toLowerCase() + ':' + c[k] + ';'; }).join('');
     try { document.body.style.background = c.surfaceContainerLow; } catch (e) {}
     try { document.documentElement.setAttribute('data-theme', c.dark ? 'dark' : 'light'); } catch (e) {}
-    return '<div style="' + vars + 'min-height:100vh; display:flex; align-items:center; justify-content:center; background:' + c.surfaceContainerLow + '; color:' + c.onSurface + ';">'
+    return '<div style="' + vars + 'min-height:calc(100vh / var(--zoom, 1)); display:flex; align-items:center; justify-content:center; background:' + c.surfaceContainerLow + '; color:' + c.onSurface + ';">'
       + '<div class="auth-card" role="dialog" aria-label="' + T('Choose a new password') + '" style="width:400px; max-width:92vw; background:' + c.surface + '; border-radius:var(--r-lg); padding:30px; box-shadow:var(--e2); display:flex; flex-direction:column; gap:14px;">'
-      +   '<div style="display:flex; align-items:center; gap:10px;">' + brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 36, false) + '<div style="font-size:18px; font-weight:600;">' + T('Choose a new password') + '</div></div>'
+      +   '<div style="display:flex; align-items:center; gap:10px;">' + brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 36, false) + '<div style="font-size:20px; font-weight:500;">' + T('Choose a new password') + '</div></div>'
       +   '<div style="font-size:13px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('An administrator reset the password for {name}. Enter the temporary password you were given, then one of your own.', { name: '<b>' + esc(state.user.displayName) + '</b>' }) + '</div>'
       +   passwordFields(c, true)
       +   '<div class="interactive" data-action="submitPasswordChange" style="height:44px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:14px;">' + T('Set password') + '</div>'
@@ -4783,7 +4828,7 @@
   function modalShell(name, phase, c, label, width, inner) {
     var mo = modalMotion(name, phase === 'closing');
     return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="' + BACKDROP_CLOSERS[name] + '" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:50;">'
-      + '<div role="dialog" data-scroll-key="' + name + '" aria-modal="true" aria-label="' + esc(T(label)) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:' + width + 'px; max-width:94vw; max-height:88vh; overflow-y:auto; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:12px; box-shadow:var(--e3);">'
+      + '<div role="dialog" data-scroll-key="' + name + '" aria-modal="true" aria-label="' + esc(T(label)) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:' + width + 'px; max-width:94vw; max-height:88vh; overflow-y:auto; background:' + c.surfaceContainerHigh + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:16px; box-shadow:var(--e3);">'
       + inner
       + '</div></div>';
   }
@@ -4791,10 +4836,10 @@
   // Light / Dark / System, as one segmented control.
   function themeSegmented(c) {
     var opts = [['light', 'Light', ICON.themeLight], ['dark', 'Dark', ICON.themeDark], ['system', 'System', ICON.themeSystem]];
-    return '<div role="radiogroup" aria-label="' + T('Theme') + '" style="display:flex; gap:2px; padding:3px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + ';">'
+    return '<div role="radiogroup" aria-label="' + T('Theme') + '" style="display:flex; height:40px; box-sizing:content-box; border:1px solid ' + c.outline + '; border-radius:var(--r-full); overflow:hidden;">'
       + opts.map(function (o) {
           var on = state.themeMode === o[0];
-          return '<span class="interactive" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setThemeMode" data-id="' + o[0] + '" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; height:28px; border-radius:4px; font-size:12px; font-weight:' + (on ? 600 : 400) + '; color:' + (on ? c.onSurface : c.onSurfaceVariant) + '; background:' + (on ? c.surface : 'transparent') + ';' + (on ? ' box-shadow:var(--e1);' : '') + '">' + o[2] + T(o[1]) + '</span>';
+          return '<span class="interactive t-label-l" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setThemeMode" data-id="' + o[0] + '" style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; color:' + (on ? c.onSecondaryContainer : c.onSurface) + '; background:' + (on ? c.secondaryContainer : 'transparent') + ';' + (o[0] !== 'light' ? ' border-left:1px solid ' + c.outline + ';' : '') + '">' + o[2] + T(o[1]) + '</span>';
         }).join('')
       + '</div>';
   }
@@ -4813,6 +4858,7 @@
   // open their own dialogs, on top of this one.
   function openSettings() {
     closeDropdowns();
+    focusDialogOnNextRender();
     setState({ settingsPhase: 'open', settingsSection: state.settingsSection || 'profile', displayNameDraft: state.user.displayName, appNameDraft: state.appName });
   }
   function closeSettings() {
@@ -4827,38 +4873,38 @@
     if (isAdmin()) sections = sections.concat([['workspace', 'Workspace'], ['accounts', 'Accounts'], ['maintenance', 'Reminders and backups']]);
     var navItem = function (x) {
       var on = sec === x[0];
-      return '<span class="interactive" data-action="setSettingsSection" data-id="' + x[0] + '" style="display:flex; align-items:center; height:32px; padding:0 10px; border-radius:var(--r-sm); font-size:13px; white-space:nowrap; font-weight:' + (on ? 600 : 400) + '; color:' + (on ? c.onSurface : c.onSurfaceVariant) + '; background:' + (on ? c.surfaceContainerHigh : 'transparent') + ';">' + T(x[1]) + '</span>';
+      return '<span class="interactive t-label-l" data-action="setSettingsSection" data-id="' + x[0] + '" style="display:flex; align-items:center; flex-shrink:0; height:48px; padding:0 16px; border-radius:var(--r-full); white-space:nowrap; color:' + (on ? c.onSecondaryContainer : c.onSurfaceVariant) + '; background:' + (on ? c.secondaryContainer : 'transparent') + ';">' + T(x[1]) + '</span>';
     };
-    var label = function (t) { return '<div style="font-size:13px; font-weight:500; color:' + c.onSurface + '; margin-bottom:6px;">' + T(t) + '</div>'; };
-    var help = function (t) { return '<div style="font-size:13px; line-height:1.5; color:' + c.onSurfaceVariant + '; margin:-2px 0 10px;">' + T(t) + '</div>'; };
-    var field = 'flex:1; min-width:0; height:36px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';';
-    var btn = function (action, text, primary) { return '<span class="interactive" data-action="' + action + '" style="display:inline-flex; align-items:center; justify-content:center; height:36px; padding:0 14px; border-radius:var(--r-sm); font-size:13px; font-weight:500; white-space:nowrap;' + (primary ? ' background:' + c.primary + '; color:' + c.onPrimary + ';' : ' border:1px solid ' + c.outline + '; color:' + c.onSurface + ';') + '">' + T(text) + '</span>'; };
+    var label = function (t) { return '<div class="t-title-s" style="color:' + c.onSurface + '; margin-bottom:8px;">' + T(t) + '</div>'; };
+    var help = function (t) { return '<div class="t-body-m" style="color:' + c.onSurfaceVariant + '; margin:-4px 0 12px;">' + T(t) + '</div>'; };
+    var field = 'flex:1; min-width:0; height:40px; padding:0 16px; border-radius:var(--r-xs); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surfaceContainerHigh + '; color:' + c.onSurface + ';';
+    var btn = function (action, text, primary) { return '<span class="interactive t-label-l" data-action="' + action + '" style="display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; height:40px; padding:0 24px; border-radius:var(--r-full); white-space:nowrap;' + (primary ? ' background:' + c.primary + '; color:' + c.onPrimary + ';' : ' border:1px solid ' + c.outline + '; color:' + c.primary + ';') + '">' + T(text) + '</span>'; };
     var row = function (title, desc, control) {
-      return '<div style="display:flex; align-items:center; gap:16px; padding:14px 0; border-bottom:1px solid ' + c.outlineVariant + ';"><div style="flex:1; min-width:0;"><div style="font-size:14px; font-weight:500;">' + T(title) + '</div>' + (desc ? '<div style="font-size:13px; line-height:1.45; color:' + c.onSurfaceVariant + '; margin-top:2px;">' + T(desc) + '</div>' : '') + '</div>' + control + '</div>';
+      return '<div style="display:flex; align-items:center; gap:16px; min-height:72px; padding:8px 0;"><div style="flex:1; min-width:0;"><div class="t-body-l">' + T(title) + '</div>' + (desc ? '<div class="t-body-m" style="color:' + c.onSurfaceVariant + ';">' + T(desc) + '</div>' : '') + '</div>' + control + '</div>';
     };
     var body = '';
     if (sec === 'profile') {
       var col = avatarColors(state.user.displayName, c.dark);
-      body = '<div style="display:flex; align-items:center; gap:14px; margin-bottom:20px;">' + avatarHtml(col.bg, col.color, 56)
+      body = '<div style="display:flex; align-items:center; gap:16px; margin-bottom:24px;">' + avatarHtml(col.bg, col.color, 56)
         + '<div style="display:flex; gap:8px;">' + btn('pickAvatar', 'Change photo') + btn('removeAvatar', 'Remove') + '</div></div>'
         + label('Display name')
         + '<div style="display:flex; gap:8px;"><input id="displayNameInput" data-field="displayNameDraft" value="' + esc(state.displayNameDraft) + '" maxlength="60" style="' + field + '">' + btn('saveDisplayName', 'Save', true) + '</div>'
-        + '<div style="font-size:13px; color:' + c.onSurfaceVariant + '; margin-top:14px;">@' + esc(state.user.username) + ' · ' + esc(T(state.user.role)) + '</div>';
+        + '<div class="t-body-m" style="color:' + c.onSurfaceVariant + '; margin-top:16px;">@' + esc(state.user.username) + ' · ' + esc(T(state.user.role)) + '</div>';
     } else if (sec === 'appearance') {
-      body = label('Theme') + '<div style="max-width:360px; margin-bottom:22px;">' + themeSegmented(c) + '</div>'
+      body = label('Theme') + '<div style="max-width:360px; margin-bottom:24px;">' + themeSegmented(c) + '</div>'
         + label('Accent colour') + help('Used for the main button, the selected item and focus rings.')
-        + '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">' + accentControls(c) + '</div>';
+        + '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' + accentControls(c) + '</div>';
     } else if (sec === 'security') {
       body = row('Password', 'Change the password you sign in with.', btn('openPasswordModal', 'Change password'))
         + row('Phone sync', 'App passwords for Apple Reminders and other CalDAV clients.', btn('openAppPasswords', 'Manage'));
     } else if (sec === 'notifications') {
       body = row('Desktop alerts', typeof window.Notification === 'function' ? 'Alerts when this tab is in the background.' : 'This browser cannot show desktop alerts here (they need HTTPS).',
-        typeof window.Notification === 'function' ? '<label class="interactive" style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;"><input type="checkbox" data-action="toggleDesktopAlerts"' + (state.desktopAlerts ? ' checked' : '') + '>' + T('On') + '</label>' : '');
+        typeof window.Notification === 'function' ? '<label class="interactive t-label-l" style="display:flex; align-items:center; gap:4px; min-height:40px; padding-right:12px; border-radius:var(--r-full); cursor:pointer;"><span class="cb-target"><input type="checkbox" data-action="toggleDesktopAlerts"' + (state.desktopAlerts ? ' checked' : '') + '></span>' + T('On') + '</label>' : '');
     } else if (sec === 'workspace') {
       body = label('App name')
-        + '<div style="display:flex; gap:8px; margin-bottom:22px;"><input id="appNameInput" data-field="appNameDraft" value="' + esc(state.appNameDraft) + '" maxlength="60" style="' + field + '">' + btn('saveAppName', 'Save', true) + '</div>'
+        + '<div style="display:flex; gap:8px; margin-bottom:24px;"><input id="appNameInput" data-field="appNameDraft" value="' + esc(state.appNameDraft) + '" maxlength="60" style="' + field + '">' + btn('saveAppName', 'Save', true) + '</div>'
         + label('App icon') + help('Also used as the browser tab icon.')
-        + '<div style="display:flex; align-items:center; gap:14px;">' + brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 48, false) + '<div style="display:flex; gap:8px;">' + btn('pickAppIcon', 'Upload image') + btn('removeAppIcon', 'Use the default icon') + '</div></div>';
+        + '<div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">' + brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 48, false) + '<div style="display:flex; gap:8px;">' + btn('pickAppIcon', 'Upload image') + btn('removeAppIcon', 'Use the default icon') + '</div></div>';
     } else if (sec === 'accounts') {
       var pending = pendingUserCount();
       body = row('Accounts', pending ? T('{n} waiting for approval', { n: pending }) : 'Approve sign-ups, change roles and departments, reset passwords.', btn('openUsers', 'Open'));
@@ -4868,101 +4914,101 @@
     }
     var current = sections.filter(function (x) { return x[0] === sec; })[0] || sections[0];
     return modalShell('settings', state.settingsPhase, c, 'Settings', 760,
-      '<div class="settings-layout" style="display:flex; gap:24px; min-height:420px;">'
-      + '<div class="settings-nav" style="width:180px; flex-shrink:0; display:flex; flex-direction:column; gap:2px; padding-right:16px; border-right:1px solid ' + c.outlineVariant + ';">'
-      +   '<div style="font-size:18px; font-weight:600; padding:2px 10px 12px;">' + T('Settings') + '</div>'
+      '<div class="settings-layout" style="display:flex; gap:24px; min-height:432px;">'
+      + '<div class="settings-nav" style="width:200px; flex-shrink:0; display:flex; flex-direction:column; gap:0; margin-left:-12px;">'
+      +   '<div class="t-headline-s" style="padding:0 16px 16px;">' + T('Settings') + '</div>'
       +   sections.map(navItem).join('')
       + '</div>'
       + '<div style="flex:1; min-width:0;">'
-      +   '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;"><h2 style="margin:0; font-size:18px; font-weight:600;">' + T(current[1]) + '</h2>'
-      +     '<span class="interactive" data-action="closeSettings" aria-label="' + T('Close') + '" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span></div>'
+      +   '<div style="display:flex; align-items:center; justify-content:space-between; margin:-4px -12px 16px 0;"><h2 class="t-title-l" style="margin:0;">' + T(current[1]) + '</h2>'
+      +     '<span class="interactive icon-btn" data-action="closeSettings" aria-label="' + T('Close') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span></div>'
       +   body
       + '</div></div>');
   }
 
   function pillButton(action, label, c, primary, extra) {
     label = T(label);
-    return '<div class="interactive" data-action="' + action + '"' + (extra || '') + ' style="display:flex; align-items:center; justify-content:center; height:38px; padding:0 18px; border-radius:var(--r-sm); font-size:13px; font-weight:600; flex-shrink:0; '
-      + (primary ? 'background:' + c.primary + '; color:' + c.onPrimary + ';' : 'color:' + c.onSurfaceVariant + ';') + '">' + label + '</div>';
+    return '<div class="interactive t-label-l" data-action="' + action + '"' + (extra || '') + ' style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 ' + (primary ? 24 : 12) + 'px; border-radius:var(--r-full); flex-shrink:0; '
+      + (primary ? 'background:' + c.primary + '; color:' + c.onPrimary + ';' : 'color:' + c.primary + ';') + '">' + label + '</div>';
   }
 
   function trashModal(c) {
     if (state.trashModalPhase === 'closed') return '';
     var rows = state.trash.map(function (t) {
-      return '<div class="' + oneShotClass('trashLeave:' + t.id).trim() + '" style="display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid ' + c.outlineVariant + ';">'
+      return '<div class="' + oneShotClass('trashLeave:' + t.id).trim() + '" style="display:flex; align-items:center; gap:12px; padding:12px 0; ">'
         + '<div style="flex:1; min-width:0;">'
-        +   '<div style="font-size:14px; font-weight:500; overflow-wrap:anywhere;">' + esc(t.title) + '</div>'
-        +   '<div style="font-size:12px; color:' + c.onSurfaceVariant + '; margin-top:2px;">'
+        +   '<div style="font-size:14px; line-height:20px; font-weight:500; overflow-wrap:anywhere;">' + esc(t.title) + '</div>'
+        +   '<div style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + '; margin-top:4px;">'
         +     esc(t.deptId ? nodeLabel(t.deptId) : T('No department')) + ' &middot; ' + esc(t.deletedByName ? T('deleted {when} by {name}', { when: formatStamp(t.deletedAt), name: t.deletedByName }) : T('deleted {when}', { when: formatStamp(t.deletedAt) }))
         +     ' &middot; <span style="color:' + c.tertiary + '; font-weight:500;">' + esc(daysLeft(t.purgeAt)) + '</span>'
         +   '</div>'
         + '</div>'
         + (t.canRestore
-          ? '<span class="interactive" data-action="restoreTrashed" data-id="' + t.id + '" style="font-size:13px; font-weight:600; color:' + c.primary + '; padding:6px;">' + T('Restore') + '</span>'
-            + '<span class="interactive" data-action="purgeTrashed" data-id="' + t.id + '" title="' + T('Delete for good') + '" style="font-size:13px; font-weight:500; color:' + c.error + '; padding:6px;">' + T('Delete') + '</span>'
-          : '<span style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T('Another department') + '</span>')
+          ? '<span class="interactive text-btn t-label-l" data-action="restoreTrashed" data-id="' + t.id + '" style="color:' + c.primary + ';">' + T('Restore') + '</span>'
+            + '<span class="interactive text-btn t-label-l" data-action="purgeTrashed" data-id="' + t.id + '" title="' + T('Delete for good') + '" style="color:' + c.error + ';">' + T('Delete') + '</span>'
+          : '<span style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + ';">' + T('Another department') + '</span>')
         + '</div>';
     }).join('');
     var anyRestorable = state.trash.some(function (t) { return t.canRestore; });
     return modalShell('trash', state.trashModalPhase, c, 'Trash', 520,
-      '<span style="font-size:18px; font-weight:600;">' + T('Trash') + '</span>'
-      + '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('Deleted tasks wait here for 10 days, with their comments and checklist, and are then removed for good. Restoring one puts it back where it was.') + '</div>'
-      + (state.trash.length ? rows : '<div style="font-size:13px; color:' + c.onSurfaceVariant + '; padding:18px 0;">' + T('The trash is empty.') + '</div>')
-      + '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px;">'
-      +   (anyRestorable ? '<span class="interactive" data-action="emptyTrash" style="font-size:13px; font-weight:500; color:' + c.error + '; padding:8px 6px;">' + T('Empty trash') + '</span>' : '<span></span>')
+      '<span style="font-size:24px; line-height:32px; font-weight:400;">' + T('Trash') + '</span>'
+      + '<div style="font-size:14px; line-height:20px; color:' + c.onSurfaceVariant + ';">' + T('Deleted tasks wait here for 10 days, with their comments and checklist, and are then removed for good. Restoring one puts it back where it was.') + '</div>'
+      + (state.trash.length ? rows : '<div style="font-size:14px; line-height:20px; color:' + c.onSurfaceVariant + '; padding:16px 0;">' + T('The trash is empty.') + '</div>')
+      + '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px;">'
+      +   (anyRestorable ? '<span class="interactive text-btn t-label-l" data-action="emptyTrash" style="color:' + c.error + ';">' + T('Empty trash') + '</span>' : '<span></span>')
       +   pillButton('closeTrash', 'Done', c, true)
       + '</div>');
   }
 
   function appPasswordsModal(c) {
     if (state.appPwModalPhase === 'closed') return '';
-    var code = function (v) { return '<code style="font-size:12px; padding:2px 7px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurface + ';">' + esc(v) + '</code>'; };
+    var code = function (v) { return '<code style="font-size:12px; line-height:16px; padding:4px 8px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurface + ';">' + esc(v) + '</code>'; };
     var created = state.appPwCreated;
     var createdBox = created
-      ? '<div class="' + oneShotClass('appPwNew').trim() + '" style="display:flex; flex-direction:column; gap:8px; padding:14px; border-radius:var(--r-md); background:' + c.primaryContainer + '; color:' + c.onPrimaryContainer + ';">'
-        + '<div style="font-size:13px; font-weight:600;">App password for ' + esc(created.name) + '</div>'
-        + '<div style="display:flex; align-items:center; gap:8px;"><code style="flex:1; font-size:18px; letter-spacing:.06em; font-weight:600; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap:anywhere;">' + esc(created.token) + '</code>'
-        +   '<span class="interactive" data-action="copyAppPassword" title="' + T('Copy') + '" style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:var(--r-sm);">' + (state.copiedToken === 'app-pw' ? '<span class="anim-copied" style="display:flex;">' + ICON.check + '</span>' : ICON.copy) + '</span></div>'
-        + '<div style="font-size:12px; line-height:1.45;">' + T('Enter it as the password on the device now. It is shown only this once - if you lose it, revoke it and make another.') + '</div>'
+      ? '<div class="' + oneShotClass('appPwNew').trim() + '" style="display:flex; flex-direction:column; gap:8px; padding:16px; border-radius:var(--r-md); background:' + c.primaryContainer + '; color:' + c.onPrimaryContainer + ';">'
+        + '<div style="font-size:14px; line-height:20px; font-weight:500;">App password for ' + esc(created.name) + '</div>'
+        + '<div style="display:flex; align-items:center; gap:8px;"><code style="flex:1; font-size:22px; line-height:28px; letter-spacing:.06em; font-weight:500; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap:anywhere;">' + esc(created.token) + '</code>'
+        +   '<span class="interactive" data-action="copyAppPassword" title="' + T('Copy') + '" style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:var(--r-sm);">' + (state.copiedToken === 'app-pw' ? '<span class="anim-copied" style="display:flex;">' + ICON.check + '</span>' : ICON.copy) + '</span></div>'
+        + '<div style="font-size:12px; line-height:16px;">' + T('Enter it as the password on the device now. It is shown only this once - if you lose it, revoke it and make another.') + '</div>'
         + '</div>'
       : '';
     var rows = state.appPasswords.map(function (p) {
-      return '<div style="display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid ' + c.outlineVariant + ';">'
-        + '<div style="flex:1; min-width:0;"><div style="font-size:13px; font-weight:500;">' + esc(p.name) + '</div>'
-        + '<div style="font-size:12px; color:' + c.onSurfaceVariant + '; margin-top:2px;">' + esc(T('Created {when}', { when: formatStamp(p.createdAt) })) + ' &middot; ' + esc(p.lastUsedAt ? T('last synced {when}', { when: formatStamp(p.lastUsedAt) }) : T('never used yet')) + '</div></div>'
-        + '<span class="interactive" data-action="revokeAppPassword" data-id="' + p.id + '" style="font-size:13px; font-weight:500; color:' + c.error + '; padding:6px;">' + T('Revoke') + '</span>'
+      return '<div style="display:flex; align-items:center; gap:8px; padding:8px 0; ">'
+        + '<div style="flex:1; min-width:0;"><div style="font-size:14px; line-height:20px; font-weight:500;">' + esc(p.name) + '</div>'
+        + '<div style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + '; margin-top:4px;">' + esc(T('Created {when}', { when: formatStamp(p.createdAt) })) + ' &middot; ' + esc(p.lastUsedAt ? T('last synced {when}', { when: formatStamp(p.lastUsedAt) }) : T('never used yet')) + '</div></div>'
+        + '<span class="interactive text-btn t-label-l" data-action="revokeAppPassword" data-id="' + p.id + '" style="color:' + c.error + ';">' + T('Revoke') + '</span>'
         + '</div>';
     }).join('');
     return modalShell('appPasswords', state.appPwModalPhase, c, 'Phone sync', 480,
-      '<span style="font-size:18px; font-weight:600;">' + T('Phone sync') + '</span>'
-      + '<div style="font-size:12px; line-height:1.55; color:' + c.onSurfaceVariant + ';">' + T('A phone’s reminders app signs in with a CalDAV account. Give each device its own {term} instead of your real one: if a phone is lost, revoke its line here and nothing else changes.', { term: '<b>' + T('app password') + '</b>' }) + '</div>'
-      + '<table class="guide-table" style="font-size:13px;">'
+      '<span style="font-size:24px; line-height:32px; font-weight:400;">' + T('Phone sync') + '</span>'
+      + '<div style="font-size:14px; line-height:20px; color:' + c.onSurfaceVariant + ';">' + T('A phone’s reminders app signs in with a CalDAV account. Give each device its own {term} instead of your real one: if a phone is lost, revoke its line here and nothing else changes.', { term: '<b>' + T('app password') + '</b>' }) + '</div>'
+      + '<table class="guide-table" style="font-size:14px; line-height:20px;">'
       +   '<tr><th style="color:' + c.onSurfaceVariant + ';">' + T('Server') + '</th><td>' + code(location.origin + '/caldav/') + '</td></tr>'
       +   '<tr><th style="color:' + c.onSurfaceVariant + ';">' + T('User name') + '</th><td>' + code(state.user.username) + '</td></tr>'
       +   '<tr><th style="color:' + c.onSurfaceVariant + ';">' + T('Password') + '</th><td>' + T('an app password from below') + '</td></tr>'
       + '</table>'
       + createdBox
       + '<div style="display:flex; gap:8px; align-items:center;">'
-      +   '<input id="appPwNameInput" data-field="appPwName" value="' + esc(state.appPwName) + '" maxlength="60" placeholder="' + T('Device name, e.g. iPhone') + '" style="flex:1; min-width:0; height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:13px; background:' + c.surface + '; color:' + c.onSurface + ';"></input>'
+      +   '<input id="appPwNameInput" data-field="appPwName" value="' + esc(state.appPwName) + '" maxlength="60" placeholder="' + T('Device name, e.g. iPhone') + '" style="flex:1; min-width:0; height:40px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';"></input>'
       +   pillButton('createAppPassword', 'Create', c, true)
       + '</div>'
-      + '<div style="font-size:13px; font-weight:600; margin-top:6px;">' + T('Your devices') + '</div>'
-      + (state.appPasswords.length ? rows : '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T('No app passwords yet.') + '</div>')
-      + '<div style="display:flex; justify-content:flex-end; margin-top:6px;">' + pillButton('closeAppPasswords', 'Done', c, true) + '</div>');
+      + '<div style="font-size:14px; line-height:20px; font-weight:500; margin-top:8px;">' + T('Your devices') + '</div>'
+      + (state.appPasswords.length ? rows : '<div style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + ';">' + T('No app passwords yet.') + '</div>')
+      + '<div style="display:flex; justify-content:flex-end; margin-top:8px;">' + pillButton('closeAppPasswords', 'Done', c, true) + '</div>');
   }
 
   function remindersModal(c) {
     if (state.reminderModalPhase === 'closed') return '';
     var r = state.reminders;
     var f = state.reminderForm;
-    var field = 'height:36px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:13px; background:' + c.surface + '; color:' + c.onSurface + ';';
+    var field = 'height:40px; padding:0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';';
     return modalShell('reminders', state.reminderModalPhase, c, 'Due-date reminders', 460,
-      '<span style="font-size:18px; font-weight:600;">' + T('Due-date reminders') + '</span>'
-      + '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('Once a day the server tells each person, in their notifications, which of their unfinished tasks are due today and which are due tomorrow. Tasks with nobody assigned are left out.') + '</div>'
-      + '<label class="interactive" style="display:flex; align-items:center; gap:9px; font-size:14px; font-weight:500; cursor:pointer;"><input type="checkbox" id="reminderEnabledInput"' + (f.enabled ? ' checked' : '') + '></input>' + T('Send due-date reminders every day') + '</label>'
-      + '<div style="display:flex; flex-direction:column; gap:4px; opacity:' + (f.enabled ? '1' : '.5') + ';"><span style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Time') + '</span>'
+      '<span style="font-size:24px; line-height:32px; font-weight:400;">' + T('Due-date reminders') + '</span>'
+      + '<div style="font-size:14px; line-height:20px; color:' + c.onSurfaceVariant + ';">' + T('Once a day the server tells each person, in their notifications, which of their unfinished tasks are due today and which are due tomorrow. Tasks with nobody assigned are left out.') + '</div>'
+      + '<label class="interactive" style="display:flex; align-items:center; gap:8px; font-size:14px; line-height:20px; font-weight:500; cursor:pointer;"><input type="checkbox" id="reminderEnabledInput"' + (f.enabled ? ' checked' : '') + '></input>' + T('Send due-date reminders every day') + '</label>'
+      + '<div style="display:flex; flex-direction:column; gap:4px; opacity:' + (f.enabled ? '1' : '.5') + ';"><span style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Time') + '</span>'
       +   '<input id="reminderTimeInput" type="time" value="' + esc(f.time) + '" style="width:140px; ' + field + '"></input></div>'
-      + (r ? '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + esc(T('The server’s clock reads {time} ({zone}) right now. If the server was off at the set time, that day’s reminders go out as soon as it starts.', { time: r.serverTime, zone: r.serverZone }))
+      + (r ? '<div style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + ';">' + esc(T('The server’s clock reads {time} ({zone}) right now. If the server was off at the set time, that day’s reminders go out as soon as it starts.', { time: r.serverTime, zone: r.serverZone }))
           + (r.enabled && r.nextAt ? '<br>' + esc(T('Next reminders {when}', { when: formatStamp(r.nextAt) })) : '') + '</div>' : '')
       + '<div style="display:flex; gap:8px; justify-content:flex-end; margin-top:4px;">' + pillButton('closeReminders', 'Cancel', c, false) + pillButton('saveReminderSettings', 'Save', c, true) + '</div>');
   }
@@ -4971,7 +5017,7 @@
     if (state.backupModalPhase === 'closed') return '';
     var b = state.backups;
     var f = state.backupForm;
-    var field = 'height:36px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:13px; background:' + c.surface + '; color:' + c.onSurface + ';';
+    var field = 'height:40px; padding:0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';';
     var status = '';
     if (b) {
       var lines = [];
@@ -4979,35 +5025,35 @@
       else lines.push('No backup has been made yet.');
       if (b.lastError) lines.push('<span style="color:' + c.error + ';">' + esc(b.lastErrorAt ? T('Last attempt failed {when}', { when: formatStamp(b.lastErrorAt) }) : T('Last attempt failed')) + ': ' + esc(b.lastError) + '</span>');
       if (b.enabled && b.nextAt) lines.push(esc(T('Next backup {when}', { when: formatStamp(b.nextAt) })));
-      status = '<div style="display:flex; flex-direction:column; gap:4px; font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + '; padding:10px 12px; border-radius:var(--r-sm); background:' + c.surfaceContainerLow + ';">' + lines.map(function (l) { return '<div>' + l + '</div>'; }).join('') + '</div>';
+      status = '<div style="display:flex; flex-direction:column; gap:4px; font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + '; padding:8px 12px; border-radius:var(--r-sm); background:' + c.surfaceContainerLow + ';">' + lines.map(function (l) { return '<div>' + l + '</div>'; }).join('') + '</div>';
     }
     var files = b && b.files && b.files.length
       ? b.files.map(function (fl) {
-          return '<div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid ' + c.outlineVariant + '; font-size:13px;">'
-            + '<code style="flex:1; min-width:0; overflow-wrap:anywhere; font-size:12px;">' + esc(fl.name) + '</code>'
-            + '<span style="color:' + c.onSurfaceVariant + '; font-size:12px; white-space:nowrap;">' + formatBytes(fl.size) + '</span>'
-            + '<a href="/api/backups/' + encodeURIComponent(fl.name) + '" download style="font-size:12px; font-weight:600; color:' + c.primary + '; text-decoration:none;">' + T('Download') + '</a>'
+          return '<div style="display:flex; align-items:center; gap:8px; padding:8px 0;  font-size:14px; line-height:20px;">'
+            + '<code style="flex:1; min-width:0; overflow-wrap:anywhere; font-size:12px; line-height:16px;">' + esc(fl.name) + '</code>'
+            + '<span style="color:' + c.onSurfaceVariant + '; font-size:12px; line-height:16px; white-space:nowrap;">' + formatBytes(fl.size) + '</span>'
+            + '<a href="/api/backups/' + encodeURIComponent(fl.name) + '" download style="font-size:12px; line-height:16px; font-weight:500; color:' + c.primary + '; text-decoration:none;">' + T('Download') + '</a>'
             + '</div>';
         }).join('')
-      : '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T('No backups in the folder yet.') + '</div>';
+      : '<div style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + ';">' + T('No backups in the folder yet.') + '</div>';
     return modalShell('backups', state.backupModalPhase, c, 'Backups', 520,
-      '<span style="font-size:18px; font-weight:600;">' + T('Backups') + '</span>'
-      + '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('A consistent copy of the whole database, taken while the server keeps running. Backups go to {dir} on the server (set with {flag}). Download one now and then so a copy lives off that machine too.', { dir: b ? '<code style="overflow-wrap:anywhere;">' + esc(b.dir) + '</code>' : T('the backups folder'), flag: '<code>-backup-dir</code>' }) + '</div>'
-      + (b && b.attachmentsCount ? '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T(b.attachmentsCount === 1 ? 'Task attachments take {size} ({n} file), kept as files in {dir}. Backups keep one copy of each file, shared between them, and a download is a zip of the database with its files.' : 'Task attachments take {size} ({n} files), kept as files in {dir}. Backups keep one copy of each file, shared between them, and a download is a zip of the database with its files.', { size: formatBytes(b.attachmentsBytes), n: b.attachmentsCount, dir: '<code style="overflow-wrap:anywhere;">' + esc(b.attachmentsDir || 'attachments') + '</code>' }) + '</div>' : '')
-      + '<label class="interactive" style="display:flex; align-items:center; gap:9px; font-size:14px; font-weight:500; cursor:pointer;"><input type="checkbox" id="backupEnabledInput"' + (f.enabled ? ' checked' : '') + '></input>' + T('Back up automatically every day') + '</label>'
+      '<span style="font-size:24px; line-height:32px; font-weight:400;">' + T('Backups') + '</span>'
+      + '<div style="font-size:14px; line-height:20px; color:' + c.onSurfaceVariant + ';">' + T('A consistent copy of the whole database, taken while the server keeps running. Backups go to {dir} on the server (set with {flag}). Download one now and then so a copy lives off that machine too.', { dir: b ? '<code style="overflow-wrap:anywhere;">' + esc(b.dir) + '</code>' : T('the backups folder'), flag: '<code>-backup-dir</code>' }) + '</div>'
+      + (b && b.attachmentsCount ? '<div style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + ';">' + T(b.attachmentsCount === 1 ? 'Task attachments take {size} ({n} file), kept as files in {dir}. Backups keep one copy of each file, shared between them, and a download is a zip of the database with its files.' : 'Task attachments take {size} ({n} files), kept as files in {dir}. Backups keep one copy of each file, shared between them, and a download is a zip of the database with its files.', { size: formatBytes(b.attachmentsBytes), n: b.attachmentsCount, dir: '<code style="overflow-wrap:anywhere;">' + esc(b.attachmentsDir || 'attachments') + '</code>' }) + '</div>' : '')
+      + '<label class="interactive" style="display:flex; align-items:center; gap:8px; font-size:14px; line-height:20px; font-weight:500; cursor:pointer;"><input type="checkbox" id="backupEnabledInput"' + (f.enabled ? ' checked' : '') + '></input>' + T('Back up automatically every day') + '</label>'
       + '<div style="display:flex; gap:12px; flex-wrap:wrap; opacity:' + (f.enabled ? '1' : '.55') + ';">'
-      +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Time (server clock)') + '</label>'
+      +   '<div style="display:flex; flex-direction:column; gap:4px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Time (server clock)') + '</label>'
       +     '<input id="backupTimeInput" type="time" value="' + esc(f.time) + '" style="' + field + '"></input></div>'
-      +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Keep the newest') + '</label>'
-      +     '<div style="display:flex; align-items:center; gap:6px;"><input id="backupKeepInput" type="number" min="1" max="365" value="' + esc(f.keep) + '" style="width:76px; ' + field + '"></input><span style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T('backups') + '</span></div></div>'
+      +   '<div style="display:flex; flex-direction:column; gap:4px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Keep the newest') + '</label>'
+      +     '<div style="display:flex; align-items:center; gap:8px;"><input id="backupKeepInput" type="number" min="1" max="365" value="' + esc(f.keep) + '" style="width:76px; ' + field + '"></input><span style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + ';">' + T('backups') + '</span></div></div>'
       + '</div>'
-      + (b ? '<div style="font-size:12px; color:' + c.onSurfaceVariant + '; margin-top:-4px;">' + esc(T('The server’s clock reads {time} ({zone}) right now. If the server was off at the set time, that day’s backup runs as soon as it starts.', { time: b.serverTime, zone: b.serverZone })) + '</div>' : '')
+      + (b ? '<div style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + '; margin-top:-4px;">' + esc(T('The server’s clock reads {time} ({zone}) right now. If the server was off at the set time, that day’s backup runs as soon as it starts.', { time: b.serverTime, zone: b.serverZone })) + '</div>' : '')
       + '<div style="display:flex; gap:8px; justify-content:flex-end;">' + pillButton('saveBackupSettings', 'Save schedule', c, true) + '</div>'
       + status
-      + '<div style="display:flex; align-items:center; justify-content:space-between; margin-top:4px;"><span style="font-size:13px; font-weight:600;">' + T('Backup files') + '</span>'
-      +   '<span class="interactive" data-action="runBackup" style="font-size:13px; font-weight:600; color:' + c.primary + '; opacity:' + (state.backupBusy ? '.5' : '1') + ';">' + (state.backupBusy ? T('Backing up…') : T('Back up now')) + '</span></div>'
+      + '<div style="display:flex; align-items:center; justify-content:space-between; margin-top:4px;"><span style="font-size:14px; line-height:20px; font-weight:500;">' + T('Backup files') + '</span>'
+      +   '<span class="interactive text-btn t-label-l" data-action="runBackup" style="color:' + c.primary + '; opacity:' + (state.backupBusy ? '.5' : '1') + ';">' + (state.backupBusy ? T('Backing up…') : T('Back up now')) + '</span></div>'
       + '<div data-scroll-key="backup-files" style="max-height:220px; overflow-y:auto;">' + files + '</div>'
-      + '<div style="display:flex; justify-content:flex-end; margin-top:6px;">' + pillButton('closeBackups', 'Done', c, false) + '</div>');
+      + '<div style="display:flex; justify-content:flex-end; margin-top:8px;">' + pillButton('closeBackups', 'Done', c, false) + '</div>');
   }
 
   function snackbar(c) {
@@ -5031,17 +5077,17 @@
     }).join('');
 
     return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="closeAddDept" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:50;">'
-      + '<div role="dialog" aria-modal="true" aria-label="' + esc(T('Add Department')) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:380px; max-width:92vw; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:14px; box-shadow:var(--e3);">'
-      +   '<span style="font-size:18px; font-weight:600;">' + T('Add Department') + '</span>'
-      +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Name') + '</label>'
-      +     '<input id="newDeptNameInput" data-form="newDeptForm" data-field="name" value="' + esc(f.name) + '" placeholder="' + T('e.g. Data Team') + '" style="height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>'
-      +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Parent Department') + '</label>'
-      +     mSelectFrom('<select id="newDeptParentSelect" data-form="newDeptForm" data-field="parentId" style="height:38px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';">'
+      + '<div role="dialog" aria-modal="true" aria-label="' + esc(T('Add Department')) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:380px; max-width:92vw; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:16px; box-shadow:var(--e3);">'
+      +   '<span style="font-size:24px; line-height:32px; font-weight:400;">' + T('Add Department') + '</span>'
+      +   '<div style="display:flex; flex-direction:column; gap:4px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Name') + '</label>'
+      +     '<input id="newDeptNameInput" data-form="newDeptForm" data-field="name" value="' + esc(f.name) + '" placeholder="' + T('e.g. Data Team') + '" style="height:40px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>'
+      +   '<div style="display:flex; flex-direction:column; gap:4px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Parent Department') + '</label>'
+      +     mSelectFrom('<select id="newDeptParentSelect" data-form="newDeptForm" data-field="parentId" style="height:40px; padding:0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';">'
       +       '<option value=""' + (f.parentId === '' ? ' selected' : '') + '>&mdash; ' + T('Top level') + ' &mdash;</option>' + parentOptions
       +     '</select>', c) + '</div>'
-      +   '<div style="display:flex; justify-content:flex-end; gap:10px; margin-top:6px;">'
-      +     '<div class="interactive" data-action="closeAddDept" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 18px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + '; font-size:14px; font-weight:500;">' + T('Cancel') + '</div>'
-      +     '<div class="interactive" data-action="createDept" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 20px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; font-weight:600;">' + T('Create') + '</div>'
+      +   '<div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">'
+      +     '<div class="interactive" data-action="closeAddDept" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 16px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + '; font-size:14px; line-height:20px; font-weight:500;">' + T('Cancel') + '</div>'
+      +     '<div class="interactive" data-action="createDept" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 20px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; line-height:20px; font-weight:500;">' + T('Create') + '</div>'
       +   '</div>'
       + '</div></div>';
   }
@@ -5056,29 +5102,29 @@
     }).join('');
 
     return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="closeMapping" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:50;">'
-      + '<div role="dialog" aria-modal="true" aria-label="' + esc(T('Department settings')) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:380px; max-width:92vw; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:14px; box-shadow:var(--e3);">'
-      +   '<span style="font-size:18px; font-weight:600;">' + T('Department') + '</span>'
-      +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Department') + '</label>'
-      +     mSelectFrom('<select id="mappingDeptSelect" data-form="mappingForm" data-field="deptId" style="height:38px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"><option value="">' + T('— Select —') + '</option>' + opts + '</select>', c) + '</div>'
-      +   (f.deptId ? '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Name') + '</label>'
-      +     '<input id="mappingNameInput" data-form="mappingForm" data-field="name" value="' + esc(f.name) + '" maxlength="60" style="height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>' : '')
-      +   '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('The calendar label below is only for your own reference in the sidebar — the subscribe link works either way.') + '</div>'
-      +   (f.deptId ? '<div style="display:flex; flex-direction:column; gap:6px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Colour') + '</label>'
+      + '<div role="dialog" aria-modal="true" aria-label="' + esc(T('Department settings')) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:380px; max-width:92vw; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:16px; box-shadow:var(--e3);">'
+      +   '<span style="font-size:24px; line-height:32px; font-weight:400;">' + T('Department') + '</span>'
+      +   '<div style="display:flex; flex-direction:column; gap:4px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Department') + '</label>'
+      +     mSelectFrom('<select id="mappingDeptSelect" data-form="mappingForm" data-field="deptId" style="height:40px; padding:0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';"><option value="">' + T('— Select —') + '</option>' + opts + '</select>', c) + '</div>'
+      +   (f.deptId ? '<div style="display:flex; flex-direction:column; gap:4px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Name') + '</label>'
+      +     '<input id="mappingNameInput" data-form="mappingForm" data-field="name" value="' + esc(f.name) + '" maxlength="60" style="height:40px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>' : '')
+      +   '<div style="font-size:14px; line-height:20px; color:' + c.onSurfaceVariant + ';">' + T('The calendar label below is only for your own reference in the sidebar — the subscribe link works either way.') + '</div>'
+      +   (f.deptId ? '<div style="display:flex; flex-direction:column; gap:8px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Colour') + '</label>'
       +     '<div role="radiogroup" aria-label="' + T('Colour') + '" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">'
       +       [''].concat(DEPT_COLORS).map(function (col) {
                 var on = (f.color || '').toUpperCase() === col;
-                return '<span class="interactive" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setMappingColor" data-id="' + col + '" title="' + (col ? col : T('No colour')) + '" style="display:flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; ' + (col ? 'background:' + col + ';' : 'border:1.5px dashed ' + c.outline + ';') + ' box-shadow:' + (on ? '0 0 0 2px ' + c.surface + ', 0 0 0 4px ' + c.onSurface : 'none') + ';"></span>';
+                return '<span class="interactive" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setMappingColor" data-id="' + col + '" title="' + (col ? col : T('No colour')) + '" style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; box-sizing:border-box; border-radius:50%; ' + (col ? 'background:' + col + ';' : 'border:1.5px dashed ' + c.outline + ';') + ' box-shadow:' + (on ? '0 0 0 2px ' + c.surface + ', 0 0 0 4px ' + c.onSurface : 'none') + ';"></span>';
               }).join('')
       +     '</div></div>' : '')
-      +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Calendar List Name') + '</label>'
-      +     '<input id="mappingListInput" data-form="mappingForm" data-field="calendarList" value="' + esc(f.calendarList) + '" placeholder="' + T('e.g. Work / Dev-Backend') + '" style="height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>'
-      +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Tag') + '</label>'
-      +     '<input id="mappingTagInput" data-form="mappingForm" data-field="tag" value="' + esc(f.tag) + '" placeholder="' + T('e.g. #engineering:backend') + '" style="height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>'
-      +   '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px;">'
-      +     (f.deptId ? '<div class="interactive" data-action="deleteDept" style="font-size:14px; font-weight:500; color:' + c.error + '; padding:8px 6px;">' + T('Delete') + '</div>' : '<span></span>')
-      +     '<div style="display:flex; gap:10px;">'
-      +       '<div class="interactive" data-action="closeMapping" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 18px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + '; font-size:14px; font-weight:500;">' + T('Cancel') + '</div>'
-      +       '<div class="interactive" data-action="saveMapping" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 20px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; font-weight:600;">' + T('Save') + '</div>'
+      +   '<div style="display:flex; flex-direction:column; gap:4px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Calendar List Name') + '</label>'
+      +     '<input id="mappingListInput" data-form="mappingForm" data-field="calendarList" value="' + esc(f.calendarList) + '" placeholder="' + T('e.g. Work / Dev-Backend') + '" style="height:40px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>'
+      +   '<div style="display:flex; flex-direction:column; gap:4px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Tag') + '</label>'
+      +     '<input id="mappingTagInput" data-form="mappingForm" data-field="tag" value="' + esc(f.tag) + '" placeholder="' + T('e.g. #engineering:backend') + '" style="height:40px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>'
+      +   '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px;">'
+      +     (f.deptId ? '<div class="interactive text-btn t-label-l" data-action="deleteDept" style="margin-left:-12px; color:' + c.error + ';">' + T('Delete') + '</div>' : '<span></span>')
+      +     '<div style="display:flex; gap:8px;">'
+      +       '<div class="interactive" data-action="closeMapping" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 16px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + '; font-size:14px; line-height:20px; font-weight:500;">' + T('Cancel') + '</div>'
+      +       '<div class="interactive" data-action="saveMapping" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 20px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; line-height:20px; font-weight:500;">' + T('Save') + '</div>'
       +     '</div>'
       +   '</div>'
       + '</div></div>';
@@ -5093,6 +5139,7 @@
     bulkDelete: function () { bulkDelete(); },
     openPalette: function () { openPalette(); },
     runPaletteItem: function (el) { runPaletteItem(Number(el.getAttribute('data-id'))); },
+    setCalendarSpan: function (el) { setCalendarSpan(el.getAttribute('data-id')); },
     shiftCalendar: function (el) { shiftCalendar(Number(el.getAttribute('data-id'))); },
     setMappingColor: function (el) { setState({ mappingForm: Object.assign({}, state.mappingForm, { color: el.getAttribute('data-id') }) }); },
     sortByColumn: function (el) { var k = el.getAttribute('data-id'); setTaskSort(state.taskSort === k ? 'created' : k); },
@@ -5334,6 +5381,12 @@
   }
   document.addEventListener('keydown', function (e) {
     if (!state.user) return;
+    // Escape is handled inside the app root; this covers focus that has
+    // fallen back to the page itself, e.g. after a menu that opened a dialog.
+    if (e.key === 'Escape' && !document.getElementById('root').contains(e.target)) {
+      if (dismissTopmost()) e.preventDefault();
+      return;
+    }
     if ((e.metaKey || e.ctrlKey) && !e.altKey && (e.key === 'k' || e.key === 'K')) {
       e.preventDefault();
       if (state.paletteOpen) closePalette(); else openPalette();

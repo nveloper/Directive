@@ -1,14 +1,5 @@
-/* Pretendard (SIL OFL 1.1, see fonts/PRETENDARD-LICENSE.txt): one typeface
-   for Korean and Latin alike, with real weights from a single variable file.
-   The version is in the file name so the server can let browsers keep it. */
-@font-face {
-  font-family: 'Pretendard Variable';
-  src: url('fonts/pretendard-variable-1.3.9.woff2') format('woff2-variations'),
-       url('fonts/pretendard-variable-1.3.9.woff2') format('woff2');
-  font-weight: 45 920;
-  font-style: normal;
-  font-display: swap;
-}
+/* Fonts: fonts/fonts.css (Google Sans Flex for Latin, Noto Sans KR for
+   Hangul), linked from index.html before this file. */
 
 /* ---- design tokens ----------------------------------------------------
    Colours live in app.js (deriveColors), because the accent is chosen at run
@@ -17,9 +8,14 @@
 :root {
   /* radius */
   --r-xs: 4px;   /* checkboxes, chips, tags */
-  --r-sm: 6px;   /* buttons, fields, menu items, rows */
-  --r-md: 10px;  /* cards, popovers, menus */
-  --r-lg: 14px;  /* dialogs, panels */
+  --r-sm: 8px;   /* fields, chips, menu items, rows (Material: small) */
+  --r-md: 12px;  /* cards, popovers, menus (Material: medium) */
+  --r-l: 16px;   /* list rows, FAB (Material: large) */
+  --r-lg: 28px;  /* dialogs, sheets (Material: extra large) */
+
+  /* spacing: the Material 4dp grid, nothing in between */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s6: 24px; --s8: 32px;
+  --r-full: 999px; /* buttons, nav indicators, search */
 
   /* elevation */
   --e1: 0 1px 2px rgb(0 0 0 / .06);
@@ -48,16 +44,13 @@
 html, body {
   margin: 0;
   height: 100%;
-  font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
-  font-feature-settings: 'ss06';  /* a distinguishable l and I */
+  font-family: 'Google Sans Flex Variable', 'Noto Sans KR Variable', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   overflow: hidden;          /* the app scrolls its own regions, never the page */
   overscroll-behavior: none; /* and no rubber-banding past them */
 }
-/* Large text is set a touch tighter, as display type usually is. */
-.page-title, [role="dialog"] h2 { letter-spacing: -0.02em; }
 b, strong { font-weight: 600; }
 /* Counts and dates line up in columns. */
 .tnum, [role="tab"], [aria-live] { font-variant-numeric: tabular-nums; }
@@ -67,8 +60,8 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; }
 input, select, textarea { transition: border-color var(--m-fast) ease, box-shadow var(--m-fast) ease; }
 input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:focus {
   outline: none;
-  border-color: var(--primary, #3451D1);
-  box-shadow: 0 0 0 3px var(--primary-container, rgba(52, 81, 209, .16));
+  border-color: var(--primary, #6750A4);
+  box-shadow: 0 0 0 3px var(--primary-container, rgba(103, 80, 164, .16));
 }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: var(--r-sm); }
@@ -102,7 +95,7 @@ input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:f
    no idea where they are; :focus-visible keeps it off mouse clicks. */
 .interactive:focus { outline: none; }
 .interactive:focus-visible {
-  outline: 2px solid var(--primary, #3451D1);
+  outline: 2px solid var(--primary, #6750A4);
   outline-offset: 2px;
   border-radius: var(--r-sm);
 }
@@ -113,7 +106,7 @@ input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:f
   z-index: 200;
   padding: 10px 16px;
   border-radius: var(--r-sm);
-  background: var(--primary, #3451D1);
+  background: var(--primary, #6750A4);
   color: var(--on-primary, #fff);
   font-size: 13px;
   font-weight: 600;
@@ -200,7 +193,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
 }
 
 /* A column flex container shrinks its children before it overflows, so a long
@@ -212,7 +205,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
    the page's own one is noise. Keyboard and wheel scrolling are unaffected. */
 .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .no-scrollbar::-webkit-scrollbar { width: 0; height: 0; display: none; }
-.swatch { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color var(--m-fast) ease, transform var(--m-fast) ease; flex-shrink: 0; }
+.swatch { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color var(--m-fast) ease, transform var(--m-fast) ease; flex-shrink: 0; }
 .swatch:hover { transform: scale(1.08); }
 .swatch.active { border-color: var(--on-surface); }
 
@@ -244,8 +237,8 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 /* The bar sits above the scrolling region and owns the safe area over it, so
    the status bar never scrolls away with the content. */
 .top-bar {
-  height: calc(56px + env(safe-area-inset-top, 0px));
-  padding: env(safe-area-inset-top, 0px) calc(20px + env(safe-area-inset-right, 0px)) 0 calc(20px + env(safe-area-inset-left, 0px));
+  height: calc(64px + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) calc(16px + env(safe-area-inset-right, 0px)) 0 calc(16px + env(safe-area-inset-left, 0px));
 }
 
 .drawer-close-btn, .drawer-header-row,
@@ -265,7 +258,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 .guide-card {
   width: 640px;
   max-width: 94vw;
-  max-height: 86vh;
+  max-height: calc(86vh / var(--zoom, 1));
   display: flex;
   flex-direction: column;
   border-radius: var(--r-lg);
@@ -299,7 +292,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
   border-top: 1px solid var(--guide-rule);
 }
 .guide-section { padding-top: 18px; scroll-margin-top: 8px; }
-.guide-section h3 { margin: 0 0 8px 0; font-size: 15px; font-weight: 600; }
+.guide-section h3 { margin: 0 0 8px 0; font-size: 16px; font-weight: 500; }
 .guide-section p, .guide-section li { font-size: 14px; line-height: 1.65; margin: 0 0 8px 0; }
 .guide-section ul { margin: 0; padding-left: 18px; }
 .guide-section strong { font-weight: 600; color: var(--on-surface, inherit); }
@@ -311,9 +304,9 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
   background: var(--guide-code-bg);
   word-break: break-all;
 }
-.guide-table { border-collapse: collapse; margin: 4px 0 10px 0; width: 100%; }
-.guide-table th, .guide-table td { text-align: left; font-size: 13px; padding: 7px 8px; border-bottom: 1px solid var(--guide-rule); vertical-align: top; }
-.guide-table th { font-weight: 600; white-space: nowrap; width: 1%; }
+.guide-table { border-collapse: collapse; margin: 4px 0 12px 0; width: 100%; }
+.guide-table th, .guide-table td { text-align: left; font-size: 14px; line-height: 20px; padding: 8px; border-bottom: 1px solid var(--guide-rule); vertical-align: top; }
+.guide-table th { font-weight: 500; white-space: nowrap; width: 1%; }
 
 /* Rendered always, shown only where the header has no room for it. */
 .fab-new-task { display: none; }
@@ -390,12 +383,13 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
     position: relative;
     top: auto; bottom: auto; left: auto;
     z-index: auto;
-    width: 248px;
+    width: 280px;
     flex-shrink: 0;
     transform: none;
     visibility: visible;
     box-shadow: none !important;
     animation: none !important;
+    border-right: none;
   }
 }
 
@@ -413,15 +407,17 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
   .account-meta { display: none !important; }
 
   .top-bar {
-    height: calc(60px + env(safe-area-inset-top, 0px));
+    height: calc(64px + env(safe-area-inset-top, 0px));
     padding: env(safe-area-inset-top, 0px) calc(8px + env(safe-area-inset-right, 0px)) 0 calc(8px + env(safe-area-inset-left, 0px));
-    gap: 2px;
+    gap: 4px;
   }
 
   /* A finger is not a mouse pointer: every control in the bar and the panels
      gets a 44px target, and the text that labels them comes up to size. */
-  .top-bar .interactive:not(.brand-icon) { width: 44px !important; height: 44px !important; }
-  .top-bar .interactive:not(.brand-icon) svg { width: 22px; height: 22px; }
+  /* Only the bar's own buttons: the panels that hang off it (alerts, account)
+     are inside .top-bar too and keep their own sizes. */
+  .top-bar .interactive:not(.brand-icon):not(.bell-panel *):not(.account-panel *) { width: 48px !important; height: 48px !important; }
+  .top-bar .interactive:not(.brand-icon):not(.bell-panel *):not(.account-panel *) > svg { width: 24px; height: 24px; }
   /* Centred on the same line as the buttons beside it. */
   .top-bar .brand-icon { align-self: center; }
 
@@ -435,11 +431,11 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
   .new-task-inline { display: none !important; }
   .fab-new-task { display: flex !important; }
   .btn-label { display: none; }
-  .filter-btn { width: 44px; padding: 0 !important; justify-content: center; }
+  .filter-btn { width: 48px; height: 48px !important; padding: 0 !important; justify-content: center; }
   .view-toggle { display: none !important; }
 
   /* Room under the list so the floating button never sits on the footer. */
-  main#task-list { padding: 16px 14px calc(84px + env(safe-area-inset-bottom, 0px)) 14px !important; gap: 12px !important; }
+  main#task-list { padding: 8px 16px calc(88px + env(safe-area-inset-bottom, 0px)) 16px !important; gap: 8px !important; }
   .page-title { font-size: 20px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   /* Tabs are scrolled sideways rather than wrapped onto three lines. */
@@ -450,7 +446,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
     padding-bottom: 2px;
   }
   [role="tablist"]::-webkit-scrollbar { display: none; }
-  [role="tablist"] > * { flex-shrink: 0; min-height: 40px; font-size: 14px !important; }
+  [role="tablist"] > * { flex-shrink: 0; min-height: 48px; }
 
   .dropdown-panel { max-width: calc(100vw - 24px); }
 
@@ -460,10 +456,10 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
      it. The fields are sized inline, so this has to outrank that. */
   input, select, textarea { font-size: 16px !important; }
   input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not(#accentHexInput),
-  select { min-height: 46px !important; }
+  select { min-height: 48px !important; }
   /* Kept at a tappable size without becoming a full-width field. */
   #accentHexInput { width: 104px !important; height: 40px !important; }
-  textarea { min-height: 76px !important; line-height: 1.5 !important; }
+  textarea { min-height: 48px !important; line-height: 24px !important; }
   /* Tick boxes get a finger-sized target of their own. */
   /* The box stays Material size; the row it sits in is the finger target. */
 
@@ -544,8 +540,8 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
   /* Hung off the bell, the panel ran past the left edge of a phone screen;
      there it spans the screen under the top bar instead. */
   .bell-panel {
-    position: fixed !important; top: 64px !important; left: 12px !important; right: 12px !important;
-    width: auto !important; max-height: min(440px, 70vh) !important;
+    position: fixed !important; top: 64px !important; left: 8px !important; right: 8px !important;
+    width: auto !important; max-height: min(560px, 72vh) !important;
   }
 }
 
@@ -553,7 +549,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
    touch screen, where there is no pointing. */
 .checklist-tool {
   display: flex; align-items: center; justify-content: center;
-  width: 22px; height: 22px; border-radius: var(--r-sm); flex-shrink: 0; opacity: .55;
+  width: 40px; height: 40px; border-radius: var(--r-full); flex-shrink: 0; opacity: .7;
 }
 .checklist-row:hover .checklist-tool, .checklist-tool:focus-visible { opacity: 1; }
 @media (hover: none) { .checklist-tool { opacity: 1; } }
@@ -562,27 +558,27 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 
 /* Task detail: the reading view a task opens into. */
 .task-detail {
-  width: 680px; max-width: 94vw; max-height: 90vh; overflow-y: auto;
+  width: 680px; max-width: 94vw; max-height: calc(90vh / var(--zoom, 1)); overflow-y: auto;
   border-radius: var(--r-lg); padding: 24px 26px; display: flex; flex-direction: column; gap: 16px;
   box-shadow: var(--e3); outline: 2px dashed transparent; outline-offset: -8px;
   transition: outline-color var(--m-fast);
 }
 /* Files dragged over an open task land in it. */
 .task-detail.drag-over { outline-color: var(--drop); }
-.detail-body { font-size: 14px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.detail-body { font-size: 16px; line-height: 24px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .detail-body a { color: var(--primary); }
 .detail-icon { display: inline-flex; flex-shrink: 0; padding: 2px; border-radius: var(--r-sm); }
 .detail-icon.interactive:hover { background: var(--surface-container-high); }
 .detail-add-icon {
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  width: 40px; height: 40px; border-radius: var(--r-sm); border: 1.5px dashed; opacity: .55;
+  width: 40px; height: 40px; border-radius: var(--r-md); border: 1.5px dashed; opacity: .55;
 }
 .detail-add-icon:hover, .detail-add-icon:focus-visible { background: var(--surface-container-high); opacity: 1; }
 /* The detail is a panel along the right edge, not a box in the middle:
    the list stays in view beside it. */
 .detail-overlay .task-detail {
   width: 520px; max-width: 100vw; height: 100%; max-height: none;
-  border-radius: 0; padding: 20px 24px 28px; gap: 20px;
+  --pad: 24px; border-radius: 0; padding: var(--pad); gap: 24px;
   border-left: 1px solid var(--outline-variant);
 }
 .detail-overlay .task-detail.card-in { animation: drawerSlideInRight var(--m-slow) var(--ease) both; }
@@ -590,7 +586,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 .detail-props .mselect-trigger:hover, .detail-props .date-trigger:hover { border-color: var(--outline) !important; }
 .mselect-label svg, .mselect-item-label svg { vertical-align: -3px; }
 @media (max-width: 860px) {
-  .detail-overlay .task-detail { width: 100vw; padding: 16px 16px 24px; border-left: none; }
+  .detail-overlay .task-detail { width: 100vw; --pad: 16px; border-left: none; }
 }
 
 .icon-picker {
@@ -611,12 +607,12 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 .att-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; }
 .att-tile { position: relative; aspect-ratio: 1; border-radius: var(--r-md); overflow: hidden; }
 .att-tile img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: zoom-in; }
-.att-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--r-sm); }
+.att-row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 4px 8px 12px; border-radius: var(--r-md); box-sizing: border-box; }
 .att-remove {
-  display: flex; align-items: center; justify-content: center; width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center; width: 40px; height: 40px;
   border-radius: 50%; flex-shrink: 0; opacity: .85; box-shadow: 0 1px 4px rgba(0,0,0,.2);
 }
-.att-tile .att-remove { position: absolute; top: 6px; right: 6px; }
+.att-tile .att-remove { position: absolute; top: 4px; right: 4px; }
 
 .lightbox {
   position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.86);
@@ -643,7 +639,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
    look it had; the list is a surface-container card with a tonal selected
    row and a check. */
 .mselect-trigger {
-  display: flex; align-items: center; gap: 6px; box-sizing: border-box;
+  display: flex; align-items: center; gap: 8px; box-sizing: border-box;
   user-select: none; -webkit-user-select: none; min-width: 0;
 }
 .mselect-trigger[aria-disabled="true"] { opacity: .6; cursor: default; }
@@ -653,16 +649,15 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 .mselect-chevron { flex-shrink: 0; opacity: .8; }
 .mselect-trigger.open .mselect-chevron { transform: rotate(180deg); }
 .mselect-menu {
-  position: fixed; z-index: 95; overflow-y: auto; padding: 6px;
+  position: fixed; z-index: 95; overflow-y: auto; padding: 8px;
   border-radius: var(--r-md); box-shadow: var(--e2);
   transform-origin: top left;
 }
 .mselect-menu.up { transform-origin: bottom left; }
 .mselect-item {
-  display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 14px 0 10px;
-  border-radius: var(--r-sm); font-size: 14px; white-space: nowrap;
+  display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 16px 0 12px;
+  border-radius: var(--r-sm); font-size: 14px; line-height: 20px; white-space: nowrap;
 }
-.mselect-item + .mselect-item { margin-top: 2px; }
 .mselect-item:not(.selected):hover, .mselect-item:not(.selected).active { background: var(--item-hover); }
 .mselect-item.selected.active { box-shadow: inset 0 0 0 2px var(--primary); }
 .mselect-check { display: flex; width: 18px; flex-shrink: 0; }
@@ -687,7 +682,7 @@ input[type="checkbox"], input[type="radio"] {
 input[type="checkbox"] { border-radius: var(--r-xs); }
 input[type="radio"] { border-radius: 50%; width: 20px !important; height: 20px !important; }
 input[type="checkbox"]:checked {
-  background: var(--primary, #3451D1); border-color: var(--primary, #3451D1);
+  background: var(--primary, #6750A4); border-color: var(--primary, #6750A4);
 }
 input[type="checkbox"]:checked::after {
   content: ''; position: absolute; left: 4.5px; top: 0.5px; width: 5px; height: 10px;
@@ -695,19 +690,19 @@ input[type="checkbox"]:checked::after {
   box-sizing: border-box;
 }
 input[type="radio"]:checked {
-  border-color: var(--primary, #3451D1);
-  background: radial-gradient(circle, var(--primary, #3451D1) 0 4.5px, transparent 5px);
+  border-color: var(--primary, #6750A4);
+  background: radial-gradient(circle, var(--primary, #6750A4) 0 4.5px, transparent 5px);
 }
 /* The state layer: a 40px circle, as Material draws around a selection control. */
 input[type="checkbox"]:hover:not(:disabled), input[type="radio"]:hover:not(:disabled) {
   box-shadow: 0 0 0 11px color-mix(in srgb, var(--on-surface, #1B1B1A) 8%, transparent);
 }
 input[type="checkbox"]:checked:hover:not(:disabled), input[type="radio"]:checked:hover:not(:disabled) {
-  box-shadow: 0 0 0 11px color-mix(in srgb, var(--primary, #3451D1) 8%, transparent);
+  box-shadow: 0 0 0 11px color-mix(in srgb, var(--primary, #6750A4) 8%, transparent);
 }
 input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 11px color-mix(in srgb, var(--primary, #3451D1) 14%, transparent);
+  box-shadow: 0 0 0 11px color-mix(in srgb, var(--primary, #6750A4) 14%, transparent);
 }
 input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: .38; cursor: default; }
 
@@ -730,8 +725,9 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: .38; cu
 @media (hover: none) { .dept-more { opacity: 1; } }
 
 @media (max-width: 860px) {
-  .settings-layout { flex-direction: column; gap: 12px !important; min-height: 0 !important; }
-  .settings-nav { width: auto !important; flex-direction: row !important; overflow-x: auto; padding: 0 0 8px !important; border-right: none !important; border-bottom: 1px solid var(--outline-variant); }
+  .settings-layout { flex-direction: column; gap: 16px !important; min-height: 0 !important; }
+  .settings-nav { width: auto !important; flex-direction: row !important; overflow-x: auto; scrollbar-width: none; margin: 0 -24px !important; padding: 0 24px !important; gap: 8px !important; }
+  .settings-nav::-webkit-scrollbar { display: none; }
   .settings-nav > div:first-child { display: none; }
 }
 #commentDraftInput { resize: none !important; }
@@ -769,3 +765,93 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: .38; cu
 .task-row:hover .sel-box ~ .status-ring, .task-row:focus-visible .sel-box ~ .status-ring, .selecting .sel-box ~ .status-ring { display: none; }
 .status-ring { display: flex; }
 .bulk-bar { max-width: calc(100vw - 24px); overflow-x: auto; }
+
+/* ---- Material You shape and frame -----------------------------------
+   The page is a tonal frame (surface container) with the content on a sheet
+   whose top corners are rounded; buttons, the search bar, segmented
+   controls and the navigation indicator are full pills, as in Material 3. */
+.content-sheet { border-radius: 28px 28px 0 0; margin-right: 12px; }
+@media (max-width: 1199px) { .content-sheet { margin-left: 12px; } }
+@media (max-width: 860px) { .content-sheet { border-radius: 24px 24px 0 0; margin: 0 !important; } }
+.new-task-inline, .filter-btn, .view-toggle, .view-toggle > *, .bulk-bar .mselect-trigger,
+.task-form-chips .mselect-trigger, .task-form-chips .date-trigger, .task-form-chips label,
+[data-action="saveTask"], [data-action="saveMapping"], [data-action="postComment"],
+[data-action="submitLogin"], [data-action="submitRegister"], [data-action="saveDisplayName"],
+[data-action="saveAppName"], [data-action="closeTaskModal"], [data-action="closeMapping"] { border-radius: var(--r-full) !important; }
+
+/* Rows have no dividers: the hover and selected states give each one its
+   own rounded shape instead. */
+#task-list .task-row { border-radius: var(--r-l); }
+
+/* Body copy gets room to breathe; numbers in tables keep their columns. */
+body { line-height: 1.45; }
+
+/* Material 3 type scale (values from the @material/web 2.2 token files).
+   Each role fixes size, line height and weight together; nothing else is
+   used on screens that have been moved over. Tracking is left at 0 for
+   Korean text. */
+.t-headline-m { font-size: 28px; line-height: 36px; font-weight: 400; }
+.t-headline-s { font-size: 24px; line-height: 32px; font-weight: 400; }
+.t-title-l    { font-size: 22px; line-height: 28px; font-weight: 400; }
+.t-title-m    { font-size: 16px; line-height: 24px; font-weight: 500; }
+.t-title-s    { font-size: 14px; line-height: 20px; font-weight: 500; }
+.t-body-l     { font-size: 16px; line-height: 24px; font-weight: 400; }
+.t-body-m     { font-size: 14px; line-height: 20px; font-weight: 400; }
+.t-body-s     { font-size: 12px; line-height: 16px; font-weight: 400; }
+.t-label-l    { font-size: 14px; line-height: 20px; font-weight: 500; }
+.t-label-m    { font-size: 12px; line-height: 16px; font-weight: 500; }
+.t-label-s    { font-size: 11px; line-height: 16px; font-weight: 500; }
+
+/* M3 icon button: a 20-24 icon in a 40 round target, 48 under a finger. */
+.icon-btn {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 40px; height: 40px; border-radius: var(--r-full);
+}
+/* M3 text button: 40 high, 12 to the sides. */
+.text-btn {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  height: 40px; padding: 0 12px; border-radius: var(--r-full);
+}
+/* An 18 check box in a 40 target, as M3 draws it. */
+.cb-target {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 40px; height: 40px; border-radius: var(--r-full); cursor: pointer;
+}
+.cb-target input { margin: 0; width: 18px; height: 18px; }
+/* Keyboard hints mean nothing on a touch screen. */
+@media (hover: none) { .kbd-hint { display: none; } }
+@media (pointer: coarse) {
+  .icon-btn, .checklist-tool, .att-remove, .cb-target { width: 48px; height: 48px; }
+  .text-btn { height: 48px; }
+  .detail-props .mselect-trigger, .detail-props .date-trigger, .detail-props .prop-plain { min-height: 48px; }
+  .checklist-row { min-height: 48px !important; }
+  .checklist-row, .checklist-add { margin-left: -16px !important; }
+}
+
+/* Form chips: M3 filter chips are 32 high; under a finger they grow to 40
+   so a row of them stays easy to hit. */
+@media (pointer: coarse) {
+  .task-form-chips > *, .task-form-chips .mselect-trigger, .task-form-chips .date-trigger { height: 40px !important; }
+}
+/* The title is the dialog's headline (M3 Headline S), not a form field,
+   so the phone rule that lifts fields to 16px leaves it alone. */
+.task-form #newTaskTitleInput { font-size: 24px !important; line-height: 32px !important; min-height: 32px !important; }
+/* Calendar chips are small on a mouse screen; under a finger they get a
+   32 minimum so a day's task can be hit. */
+@media (pointer: coarse) { .cal-chip { min-height: 32px; height: auto !important; } }
+
+/* M3 navigation drawer rows: 48 with a mouse, 56 under a finger, Label L,
+   a full-pill indicator. The tree chevron is a 20 icon in a 40 target. */
+.nav-item { min-height: 48px; box-sizing: border-box; }
+.tree-chevron-btn { width: 40px; height: 40px; padding: 10px; box-sizing: border-box; border-radius: var(--r-full) !important; }
+@media (pointer: coarse) {
+  .nav-item { min-height: 56px; }
+  .tree-chevron-btn { width: 48px; height: 48px; padding: 14px; }
+}
+/* .icon-btn sets display:flex; buttons that only exist on some screens keep
+   their own visibility rules. */
+.mobile-search-btn.icon-btn { display: none; }
+@media (max-width: 860px) { .mobile-search-btn.icon-btn { display: flex; } }
+.drawer-close-btn.icon-btn { display: none; }
+.left-nav .drawer-close-btn.icon-btn, .right-panel .drawer-close-btn.icon-btn { display: flex; }
+@media (min-width: 1200px) { .left-nav .drawer-close-btn.icon-btn { display: none; } }

@@ -6,15 +6,28 @@ A self-hosted task board for a team split into departments. One small binary
 holds the server, the web app and its database - copy it to a machine, run it,
 and open a browser.
 
+**[Try the demo](https://nveloper.github.io/Directive/)** - the real interface running on sample data in your
+browser, with no server behind it. Nothing you do there is kept.
+
+![The task list](docs/ui-spec/after-phase5/02-bulk-select.png)
+
 ## Features
 
-- **Departments and tasks** — a department tree in the sidebar; tasks with
-  status, priority, assignee and due date, in a list or a grid, with status
-  tabs and overdue work flagged. Members change work in their own department;
-  an administrator runs everything else.
-- **Task details** — a description with links, a checklist, comments with
-  `@mentions`, file attachments (images shown inline), and an emoji or picture
-  as the task's icon.
+- **Departments and tasks** — a department tree in the sidebar, each with a
+  colour of its choosing; tasks with status, priority, assignee and due date.
+  Members change work in their own department; an administrator runs
+  everything else.
+- **Three views** — a list (sortable by its column headings), a board with a
+  column per status (drag a card to change it), and a month calendar by due
+  date. Status tabs and overdue work flagged in all of them.
+- **Task details** — a side panel where status, assignee, priority, due date
+  and department are changed in place; a description with links, a checklist,
+  file attachments (images shown inline), an emoji or picture as the task's
+  icon, and one timeline of comments (with `@mentions`) and changes.
+- **Fast to drive** — `Ctrl/⌘ K` opens a command menu that jumps anywhere and
+  searches tasks; `C` new task, `/` search, `J`/`K` move, `X` select,
+  `1`/`2`/`3` switch views. Several tasks can be selected and changed or
+  trashed at once.
 - **Repeating tasks** — daily, weekly, monthly or yearly; finishing one rolls
   it on to the next date.
 - **Notifications** — when a task is assigned to you, you are mentioned, your
@@ -34,7 +47,8 @@ and open a browser.
   files, with downloads from the app.
 - **Live and localised** — changes appear on every open screen without
   reloading. The interface follows the system language (Korean or English)
-  and the light or dark setting, with an accent colour of your choice.
+  and the light or dark setting, with an accent colour of your choice, and
+  works on a phone.
 
 ## Requirements
 
@@ -156,6 +170,15 @@ GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o directive-linux-amd64 .
 Everything else - calendars, CalDAV, backups and restores, attachment storage,
 the API - is described in [server/README.md](server/README.md).
 
+### The demo page
+
+`demo/` turns the same frontend into a static page: `demo/mock-api.js` answers
+the app's API calls from sample data in the browser. `demo/build.sh _site`
+assembles it, and `.github/workflows/pages.yml` publishes it to GitHub Pages on
+every push to `main` (turn Pages on once under *Settings → Pages → Source:
+GitHub Actions*). File uploads, sign-out and a few administrator tools are
+switched off there.
+
 ---
 
 # 한국어
@@ -165,13 +188,22 @@ the API - is described in [server/README.md](server/README.md).
 부서 단위로 일하는 팀을 위한 설치형 업무 관리 앱입니다. 서버, 웹 화면, DB가 작은
 실행 파일 하나에 들어 있어서, 서버에 복사해 실행하고 브라우저로 열면 바로 씁니다.
 
+**[데모 보기](https://nveloper.github.io/Directive/)** - 실제 화면을 서버 없이 브라우저 안의 샘플 데이터로 돌립니다.
+데모에서 바꾼 내용은 저장되지 않습니다.
+
 ## 기능
 
-- **부서와 작업**: 사이드바의 부서 트리, 상태·우선순위·담당자·기한을 가진 작업을
-  목록이나 카드로 봅니다. 상태 탭이 있고 기한이 지난 작업은 따로 표시됩니다.
-  구성원은 자기 부서의 작업을 바꾸고, 나머지 관리는 관리자가 합니다.
-- **작업 상세**: 링크가 걸리는 설명, 체크리스트, `@언급`이 되는 코멘트, 첨부파일
-  (이미지는 바로 보임), 이모지나 사진으로 고르는 작업 아이콘.
+- **부서와 작업**: 사이드바의 부서 트리(부서마다 색 지정 가능), 상태·우선순위·
+  담당자·기한을 가진 작업. 구성원은 자기 부서의 작업을 바꾸고, 나머지 관리는
+  관리자가 합니다.
+- **세 가지 보기**: 목록(열 제목을 눌러 정렬), 상태별 보드(카드를 끌어 상태 변경),
+  기한별 월간 캘린더. 어느 보기든 상태 탭이 있고 기한 지난 작업이 표시됩니다.
+- **작업 상세**: 오른쪽 패널에서 상태·담당자·우선순위·기한·부서를 바로 바꿉니다.
+  링크가 걸리는 설명, 체크리스트, 첨부파일(이미지는 바로 보임), 이모지나 사진
+  아이콘, 그리고 코멘트(`@언급`)와 변경 이력을 합친 타임라인.
+- **빠른 조작**: `Ctrl/⌘ K` 명령 메뉴로 어디든 이동하고 작업을 찾습니다. `C` 새 작업,
+  `/` 검색, `J`/`K` 이동, `X` 선택, `1`/`2`/`3` 보기 전환. 여러 작업을 골라
+  한꺼번에 바꾸거나 휴지통으로 옮길 수 있습니다.
 - **반복 작업**: 매일, 매주, 매월, 매년. 끝내면 다음 날짜로 넘어갑니다.
 - **알림**: 작업을 배정받거나, 언급되거나, 내 작업에 코멘트가 달리거나, 내 작업의
   기한이 오늘이나 내일일 때 알려 줍니다. HTTPS에서는 데스크톱 알림도 됩니다.
@@ -187,7 +219,7 @@ the API - is described in [server/README.md](server/README.md).
   있습니다.
 - **실시간, 다국어**: 바뀐 내용이 새로고침 없이 모든 화면에 바로 반영됩니다. 화면은
   시스템 언어(한국어 또는 영어)와 밝은/어두운 모드를 따르고, 강조 색은 원하는
-  대로 고릅니다.
+  대로 고릅니다. 휴대폰에서도 쓸 수 있습니다.
 
 ## 요구 사양
 
@@ -306,3 +338,11 @@ GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o directive-linux-amd64 .
 
 캘린더, CalDAV, 백업과 복원, 첨부파일 보관, API 등 나머지 내용은
 [server/README.md](server/README.md)에 있습니다(영어).
+
+### 데모 페이지
+
+`demo/`는 같은 화면을 정적 페이지로 만듭니다. `demo/mock-api.js`가 앱의 API 호출에
+브라우저 안의 샘플 데이터로 답합니다. `demo/build.sh _site`로 묶고,
+`.github/workflows/pages.yml`이 `main`에 푸시될 때마다 GitHub Pages에 올립니다
+(처음 한 번 *Settings → Pages → Source: GitHub Actions*로 켜야 합니다). 파일 올리기,
+로그아웃, 일부 관리자 기능은 데모에서 꺼져 있습니다.
