@@ -2874,20 +2874,42 @@
 
   // The status icon in a list row is a button: it marks the task done, or
   // opens it again if it already was.
+  // Board cards get a name each so a re-render glides them to their new
+  // places (see softSwap).
+  var boardPending = {};
+  function nameCards(on) {
+    Array.prototype.forEach.call(document.querySelectorAll('#task-list .board-card[data-id]'), function (el) {
+      el.style.viewTransitionName = on ? 'card-' + el.getAttribute('data-id').replace(/[^A-Za-z0-9_-]/g, '_') : '';
+      if (on) el.style.viewTransitionClass = 'card';
+    });
+  }
   function toggleRowDone(id) {
     var t = findLoadedTask(id);
     if (!t || !canWriteDept(t.deptId)) return;
     var next = t.status === 'done' ? 'todo' : 'done';
-    state.tasks.concat(state.todayTasks || []).forEach(function (x) {
-      if (x.id !== id) return;
-      x.status = next;
-      if (next === 'done') x.overdue = false;
-    });
-    render();
+    var apply = function () {
+      state.tasks.concat(state.todayTasks || []).forEach(function (x) {
+        if (x.id !== id) return;
+        x.status = next;
+        if (next === 'done') x.overdue = false;
+      });
+    };
+    if (state.viewMode === 'grid' && document.querySelector('#task-list .board-card')) {
+      // On the board the card first shows its new icon where it is, then
+      // glides to its new column.
+      boardPending[id] = next;
+      render();
+      setTimeout(function () {
+        delete boardPending[id];
+        apply();
+        nameCards(true);
+        softSwap('card', function () { render(); nameCards(true); });
+      }, 520);
+    } else { apply(); render(); }
     api('PUT', '/api/tasks/' + id + '/status', { status: next })
       .then(function (res) {
         if (res && res.nextId) showSnackbar(T('Done. The next one is scheduled.'));
-        return refreshTasks();
+        return state.viewMode === 'grid' ? new Promise(function (r) { setTimeout(r, 900); }).then(refreshTasks) : refreshTasks();
       })
       .then(render)
       .catch(function (e) { window.alert(TE(e.message)); refreshTasks().then(render); });
@@ -3444,11 +3466,17 @@
     if (!document.startViewTransition || reduce) { run(); return; }
     var docEl = document.documentElement;
     docEl.setAttribute('data-swap', dir || 'fade');
+    // Named parts are lifted above everything else while they animate, so
+    // with a drawer or dialog open they would show through it. Then the
+    // page cross-fades as one picture instead.
+    if (document.querySelector('.left-nav.open, .left-nav.anim-open, .left-nav.anim-close, .right-panel.open, .right-panel.anim-open, .right-panel.anim-close, .modal-overlay, .mobile-scrim, .dropdown-panel, .bell-panel')) docEl.setAttribute('data-swap-flat', '');
+    else docEl.removeAttribute('data-swap-flat');
     var vt = document.startViewTransition(function () {
       var p = run();
       return Promise.race([p || Promise.resolve(), new Promise(function (r) { setTimeout(r, 350); })]);
     });
-    vt.finished.then(function () { docEl.removeAttribute('data-swap'); }, function () { docEl.removeAttribute('data-swap'); });
+    var done = function () { docEl.removeAttribute('data-swap'); docEl.removeAttribute('data-swap-flat'); };
+    vt.finished.then(done, done);
   }
 
   function setCalendarSpan(span) {
@@ -3552,7 +3580,11 @@
     var writable = canWriteDept(t.deptId);
     var cls = 'interactive board-card' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + '';
     return '<div class="' + cls + '"' + (writable ? ' draggable="true"' : '') + ' data-action="openTask" data-id="' + t.id + '" style="background:' + c.surface + '; border-radius:var(--r-md); padding:16px; min-width:0; display:flex; flex-direction:column; gap:12px;">'
-      + '<div class="t-body-l" style="display:flex; align-items:flex-start; gap:8px; color:' + (t.status === 'done' ? c.textMuted : c.onSurface) + ';">' + taskIconHtml(t, 16) + '<span style="min-width:0; overflow-wrap:anywhere;">' + esc(t.title) + '</span></div>'
+      + '<div class="t-body-l" style="display:flex; align-items:flex-start; gap:8px; color:' + (t.status === 'done' ? c.textMuted : c.onSurface) + ';">'
+      +   (writable
+            ? '<span class="interactive status-btn status-btn-card' + statusMorph({ id: t.id, status: boardPending[t.id] || t.status }, 'card') + '" data-action="toggleRowDone" data-id="' + t.id + '" role="checkbox" aria-checked="' + (t.status === 'done' ? 'true' : 'false') + '" title="' + T(t.status === 'done' ? 'Mark not done' : 'Mark done') + '" draggable="false">' + statusIconHtml(boardPending[t.id] || t.status, (maps.statusStyle[boardPending[t.id] || t.status] || maps.statusStyle.todo).dot, 18) + '</span>'
+            : '')
+      +   taskIconHtml(t, 16) + '<span style="min-width:0; overflow-wrap:anywhere;">' + esc(t.title) + '</span></div>'
       + '<div class="t-label-m" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; color:' + c.onSurfaceVariant + ';">' + (t.deptId ? '<span style="display:inline-flex; align-items:center; gap:4px; padding:4px 8px; border-radius:var(--r-sm); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';">' + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span>' : '') + taskBadges(t, c) + '</div>'
       + searchMatchHtml(t, c)
       + '<div style="display:flex; align-items:center; gap:8px;">'
@@ -5715,12 +5747,6 @@
       if (!t || !st || t.status === st) return;
       // The card glides from its old column to its place in the new one,
       // and the cards around it close up and make room, instead of jumping.
-      var nameCards = function (on) {
-        Array.prototype.forEach.call(document.querySelectorAll('#task-list .board-card[data-id]'), function (el) {
-          el.style.viewTransitionName = on ? 'card-' + el.getAttribute('data-id').replace(/[^A-Za-z0-9_-]/g, '_') : '';
-          if (on) el.style.viewTransitionClass = 'card';
-        });
-      };
       nameCards(true);
       softSwap('card', function () {
         t.status = st;
