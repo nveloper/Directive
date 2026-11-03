@@ -1806,7 +1806,9 @@
     if (searchTimer) clearTimeout(searchTimer);
     searchTimer = setTimeout(function () {
       searchTimer = null;
-      fetchTasks().then(render);
+      // The results are fetched first and then swapped in, so the page
+      // never freezes on the old picture while the person is typing.
+      fetchTasks().then(function () { softSwap('fade', render); });
     }, 250);
   }
 
@@ -2364,7 +2366,11 @@
   // Turning the page moves the same way changing a tab does, instead of the
   // rows swapping out from under the eye.
   function goToPage(next) {
-    reloadListSoftly({ page: next });
+    softSwap('fade', function () {
+      setState({ page: next });
+      if (isNarrowScreen() && window.scrollY) window.scrollTo(0, 0);
+      return fetchTasks().then(render);
+    });
   }
   function prevPage() {
     if (state.page <= 1) return;
@@ -3664,7 +3670,7 @@
         + '<span class="interactive icon-btn" data-action="closeMobileSearch" title="' + T('Back') + '" aria-label="' + T('Back') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.chevronLeft + '</span>'
         + '<div style="flex:1; display:flex; align-items:center; gap:12px; height:48px; padding:0 16px; border-radius:var(--r-full); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">'
         +   ICON.search
-        +   '<input id="mobileSearchInput" data-field="searchQuery" value="' + esc(state.searchQuery) + '" placeholder="' + T('Search tasks, comments, files') + '" style="border:none; outline:none; padding:0; background:transparent; flex:1; min-width:0; font-size:16px; line-height:24px; color:inherit;"></input>'
+        +   '<input id="mobileSearchInput" data-field="searchQuery" value="' + esc(state.searchQuery) + '" placeholder="' + T('Search tasks, comments, files') + '" style="view-transition-name:search-box-m; border:none; outline:none; padding:0; background:transparent; flex:1; min-width:0; font-size:16px; line-height:24px; color:inherit;"></input>'
         +   searchClear
         + '</div>'
       + '</div>';
@@ -3780,7 +3786,7 @@
       + '<div class="topbar-center" style="flex:1; display:flex; justify-content:center;">'
       +   '<div class="desktop-search-bar" style="align-items:center; gap:12px; width:520px; max-width:100%; height:48px; padding:0 16px; border-radius:var(--r-full); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">'
       +     ICON.search
-      +     '<input id="searchInput" data-field="searchQuery" value="' + esc(state.searchQuery) + '" placeholder="' + T('Search tasks, comments, files') + '" style="border:none; outline:none; padding:0; background:transparent; flex:1; min-width:0; font-size:16px; line-height:24px; color:inherit;"></input>'
+      +     '<input id="searchInput" data-field="searchQuery" value="' + esc(state.searchQuery) + '" placeholder="' + T('Search tasks, comments, files') + '" style="view-transition-name:search-box; border:none; outline:none; padding:0; background:transparent; flex:1; min-width:0; font-size:16px; line-height:24px; color:inherit;"></input>'
       +     searchClear
       +   '</div>'
       +   '<div class="interactive mobile-search-btn icon-btn" data-action="openMobileSearch" title="' + T('Search') + '" aria-label="' + T('Search') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.search + '</div>'
@@ -4016,7 +4022,7 @@
       + (narrow ? '<div style="display:flex; align-items:center; gap:4px;">' + tablistHtml + filterHtml + '</div>' : tablistHtml)
       // Only the list itself fades on a tab change; the header and the tabs
       // stay put so the underline can slide across them.
-      + '<div class="list-body ' + listFadeMotion.cls + '" style="' + listFadeMotion.style.replace('animation-delay', '--fade-delay') + 'position:relative; flex:1; min-height:0; display:flex; flex-direction:column;">'
+      + '<div class="list-body ' + listFadeMotion.cls + '" style="view-transition-name:list-body; ' + listFadeMotion.style.replace('animation-delay', '--fade-delay') + 'position:relative; flex:1; min-height:0; display:flex; flex-direction:column;">'
       +   bodyHtml
       +   ghostHtml
       + '</div>'
