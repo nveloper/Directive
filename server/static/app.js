@@ -1921,6 +1921,25 @@
         restoredScrolls.push({ el: fresh[fi], top: fresh[fi].scrollTop, left: fresh[fi].scrollLeft });
       }
     }
+    // A one-shot animation lives on an element that every render replaces;
+    // without this each re-render while it plays would start it over, which
+    // shows as a flicker. The fresh element picks up where the old one was.
+    Object.keys(oneShot).forEach(function (key) {
+      var elapsed = Date.now() - (oneShotStart[key] || Date.now());
+      if (elapsed < 20) return;
+      Array.prototype.forEach.call(root.getElementsByClassName(oneShot[key]), function (el) {
+        el.style.setProperty('--shot-delay', '-' + elapsed + 'ms');
+      });
+    });
+    // Drawers and their scrim slide and fade the same way: a render during the
+    // slide resumes it rather than snapping the drawer back to its start.
+    [['.left-nav.anim-open, .left-nav.anim-close', 'nav'], ['.right-panel.anim-open, .right-panel.anim-close', 'cal'], ['.mobile-scrim', 'scrim']].forEach(function (pair) {
+      var at = drawerAnimAt[pair[1]];
+      if (!at) return;
+      var elapsed = Date.now() - at;
+      if (elapsed < 20 || elapsed > 1000) return;
+      Array.prototype.forEach.call(root.querySelectorAll(pair[0]), function (el) { el.style.animationDelay = '-' + elapsed + 'ms'; });
+    });
     applyA11y(root);
     placeMSelectMenu(root);
     placeDatePicker(root);
@@ -2193,10 +2212,13 @@
   var oneShot = {};
   var oneShotTokens = {};
 
+  var oneShotStart = {};
+  var drawerAnimAt = {};
   function playOnce(key, cls, ms) {
     var token = (oneShotTokens[key] || 0) + 1;
     oneShotTokens[key] = token;
     oneShot[key] = cls;
+    oneShotStart[key] = Date.now();
     setTimeout(function () {
       if (oneShotTokens[key] !== token) return;
       delete oneShot[key];
@@ -2275,7 +2297,7 @@
   function selectNode(id) {
     if (state.selectedNode === id) { closeMobileNav(); return; }
     nav.nodeTarget = id;
-    playOnce('node', 'anim-select', 420);
+    if (isWideScreen()) playOnce('node', 'anim-select', 420);
     reloadListSoftly({ selectedNode: id, page: 1 });
     // The drawer stays a moment so the pick is seen, then slides away.
     setTimeout(closeMobileNav, 180);
@@ -2423,6 +2445,7 @@
 
   function setMobileNav(open) {
     var token = ++nav.mobileNavToken;
+    drawerAnimAt.nav = drawerAnimAt.scrim = Date.now();
     setState({ mobileNavOpen: open, mobileNavAnim: open ? 'anim-open' : 'anim-close' });
     setTimeout(function () {
       if (nav.mobileNavToken === token) setState({ mobileNavAnim: null });
@@ -2441,6 +2464,7 @@
 
   function setMobileCalendar(open) {
     var token = ++nav.mobileCalendarToken;
+    drawerAnimAt.cal = drawerAnimAt.scrim = Date.now();
     setState({ mobileCalendarOpen: open, mobileCalendarAnim: open ? 'anim-open' : 'anim-close' });
     setTimeout(function () {
       if (nav.mobileCalendarToken === token) setState({ mobileCalendarAnim: null });

@@ -896,18 +896,18 @@ body { line-height: 1.45; }
    back while the pseudo-element plays the morph. */
 @keyframes indicatorGrow { from { transform: scaleX(.3); opacity: .3; } to { transform: scaleX(1); opacity: 1; } }
 @keyframes holdBg { from, to { background-color: transparent; } }
-.anim-select { position: relative; isolation: isolate; animation: holdBg var(--m-spatial) steps(1, end); }
+.anim-select { position: relative; isolation: isolate; animation: holdBg var(--m-spatial) steps(1, end) var(--shot-delay, 0ms); }
 .anim-select::before {
   content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
   background: var(--secondary-container);
-  animation: indicatorGrow var(--m-spatial) var(--spring) both;
+  animation: indicatorGrow var(--m-spatial) var(--spring) var(--shot-delay, 0ms) both;
 }
 /* Segmented buttons fill from the middle the same way. */
-.anim-seg { position: relative; isolation: isolate; animation: holdBg var(--m-spatial) steps(1, end); }
+.anim-seg { position: relative; isolation: isolate; animation: holdBg var(--m-spatial) steps(1, end) var(--shot-delay, 0ms); }
 .anim-seg::before {
   content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
   background: var(--secondary-container);
-  animation: indicatorGrow var(--m-spatial) var(--spring) both;
+  animation: indicatorGrow var(--m-spatial) var(--spring) var(--shot-delay, 0ms) both;
 }
 .view-toggle .anim-seg::before { background: var(--surface); box-shadow: var(--e1); }
 /* Tabs: the underline slides from the tab that was selected to the new one,
