@@ -301,3 +301,47 @@
     document.body.appendChild(b);
   });
 })();
+
+// Diagnostics for the demo: open the page with #debug in the address to see
+// what this browser measures - viewport, the list's scroll box, the page's
+// scroll, and how many touches, scrolls and re-renders happen. Read-only.
+(function () {
+  if (!/debug/.test(location.hash)) return;
+  var counts = { touchstart: 0, touchmove: 0, prevented: 0, winScroll: 0, boxScroll: 0, renders: 0 };
+  var lastTarget = '';
+  document.addEventListener('touchstart', function (e) {
+    counts.touchstart++;
+    var t = e.target; lastTarget = t ? (t.tagName.toLowerCase() + (t.className && typeof t.className === 'string' ? '.' + t.className.split(' ').slice(0, 2).join('.') : '')) : '';
+  }, { capture: true, passive: true });
+  document.addEventListener('touchmove', function (e) { counts.touchmove++; setTimeout(function () { if (e.defaultPrevented) counts.prevented++; }, 0); }, { capture: true, passive: true });
+  window.addEventListener('scroll', function () { counts.winScroll++; }, { passive: true });
+  document.addEventListener('scroll', function (e) { if (e.target !== document) counts.boxScroll++; }, { capture: true, passive: true });
+  function start() {
+    var root = document.getElementById('root');
+    if (root) new MutationObserver(function () { counts.renders++; }).observe(root, { childList: true });
+    var box = document.createElement('pre');
+    box.style.cssText = 'position:fixed; left:4px; top:4px; z-index:2147483647; margin:0; padding:6px 8px; max-width:calc(100vw - 8px); font:10px/1.35 ui-monospace,monospace; white-space:pre-wrap; background:rgba(0,0,0,.78); color:#7CFC00; border-radius:6px; pointer-events:none;';
+    document.body.appendChild(box);
+    setInterval(function () {
+      var cs = function (el, k) { return el ? getComputedStyle(el)[k] : '-'; };
+      var shell = document.querySelector('.app-shell');
+      var main = document.querySelector('#task-list');
+      var lb = document.querySelector('.list-body > div');
+      var vv = window.visualViewport;
+      var mq = function (q) { return window.matchMedia(q).matches ? 'y' : 'n'; };
+      box.textContent = [
+        navigator.userAgent.replace(/^Mozilla\/5\.0 \(/, '').slice(0, 90),
+        'inner ' + innerWidth + 'x' + innerHeight + ' vv ' + (vv ? Math.round(vv.width) + 'x' + Math.round(vv.height) + ' s' + vv.scale.toFixed(2) : '-') + ' dpr ' + devicePixelRatio,
+        'narrow ' + mq('(max-width: 860px)') + ' coarse ' + mq('(pointer: coarse)') + ' dvh ' + (CSS.supports('height', '100dvh') ? 'y' : 'n') + ' has ' + (CSS.supports('selector(:has(a))') ? 'y' : 'n') + ' clip ' + (CSS.supports('overflow-x', 'clip') ? 'y' : 'n'),
+        'html ov ' + cs(document.documentElement, 'overflowY') + ' body ov ' + cs(document.body, 'overflowY') + ' h ' + document.body.offsetHeight,
+        'doc scrollH ' + document.documentElement.scrollHeight + ' scrollY ' + Math.round(scrollY),
+        'shell h ' + (shell ? shell.offsetHeight : '-') + ' ov ' + cs(shell, 'overflowY'),
+        'main h ' + (main ? main.offsetHeight : '-') + ' ov ' + cs(main, 'overflowY'),
+        'list client ' + (lb ? lb.clientHeight : '-') + ' scrollH ' + (lb ? lb.scrollHeight : '-') + ' top ' + (lb ? lb.scrollTop : '-') + ' ov ' + cs(lb, 'overflowY'),
+        'touch start ' + counts.touchstart + ' move ' + counts.touchmove + ' prevented ' + counts.prevented + ' on ' + lastTarget,
+        'scroll win ' + counts.winScroll + ' box ' + counts.boxScroll + ' renders ' + counts.renders
+      ].join('\n');
+    }, 300);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
