@@ -1231,7 +1231,7 @@
     var cal = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="14" height="12" rx="2"></rect><path d="M3 8.5h14M7 2.5v4M13 2.5v4"></path></svg>';
     var label = value ? formatDue(value) + ' · ' + relativeDue(value, false) : T('No due date');
     if (value && relativeDue(value, false) === formatDue(value)) label = formatDue(value);
-    return '<div id="dp-trigger-' + field + '" class="' + (lock ? '' : 'interactive ') + 'date-trigger"' + (lock ? '' : ' data-action="toggleDatePicker" data-id="' + field + '"') + ' role="button" aria-haspopup="dialog" aria-label="' + T('Due Date') + '" style="display:flex; align-items:center; gap:8px; height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; background:' + c.surface + '; color:' + (value ? c.onSurface : c.textMuted) + '; font-size:14px;' + (lock ? ' opacity:.6;' : '') + '">'
+    return '<div id="dp-trigger-' + field + '" class="' + (lock ? '' : 'interactive ') + 'date-trigger"' + (lock ? '' : ' data-action="toggleDatePicker" data-id="' + field + '"') + ' role="button" aria-haspopup="dialog" aria-label="' + T('Due Date') + '" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 12px; border-radius:var(--r-xs); border:1px solid ' + c.outline + '; background:' + c.surface + '; color:' + (value ? c.onSurface : c.textMuted) + '; font-size:14px; line-height:20px;' + (lock ? ' opacity:.6;' : '') + '">'
       + '<span style="display:flex; color:' + c.onSurfaceVariant + ';">' + cal + '</span><span class="tnum" style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + esc(label) + '</span></div>';
   }
   function datePickerPopover(c) {
@@ -1246,8 +1246,8 @@
     for (var d = 1; d <= days; d++) {
       var iso = isoOf(new Date(y, mo, d));
       var sel = iso === value, isToday = iso === today;
-      cells += '<span class="interactive tnum" data-action="pickDate" data-id="' + iso + '" style="display:flex; align-items:center; justify-content:center; height:32px; border-radius:var(--r-sm); font-size:13px;'
-        + (sel ? ' background:' + c.primary + '; color:' + c.onPrimary + '; font-weight:600;' : (isToday ? ' color:' + c.primary + '; font-weight:600; box-shadow:inset 0 0 0 1px ' + c.primary + ';' : ' color:' + c.onSurface + ';')) + '">' + d + '</span>';
+      cells += '<span class="interactive tnum" data-action="pickDate" data-id="' + iso + '" style="display:flex; align-items:center; justify-content:center; height:40px; border-radius:var(--r-full); font-size:14px;'
+        + (sel ? ' background:' + c.primary + '; color:' + c.onPrimary + '; font-weight:500;' : (isToday ? ' color:' + c.primary + '; font-weight:500; box-shadow:inset 0 0 0 1px ' + c.primary + ';' : ' color:' + c.onSurface + ';')) + '">' + d + '</span>';
     }
     var quick = [['today', 'Today'], ['tomorrow', 'Tomorrow'], ['friday', 'This Friday'], ['monday', 'Next Monday'], ['none', 'No due date']].map(function (q) {
       return '<span class="interactive" data-action="quickDate" data-id="' + q[0] + '" style="display:flex; align-items:center; height:30px; padding:0 10px; border-radius:var(--r-sm); font-size:13px; color:' + (q[0] === 'none' ? c.onSurfaceVariant : c.onSurface) + ';">' + T(q[1]) + '</span>';
@@ -3627,7 +3627,7 @@
     var unreadDot = function (on) { return '<span aria-hidden="true" style="width:6px; height:6px; margin-top:8px; border-radius:50%; flex-shrink:0; background:' + (on ? c.primary : 'transparent') + ';"></span>'; };
     var personAvatar = function (name, size) {
       var col = avatarColors(name, c.dark);
-      return '<span style="display:flex; align-items:center; justify-content:center; width:' + size + 'px; height:' + size + 'px; border-radius:50%; flex-shrink:0; background:' + col.bg + '; color:' + col.color + '; font-size:12px; font-weight:500;">' + esc(computeInitials(name)) + '</span>';
+      return '<span style="display:flex; align-items:center; justify-content:center; width:' + size + 'px; height:' + size + 'px; border-radius:50%; flex-shrink:0; background:' + col.bg + '; color:' + col.color + '; font-size:' + (size >= 32 ? 14 : 12) + 'px; line-height:1; font-weight:500;">' + esc(computeInitials(name)) + '</span>';
     };
     var notifKindIcon = function (kind) {
       if (kind === 'dueToday' || kind === 'dueTomorrow') return '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10.5" r="6.5"></circle><path d="M10 7v3.5l2.5 1.5"></path></svg>';
@@ -4145,34 +4145,34 @@
     var done = items.filter(function (x) { return x.done; }).length;
     var rows = items.map(function (it, i) {
       var box = editing
-        ? '<input type="checkbox"' + (readOnly ? ' disabled' : '') + ' data-action="toggleChecklistItem" data-id="' + it.id + '"' + (it.done ? ' checked' : '') + ' aria-label="' + esc(it.body) + '" style="flex-shrink:0;"></input>'
-        : '<span style="width:6px; height:6px; border-radius:50%; background:' + c.outline + '; flex-shrink:0; margin:0 5px;"></span>';
+        ? '<label class="cb-target"><input type="checkbox"' + (readOnly ? ' disabled' : '') + ' data-action="toggleChecklistItem" data-id="' + it.id + '"' + (it.done ? ' checked' : '') + ' aria-label="' + esc(it.body) + '"></input></label>'
+        : '<span class="cb-target"><span style="width:6px; height:6px; border-radius:50%; background:' + c.outline + ';"></span></span>';
       var tools = readOnly ? '' : (
         (editing && items.length > 1
-          ? '<span class="interactive checklist-tool" data-action="moveChecklistUp" data-id="' + it.id + '" title="' + T('Move up') + '"' + (i === 0 ? ' style="visibility:hidden;"' : '') + '>' + '<svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12l5-5 5 5"></path></svg></span>'
-          + '<span class="interactive checklist-tool" data-action="moveChecklistDown" data-id="' + it.id + '" title="' + T('Move down') + '"' + (i === items.length - 1 ? ' style="visibility:hidden;"' : '') + '>' + '<svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 8l5 5 5-5"></path></svg></span>'
+          ? '<span class="interactive checklist-tool" data-action="moveChecklistUp" data-id="' + it.id + '" title="' + T('Move up') + '"' + (i === 0 ? ' style="visibility:hidden;"' : '') + '>' + '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 12l5-5 5 5"></path></svg></span>'
+          + '<span class="interactive checklist-tool" data-action="moveChecklistDown" data-id="' + it.id + '" title="' + T('Move down') + '"' + (i === items.length - 1 ? ' style="visibility:hidden;"' : '') + '>' + '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M5 8l5 5 5-5"></path></svg></span>'
           : '')
         + '<span class="interactive checklist-tool" data-action="deleteChecklistItem" data-id="' + it.id + '" title="' + T('Remove') + '">' + ICON.close + '</span>');
-      return '<div class="checklist-row' + oneShotClass('check:' + it.id) + '" style="display:flex; align-items:center; gap:9px; padding:5px 2px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">'
+      return '<div class="checklist-row' + oneShotClass('check:' + it.id) + '" style="display:flex; align-items:center; gap:4px; min-height:40px; margin-left:-12px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">'
         + box
-        + '<span style="flex:1; min-width:0; font-size:13px; line-height:1.4; overflow-wrap:anywhere; color:' + (it.done ? c.onSurfaceVariant : c.onSurface) + '; text-decoration:' + (it.done ? 'line-through' : 'none') + ';">' + esc(it.body) + '</span>'
+        + '<span class="t-body-m" style="flex:1; min-width:0; padding:8px 0; overflow-wrap:anywhere; color:' + (it.done ? c.onSurfaceVariant : c.onSurface) + '; text-decoration:' + (it.done ? 'line-through' : 'none') + ';">' + esc(it.body) + '</span>'
         + tools
         + '</div>';
     }).join('');
     var pct = items.length ? Math.round(done / items.length * 100) : 0;
-    return '<div style="display:flex; flex-direction:column; gap:4px;">'
-      + '<div style="display:flex; align-items:center; gap:8px;"><label style="font-size:16px; font-weight:500; color:' + c.onSurface + ';">' + T('Checklist') + '</label>'
-      +   (items.length && editing ? '<span style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + done + '/' + items.length + '</span>'
+    return '<div style="display:flex; flex-direction:column; gap:0;">'
+      + '<div style="display:flex; align-items:center; gap:12px; min-height:40px;"><label class="t-title-m" style="color:' + c.onSurface + ';">' + T('Checklist') + '</label>'
+      +   (items.length && editing ? '<span class="t-label-m tnum" style="color:' + c.onSurfaceVariant + ';">' + done + '/' + items.length + '</span>'
           + '<span style="flex:1; height:4px; border-radius:2px; background:' + c.surfaceContainerHigh + '; overflow:hidden;"><span style="display:block; height:100%; width:' + pct + '%; background:' + c.secondary + '; transition:width .3s;"></span></span>' : '')
       + '</div>'
       + rows
-      + (readOnly ? (items.length ? '' : '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T('No checklist.') + '</div>')
+      + (readOnly ? (items.length ? '' : '<div class="t-body-m" style="color:' + c.onSurfaceVariant + ';">' + T('No checklist.') + '</div>')
         // A quiet "+ Add item" line rather than a boxed field: it reads as the
         // next row of the list, and takes a border only while typing in it.
-        : '<div class="checklist-add" style="display:flex; align-items:center; gap:4px; margin-top:2px;">'
-          + '<span aria-hidden="true" style="display:flex; color:' + c.textMuted + '; padding-left:2px;">' + ICON.plus + '</span>'
-          + '<input id="checklistDraftInput" data-field="checklistDraft" value="' + esc(state.checklistDraft || '') + '" maxlength="500" placeholder="' + T('Add item') + '" aria-label="' + T('Add a step and press Enter') + '" style="flex:1; min-width:0; height:32px; padding:0 8px; border-radius:var(--r-sm); border:1px solid transparent; font-size:14px; background:transparent; color:' + c.onSurface + ';"></input>'
-          + '<div class="interactive" data-action="addChecklistItem" style="display:flex; align-items:center; justify-content:center; height:28px; padding:0 10px; border-radius:var(--r-sm); color:' + c.primary + '; font-size:13px; font-weight:500; flex-shrink:0;">' + T('Add') + '</div>'
+        : '<div class="checklist-add" style="display:flex; align-items:center; gap:4px; margin-left:-12px;">'
+          + '<span class="cb-target" aria-hidden="true" style="color:' + c.textMuted + ';">' + ICON.plus + '</span>'
+          + '<input id="checklistDraftInput" data-field="checklistDraft" value="' + esc(state.checklistDraft || '') + '" maxlength="500" placeholder="' + T('Add item') + '" aria-label="' + T('Add a step and press Enter') + '" style="flex:1; min-width:0; height:40px; padding:0 8px; margin-left:-8px; border-radius:var(--r-xs); border:1px solid transparent; font-size:14px; line-height:20px; background:transparent; color:' + c.onSurface + ';"></input>'
+          + '<div class="interactive text-btn t-label-l" data-action="addChecklistItem" style="color:' + c.primary + ';">' + T('Add') + '</div>'
           + '</div>')
       + '</div>';
   }
@@ -4201,37 +4201,37 @@
     var all = events.concat(comments).sort(function (x, y) { return new Date(x.at) - new Date(y.at); });
     var avatar = function (name, size) {
       var col = avatarColors(name, c.dark);
-      return '<span style="display:flex; align-items:center; justify-content:center; width:' + size + 'px; height:' + size + 'px; border-radius:50%; flex-shrink:0; background:' + col.bg + '; color:' + col.color + '; font-size:12px; font-weight:500;">' + esc(computeInitials(name)) + '</span>';
+      return '<span style="display:flex; align-items:center; justify-content:center; width:' + size + 'px; height:' + size + 'px; border-radius:50%; flex-shrink:0; background:' + col.bg + '; color:' + col.color + '; font-size:' + (size >= 32 ? 14 : 12) + 'px; line-height:1; font-weight:500;">' + esc(computeInitials(name)) + '</span>';
     };
     var items = all.map(function (x) {
       if (x.kind === 'event') {
-        return '<div style="display:flex; align-items:center; gap:10px; padding:4px 0 4px 8px; font-size:12px; color:' + c.textMuted + ';">'
-          + '<span aria-hidden="true" style="width:8px; height:8px; border-radius:50%; flex-shrink:0; background:' + c.outline + ';"></span>'
+        return '<div class="t-body-s" style="display:flex; align-items:center; gap:12px; min-height:24px; padding:4px 0; color:' + c.onSurfaceVariant + ';">'
+          + '<span aria-hidden="true" style="display:flex; align-items:center; justify-content:center; width:32px; flex-shrink:0;"><span style="width:8px; height:8px; border-radius:50%; background:' + c.outline + ';"></span></span>'
           + '<span style="min-width:0;">' + esc(taskEventText(x.a)) + ' · ' + esc(formatStamp(x.at)) + '</span></div>';
       }
       var cm = x.cm;
-      return '<div class="' + oneShotClass('comment:' + cm.id).trim() + '" style="display:flex; gap:10px; padding:8px 0;">'
-        + avatar(cm.authorName || '?', 24)
-        + '<div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">'
-        +   '<div style="display:flex; align-items:center; gap:8px;">'
-        +     '<span style="font-size:13px; font-weight:500;">' + esc(cm.authorName) + '</span>'
-        +     '<span style="font-size:12px; color:' + c.textMuted + ';">' + esc(formatStamp(cm.createdAt)) + '</span>'
-        +     ((cm.mine || isAdmin()) ? '<span class="interactive" data-action="deleteComment" data-id="' + cm.id + '" title="' + T('Delete comment') + '" style="margin-left:auto; display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:var(--r-sm); color:' + c.textMuted + ';">' + ICON.close + '</span>' : '')
+      return '<div class="' + oneShotClass('comment:' + cm.id).trim() + '" style="display:flex; gap:12px; padding:8px 0;">'
+        + avatar(cm.authorName || '?', 32)
+        + '<div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">'
+        +   '<div style="display:flex; align-items:center; gap:8px; min-height:32px;">'
+        +     '<span class="t-label-l">' + esc(cm.authorName) + '</span>'
+        +     '<span class="t-body-s" style="color:' + c.onSurfaceVariant + ';">' + esc(formatStamp(cm.createdAt)) + '</span>'
+        +     ((cm.mine || isAdmin()) ? '<span class="interactive icon-btn" data-action="deleteComment" data-id="' + cm.id + '" title="' + T('Delete comment') + '" aria-label="' + T('Delete comment') + '" style="margin:-4px -8px -4px auto; color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>' : '')
         +   '</div>'
-        +   '<div style="font-size:14px; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; color:' + c.onSurface + ';">' + renderCommentBody(cm.body, c) + '</div>'
+        +   '<div class="t-body-m" style="white-space:pre-wrap; overflow-wrap:anywhere; color:' + c.onSurface + ';">' + renderCommentBody(cm.body, c) + '</div>'
         + '</div></div>';
     }).join('');
     var me = state.user ? state.user.displayName : '';
-    return '<div style="display:flex; flex-direction:column; gap:2px; padding-top:16px; border-top:1px solid ' + c.outlineVariant + ';">'
-      + '<span style="font-size:16px; font-weight:500; margin-bottom:6px;">' + T('Activity') + (state.comments.length ? ' <span class="tnum" style="font-weight:400; color:' + c.textMuted + ';">· ' + T(state.comments.length === 1 ? '{n} comment' : '{n} comments', { n: state.comments.length }) + '</span>' : '') + '</span>'
-      + (all.length ? items : '<div style="font-size:13px; color:' + c.textMuted + '; padding:4px 0 8px 0;">' + T('No comments yet.') + '</div>')
+    return '<div style="display:flex; flex-direction:column; gap:4px;">'
+      + '<span class="t-title-m" style="display:flex; align-items:center; min-height:40px;">' + T('Activity') + (state.comments.length ? '&nbsp;<span class="tnum t-body-m" style="color:' + c.onSurfaceVariant + ';">· ' + T(state.comments.length === 1 ? '{n} comment' : '{n} comments', { n: state.comments.length }) + '</span>' : '') + '</span>'
+      + (all.length ? items : '<div class="t-body-m" style="color:' + c.onSurfaceVariant + ';">' + T('No comments yet.') + '</div>')
       + '</div>'
-      + '<div class="comment-composer" style="position:sticky; bottom:-28px; margin:8px -24px -28px; padding:12px 24px 20px; background:' + c.surface + '; border-top:1px solid ' + c.outlineVariant + '; display:flex; gap:10px; align-items:flex-start;">'
-      +   avatar(me || '?', 28)
-      +   '<div style="position:relative; flex:1; min-width:0; display:flex; flex-direction:column; gap:6px;">'
-      +     '<textarea id="commentDraftInput" data-field="commentDraft" rows="2" placeholder="' + T('Add a comment - type @ to notify someone') + '" aria-autocomplete="list" style="width:100%; min-height:40px; max-height:160px; padding:9px 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:1.5; font-family:inherit; resize:none; background:' + c.surface + '; color:' + c.onSurface + ';">' + esc(state.commentDraft || '') + '</textarea>'
-      +     '<div style="display:flex; align-items:center; justify-content:flex-end; gap:10px;"><span style="font-size:12px; color:' + c.textMuted + ';">' + T(/Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘ Enter to post' : 'Ctrl Enter to post') + '</span>'
-      +       '<div class="interactive" data-action="postComment" style="display:flex; align-items:center; justify-content:center; height:32px; padding:0 14px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:13px; font-weight:500; flex-shrink:0;">' + T('Post') + '</div></div>'
+      + '<div class="comment-composer" style="position:sticky; bottom:calc(-1 * var(--pad)); margin:0 calc(-1 * var(--pad)) calc(-1 * var(--pad)); padding:12px var(--pad) 16px; background:' + c.surface + '; border-top:1px solid ' + c.outlineVariant + '; display:flex; gap:12px; align-items:flex-start;">'
+      +   '<span style="padding-top:8px;">' + avatar(me || '?', 32) + '</span>'
+      +   '<div style="position:relative; flex:1; min-width:0; display:flex; flex-direction:column; gap:8px;">'
+      +     '<textarea id="commentDraftInput" data-field="commentDraft" rows="1" placeholder="' + T('Add a comment - type @ to notify someone') + '" aria-autocomplete="list" style="width:100%; min-height:48px; max-height:160px; padding:12px 16px; border-radius:var(--r-xs); border:1px solid ' + c.outline + '; font-size:16px; line-height:24px; font-family:inherit; resize:none; background:' + c.surface + '; color:' + c.onSurface + ';">' + esc(state.commentDraft || '') + '</textarea>'
+      +     '<div style="display:flex; align-items:center; justify-content:flex-end; gap:12px;"><span class="kbd-hint t-body-s" style="color:' + c.onSurfaceVariant + ';">' + T(/Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘ Enter to post' : 'Ctrl Enter to post') + '</span>'
+      +       '<div class="interactive t-label-l" data-action="postComment" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 24px; border-radius:var(--r-full); background:' + c.primary + '; color:' + c.onPrimary + '; flex-shrink:0;">' + T('Post') + '</div></div>'
       +     mentionPicker(c)
       +   '</div>'
       + '</div>';
@@ -4246,14 +4246,14 @@
     if (!list.length) return '';
     var items = list.map(function (m, i) {
       var active = i === state.mention.index;
-      return '<div class="interactive" role="option" aria-selected="' + (active ? 'true' : 'false') + '" data-action="pickMention" data-id="' + m.id + '" style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:var(--r-sm); font-size:13px; background:' + (active ? c.primaryContainer : 'transparent') + '; color:' + (active ? c.onPrimaryContainer : c.onSurface) + ';">'
+      return '<div class="interactive t-body-m" role="option" aria-selected="' + (active ? 'true' : 'false') + '" data-action="pickMention" data-id="' + m.id + '" style="display:flex; align-items:center; gap:12px; min-height:48px; padding:0 12px; border-radius:var(--r-sm); background:' + (active ? c.primaryContainer : 'transparent') + '; color:' + (active ? c.onPrimaryContainer : c.onSurface) + ';">'
         + withImageFallback('/api/users/' + m.id + '/avatar?v=' + state.avatarVersion,
             '<div style="width:22px; height:22px; border-radius:50%; background:' + c.tertiaryContainer + '; color:' + c.onTertiaryContainer + '; font-size:12px; font-weight:500; display:flex; align-items:center; justify-content:center;">' + esc(computeInitials(m.displayName)) + '</div>', 22, '50%')
         + '<span>' + esc(m.displayName) + '</span>'
-        + (m.deptId ? '<span style="margin-left:auto; font-size:12px; color:' + c.onSurfaceVariant + ';">' + esc(nodeLabel(m.deptId)) + '</span>' : '')
+        + (m.deptId ? '<span class="t-body-s" style="margin-left:auto; color:' + c.onSurfaceVariant + ';">' + esc(nodeLabel(m.deptId)) + '</span>' : '')
         + '</div>';
     }).join('');
-    return '<div role="listbox" aria-label="' + T('People to mention') + '" style="position:absolute; left:0; bottom:calc(100% + 6px); width:260px; max-width:100%; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:5px; z-index:5;">' + items + '</div>';
+    return '<div role="listbox" aria-label="' + T('People to mention') + '" style="position:absolute; left:0; bottom:calc(100% + 6px); width:260px; max-width:100%; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:8px; z-index:5;">' + items + '</div>';
   }
 
   // Comment stamps are stored UTC; show them in the reader's own time.
@@ -4618,7 +4618,7 @@
     var writable = canWriteDept(t.deptId);
     var maps = styleMaps(c);
     var v = taskView(t, maps, c);
-    var pencil = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 3.5l3 3L7 16l-3.5.5L4 13z"></path><path d="M11.5 5.5l3 3"></path></svg>';
+    var pencil = '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 3.5l3 3L7 16l-3.5.5L4 13z"></path><path d="M11.5 5.5l3 3"></path></svg>';
 
     // With no icon yet, the same spot holds a faint placeholder that adds one.
     var smiley = '<svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="10" cy="10" r="7.5"></circle><path d="M7 12c.8 1 1.8 1.5 3 1.5s2.2-.5 3-1.5"></path><path d="M7.5 8h.01M12.5 8h.01" stroke-width="2.2"></path></svg>';
@@ -4630,8 +4630,8 @@
 
     // Properties as a two-column list, each value changeable where it is shown.
     var dot = (maps.statusStyle[t.status] || maps.statusStyle.todo).dot;
-    var fieldStyle = 'height:32px; padding:0 8px; border-radius:var(--r-sm); border:1px solid transparent; font-size:14px; background:transparent; color:' + c.onSurface + ';';
-    var plain = function (inner) { return '<span style="display:flex; align-items:center; gap:8px; min-height:32px; padding:0 8px; font-size:14px; color:' + c.onSurface + ';">' + inner + '</span>'; };
+    var fieldStyle = 'height:40px; padding:0 8px; border-radius:var(--r-xs); border:1px solid transparent; font-size:14px; line-height:20px; background:transparent; color:' + c.onSurface + ';';
+    var plain = function (inner) { return '<span class="prop-plain t-body-m" style="display:flex; align-items:center; gap:8px; min-height:40px; padding:0 8px; color:' + c.onSurface + ';">' + inner + '</span>'; };
     var statusValue = writable
       ? mSelectFrom('<select id="detailStatusSelect" aria-label="' + T('Status') + '" style="' + fieldStyle + '">'
         + EDITABLE_STATUSES.map(function (s) { return '<option value="' + s + '"' + (s === t.status ? ' selected' : '') + '>' + statusIconHtml(s, maps.statusStyle[s].dot, 14) + '<span style="margin-left:8px;">' + TAB_LABELS[s] + '</span>' + '</option>'; }).join('')
@@ -4650,7 +4650,7 @@
         + '</select>', c)
       : plain(priorityIconHtml(t.priority, v.priorityColor, c.outlineVariant) + esc(T(t.priority)));
     var dueValue = writable
-      ? '<div style="display:flex; align-items:center; gap:8px;">' + dateTriggerHtml('detail', t.dueDate, c, '').replace('border:1px solid ' + c.outline, 'border:1px solid transparent').replace('height:38px', 'height:32px; padding:0 8px') + (t.overdue ? '<span style="font-size:13px; font-weight:500; color:' + c.error + ';">' + esc(relativeDue(t.dueDate, true)) + '</span>' : '') + '</div>'
+      ? '<div style="display:flex; align-items:center; gap:8px;">' + dateTriggerHtml('detail', t.dueDate, c, '').replace('border:1px solid ' + c.outline, 'border:1px solid transparent').replace('height:40px; padding:0 12px', 'height:40px; padding:0 8px') + (t.overdue ? '<span class="t-label-l" style="color:' + c.error + ';">' + esc(relativeDue(t.dueDate, true)) + '</span>' : '') + '</div>'
       : plain('<span style="color:' + v.dueColor + ';">' + esc(t.dueDate ? formatDue(t.dueDate) : T('No due date')) + '</span>');
     var repeatValue = plain(t.recurrence ? ICON.repeat + esc(describeRepeat(t.recurrence)) : '<span style="color:' + c.textMuted + ';">' + T('Does not repeat') + '</span>');
     var deptValue = writable && isAdmin()
@@ -4660,12 +4660,12 @@
         + '</select>', c)
       : plain(t.deptId ? esc(nodeLabel(t.deptId)) : '<span style="color:' + c.textMuted + ';">' + T('No department') + '</span>');
     var calValue = writable
-      ? '<label class="interactive" style="display:flex; align-items:center; gap:8px; min-height:32px; padding:0 8px; border-radius:var(--r-sm); font-size:14px; cursor:pointer;"><input type="checkbox" data-action="toggleDetailCalendar"' + (t.calendarVisible ? ' checked' : '') + '>' + T('Show in the department calendar') + '</label>'
+      ? '<label class="interactive prop-plain t-body-m" style="display:flex; align-items:center; gap:12px; min-height:40px; padding:0 8px; border-radius:var(--r-xs); cursor:pointer;"><input type="checkbox" data-action="toggleDetailCalendar"' + (t.calendarVisible ? ' checked' : '') + '>' + T('Show in the department calendar') + '</label>'
       : plain(T(t.calendarVisible ? 'Shown in calendar' : 'Not in calendar'));
     var row = function (label, value) {
-      return '<div style="display:grid; grid-template-columns:96px minmax(0,1fr); align-items:center; gap:8px;"><span style="font-size:13px; color:' + c.onSurfaceVariant + ';">' + T(label) + '</span><div style="min-width:0;">' + value + '</div></div>';
+      return '<div style="display:grid; grid-template-columns:112px minmax(0,1fr); align-items:center; gap:8px;"><span class="t-body-m" style="color:' + c.onSurfaceVariant + ';">' + T(label) + '</span><div style="min-width:0;">' + value + '</div></div>';
     };
-    var meta = '<div class="detail-props" style="display:flex; flex-direction:column; gap:2px;">'
+    var meta = '<div class="detail-props" style="display:flex; flex-direction:column; gap:0;">'
       + row('Status', statusValue) + row('Assignee', assigneeValue) + row('Priority', priorityValue)
       + row('Due Date', dueValue) + row('Repeat', repeatValue) + row('Department', deptValue) + row('Calendar', calValue)
       + '</div>';
@@ -4674,19 +4674,18 @@
     var mo = modalMotion('detail', closing);
     return '<div class="modal-overlay detail-overlay ' + mo.dim + '" data-backdrop="closeTaskDetail" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,.18); display:flex; align-items:stretch; justify-content:flex-end; z-index:50;">'
       + '<div role="dialog" id="taskDetailDialog" data-scroll-key="' + esc('detail:' + t.id) + '" aria-modal="true" aria-label="' + esc(t.title) + '" tabindex="-1" class="task-detail ' + mo.card + (state.dragOver ? ' drag-over' : '') + '" style="' + mo.cardStyle + 'background:' + c.surface + '; --drop:' + c.primary + ';">'
-      +   '<div style="display:flex; align-items:center; gap:10px;">'
-      +     '<div style="flex:1; min-width:0; display:flex; align-items:center; gap:10px; position:relative;">'
+      +   '<div style="display:flex; align-items:center; gap:4px; margin-right:-8px;">'
+      +     '<div style="flex:1; min-width:0; display:flex; align-items:center; gap:12px; position:relative;">'
       +       iconBlock
       +       ((state.iconPickerOpen || state.iconPickerClosing) && writable ? iconPicker(c, t) : '')
-      +       '<h2 style="flex:1; min-width:0; margin:0; font-size:22px; line-height:1.35; font-weight:500; overflow-wrap:anywhere; color:' + v.titleColor + '; text-decoration:' + v.titleDeco + ';">' + esc(t.title) + '</h2>'
+      +       '<h2 class="t-title-l" style="flex:1; min-width:0; margin:0; overflow-wrap:anywhere; color:' + v.titleColor + '; text-decoration:' + v.titleDeco + ';">' + esc(t.title) + '</h2>'
       +     '</div>'
-      +     (writable ? '<span class="interactive" data-action="editFromDetail" title="' + T('Edit title, description and repeat') + '" aria-label="' + T('Edit task') + '" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--r-sm); flex-shrink:0; color:' + c.onSurfaceVariant + ';">' + pencil + '</span>' : '')
-      +     '<span class="interactive" data-action="closeTaskDetail" title="' + T('Close') + '" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--r-sm); flex-shrink:0; color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
+      +     (writable ? '<span class="interactive icon-btn" data-action="editFromDetail" title="' + T('Edit title, description and repeat') + '" aria-label="' + T('Edit task') + '" style="color:' + c.onSurfaceVariant + ';">' + pencil + '</span>' : '')
+      +     '<span class="interactive icon-btn" data-action="closeTaskDetail" title="' + T('Close') + '" aria-label="' + T('Close') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
       +   '</div>'
       +   meta
-      +   (writable ? '' : '<div style="font-size:12px; line-height:1.45; color:' + c.onSurfaceVariant + '; background:' + c.surfaceContainerHigh + '; padding:8px 11px; border-radius:var(--r-sm);">This task belongs to ' + esc(nodeLabel(t.deptId) || 'no department') + ', so you can read and comment on it but not change it.</div>')
-      +   '<div class="detail-body" style="color:' + (t.description ? c.onSurface : c.onSurfaceVariant) + ';">' + (t.description ? linkify(t.description) : (writable ? '<span class="interactive" data-action="editFromDetail" style="display:inline-block; padding:2px 0; color:' + c.textMuted + ';">' + T('Add a description…') + '</span>' : T('No description.'))) + '</div>'
-      +   '<div style="height:1px; background:' + c.outlineVariant + ';"></div>'
+      +   (writable ? '' : '<div class="t-body-m" style="color:' + c.onSurfaceVariant + '; background:' + c.surfaceContainerHigh + '; padding:12px 16px; border-radius:var(--r-md);">This task belongs to ' + esc(nodeLabel(t.deptId) || 'no department') + ', so you can read and comment on it but not change it.</div>')
+      +   '<div class="detail-body" style="color:' + (t.description ? c.onSurface : c.onSurfaceVariant) + ';">' + (t.description ? linkify(t.description) : (writable ? '<span class="interactive" data-action="editFromDetail" style="display:inline-block; color:' + c.textMuted + ';">' + T('Add a description…') + '</span>' : T('No description.'))) + '</div>'
       +   checklistSection(c, true, !writable)
       +   attachmentsSection(c, writable)
       // Who made it and when it last changed are in the timeline now.
@@ -4721,10 +4720,10 @@
     var exit = motion('icon:out', closing, 'dropdown-out', ICON_PICKER_OUT_MS, true);
     var m = closing ? exit : enter;
     return '<div class="icon-picker ' + m.cls + '" data-dropdown="icon" style="' + m.style + 'background:' + c.surface + '; border:1px solid ' + c.outlineVariant + ';">'
-      + '<div style="display:flex; align-items:center; gap:10px; padding:2px 4px 8px 4px;">'
-      +   '<span style="font-size:12px; font-weight:500; flex:1;">' + T('Icon') + '</span>'
-      +   '<span class="interactive" data-action="uploadTaskIcon" style="font-size:12px; font-weight:500; color:' + c.primary + ';">' + T('Upload image') + '</span>'
-      +   (t.icon ? '<span class="interactive" data-action="removeTaskIcon" style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Remove') + '</span>' : '')
+      + '<div style="display:flex; align-items:center; gap:4px; padding:0 0 8px 4px;">'
+      +   '<span class="t-title-s" style="flex:1;">' + T('Icon') + '</span>'
+      +   '<span class="interactive text-btn t-label-l" data-action="uploadTaskIcon" style="color:' + c.primary + ';">' + T('Upload image') + '</span>'
+      +   (t.icon ? '<span class="interactive text-btn t-label-l" data-action="removeTaskIcon" style="color:' + c.onSurfaceVariant + ';">' + T('Remove') + '</span>' : '')
       + '</div>'
       + '<div class="emoji-tabs" style="border-bottom:1px solid ' + c.outlineVariant + ';">' + tabs + '</div>'
       + '<div class="emoji-grid" data-scroll-key="emoji-grid">' + grid + '</div>'
@@ -4751,23 +4750,23 @@
       return '<div class="att-row' + oneShotClass('att:' + a.id) + '" style="border:1px solid ' + c.outlineVariant + ';">'
         + '<span style="color:' + c.primary + '; display:flex;">' + fileIcon() + '</span>'
         + '<a href="/api/attachments/' + a.id + '?download=1" download="' + esc(a.name) + '" style="flex:1; min-width:0; color:' + c.onSurface + '; text-decoration:none;">'
-        +   '<div style="font-size:13px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(a.name) + '</div>'
-        +   '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + formatBytes(a.size) + ' &middot; ' + esc(a.uploaderName) + ' &middot; ' + esc(formatStamp(a.createdAt)) + '</div>'
+        +   '<div class="t-label-l" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(a.name) + '</div>'
+        +   '<div class="t-body-s" style="color:' + c.onSurfaceVariant + ';">' + formatBytes(a.size) + ' &middot; ' + esc(a.uploaderName) + ' &middot; ' + esc(formatStamp(a.createdAt)) + '</div>'
         + '</a>'
         + del(a)
         + '</div>';
     }).join('');
-    var busy = state.uploading > 0 ? '<span style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T(state.uploading === 1 ? 'Uploading {n} file…' : 'Uploading {n} files…', { n: state.uploading }) + '</span>' : '';
+    var busy = state.uploading > 0 ? '<span class="t-body-s" style="color:' + c.onSurfaceVariant + ';">' + T(state.uploading === 1 ? 'Uploading {n} file…' : 'Uploading {n} files…', { n: state.uploading }) + '</span>' : '';
     return '<div style="display:flex; flex-direction:column; gap:8px;">'
-      + '<div style="display:flex; align-items:center; gap:10px;">'
-      +   '<label style="font-size:16px; font-weight:500; color:' + c.onSurface + ';">' + T('Attachments') + (state.attachments.length ? ' (' + state.attachments.length + ')' : '') + '</label>'
+      + '<div style="display:flex; align-items:center; gap:12px; min-height:40px;">'
+      +   '<label class="t-title-m" style="color:' + c.onSurface + ';">' + T('Attachments') + (state.attachments.length ? ' (' + state.attachments.length + ')' : '') + '</label>'
       +   busy
-      +   (writable ? '<span class="interactive" data-action="pickAttachments" style="margin-left:auto; font-size:13px; font-weight:500; color:' + c.primary + ';">' + T('+ Add files') + '</span>' : '')
+      +   (writable ? '<span class="interactive text-btn t-label-l" data-action="pickAttachments" style="margin-left:auto; margin-right:-12px; color:' + c.primary + ';">' + T('+ Add files') + '</span>' : '')
       + '</div>'
       + (tiles ? '<div class="att-grid">' + tiles + '</div>' : '')
       + rows
       + (!state.attachments.length
-          ? '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + (writable ? T('No files yet. Drop files here, paste an image, or use Add files (up to 20 MB each).') : T('No files.')) + '</div>'
+          ? '<div class="t-body-m" style="color:' + c.onSurfaceVariant + ';">' + (writable ? T('No files yet. Drop files here, paste an image, or use Add files (up to 20 MB each).') : T('No files.')) + '</div>'
           : '')
       + '</div>';
   }

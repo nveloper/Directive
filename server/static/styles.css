@@ -454,10 +454,10 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
      it. The fields are sized inline, so this has to outrank that. */
   input, select, textarea { font-size: 16px !important; }
   input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not(#accentHexInput),
-  select { min-height: 46px !important; }
+  select { min-height: 48px !important; }
   /* Kept at a tappable size without becoming a full-width field. */
   #accentHexInput { width: 104px !important; height: 40px !important; }
-  textarea { min-height: 76px !important; line-height: 1.5 !important; }
+  textarea { min-height: 48px !important; line-height: 24px !important; }
   /* Tick boxes get a finger-sized target of their own. */
   /* The box stays Material size; the row it sits in is the finger target. */
 
@@ -547,7 +547,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
    touch screen, where there is no pointing. */
 .checklist-tool {
   display: flex; align-items: center; justify-content: center;
-  width: 22px; height: 22px; border-radius: var(--r-sm); flex-shrink: 0; opacity: .55;
+  width: 40px; height: 40px; border-radius: var(--r-full); flex-shrink: 0; opacity: .7;
 }
 .checklist-row:hover .checklist-tool, .checklist-tool:focus-visible { opacity: 1; }
 @media (hover: none) { .checklist-tool { opacity: 1; } }
@@ -563,20 +563,20 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 }
 /* Files dragged over an open task land in it. */
 .task-detail.drag-over { outline-color: var(--drop); }
-.detail-body { font-size: 14px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
+.detail-body { font-size: 16px; line-height: 24px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .detail-body a { color: var(--primary); }
 .detail-icon { display: inline-flex; flex-shrink: 0; padding: 2px; border-radius: var(--r-sm); }
 .detail-icon.interactive:hover { background: var(--surface-container-high); }
 .detail-add-icon {
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  width: 40px; height: 40px; border-radius: var(--r-sm); border: 1.5px dashed; opacity: .55;
+  width: 40px; height: 40px; border-radius: var(--r-md); border: 1.5px dashed; opacity: .55;
 }
 .detail-add-icon:hover, .detail-add-icon:focus-visible { background: var(--surface-container-high); opacity: 1; }
 /* The detail is a panel along the right edge, not a box in the middle:
    the list stays in view beside it. */
 .detail-overlay .task-detail {
   width: 520px; max-width: 100vw; height: 100%; max-height: none;
-  border-radius: 0; padding: 20px 24px 28px; gap: 20px;
+  --pad: 24px; border-radius: 0; padding: var(--pad); gap: 24px;
   border-left: 1px solid var(--outline-variant);
 }
 .detail-overlay .task-detail.card-in { animation: drawerSlideInRight var(--m-slow) var(--ease) both; }
@@ -584,7 +584,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 .detail-props .mselect-trigger:hover, .detail-props .date-trigger:hover { border-color: var(--outline) !important; }
 .mselect-label svg, .mselect-item-label svg { vertical-align: -3px; }
 @media (max-width: 860px) {
-  .detail-overlay .task-detail { width: 100vw; padding: 16px 16px 24px; border-left: none; }
+  .detail-overlay .task-detail { width: 100vw; --pad: 16px; border-left: none; }
 }
 
 .icon-picker {
@@ -605,12 +605,12 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 .att-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; }
 .att-tile { position: relative; aspect-ratio: 1; border-radius: var(--r-md); overflow: hidden; }
 .att-tile img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: zoom-in; }
-.att-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--r-sm); }
+.att-row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 4px 8px 12px; border-radius: var(--r-md); box-sizing: border-box; }
 .att-remove {
-  display: flex; align-items: center; justify-content: center; width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center; width: 40px; height: 40px;
   border-radius: 50%; flex-shrink: 0; opacity: .85; box-shadow: 0 1px 4px rgba(0,0,0,.2);
 }
-.att-tile .att-remove { position: absolute; top: 6px; right: 6px; }
+.att-tile .att-remove { position: absolute; top: 4px; right: 4px; }
 
 .lightbox {
   position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.86);
@@ -637,7 +637,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
    look it had; the list is a surface-container card with a tonal selected
    row and a check. */
 .mselect-trigger {
-  display: flex; align-items: center; gap: 6px; box-sizing: border-box;
+  display: flex; align-items: center; gap: 8px; box-sizing: border-box;
   user-select: none; -webkit-user-select: none; min-width: 0;
 }
 .mselect-trigger[aria-disabled="true"] { opacity: .6; cursor: default; }
@@ -647,16 +647,15 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 .mselect-chevron { flex-shrink: 0; opacity: .8; }
 .mselect-trigger.open .mselect-chevron { transform: rotate(180deg); }
 .mselect-menu {
-  position: fixed; z-index: 95; overflow-y: auto; padding: 6px;
+  position: fixed; z-index: 95; overflow-y: auto; padding: 8px;
   border-radius: var(--r-md); box-shadow: var(--e2);
   transform-origin: top left;
 }
 .mselect-menu.up { transform-origin: bottom left; }
 .mselect-item {
-  display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 14px 0 10px;
-  border-radius: var(--r-sm); font-size: 14px; white-space: nowrap;
+  display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 16px 0 12px;
+  border-radius: var(--r-sm); font-size: 14px; line-height: 20px; white-space: nowrap;
 }
-.mselect-item + .mselect-item { margin-top: 2px; }
 .mselect-item:not(.selected):hover, .mselect-item:not(.selected).active { background: var(--item-hover); }
 .mselect-item.selected.active { box-shadow: inset 0 0 0 2px var(--primary); }
 .mselect-check { display: flex; width: 18px; flex-shrink: 0; }
@@ -775,9 +774,7 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: .38; cu
 .task-form-chips .mselect-trigger, .task-form-chips .date-trigger, .task-form-chips label,
 [data-action="saveTask"], [data-action="saveMapping"], [data-action="postComment"],
 [data-action="submitLogin"], [data-action="submitRegister"], [data-action="saveDisplayName"],
-[data-action="saveAppName"], [data-action="closeTaskModal"], [data-action="closeMapping"],
-.fab-new-task { border-radius: var(--r-full) !important; }
-.view-toggle > * { width: 36px !important; }
+[data-action="saveAppName"], [data-action="closeTaskModal"], [data-action="closeMapping"] { border-radius: var(--r-full) !important; }
 
 /* Rows have no dividers: the hover and selected states give each one its
    own rounded shape instead. */
@@ -785,7 +782,6 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: .38; cu
 
 /* Body copy gets room to breathe; numbers in tables keep their columns. */
 body { line-height: 1.45; }
-.detail-body { font-size: 15px !important; line-height: 1.7 !important; }
 
 /* Material 3 type scale (values from the @material/web 2.2 token files).
    Each role fixes size, line height and weight together; nothing else is
@@ -802,3 +798,29 @@ body { line-height: 1.45; }
 .t-label-l    { font-size: 14px; line-height: 20px; font-weight: 500; }
 .t-label-m    { font-size: 12px; line-height: 16px; font-weight: 500; }
 .t-label-s    { font-size: 11px; line-height: 16px; font-weight: 500; }
+
+/* M3 icon button: a 20-24 icon in a 40 round target, 48 under a finger. */
+.icon-btn {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 40px; height: 40px; border-radius: var(--r-full);
+}
+/* M3 text button: 40 high, 12 to the sides. */
+.text-btn {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  height: 40px; padding: 0 12px; border-radius: var(--r-full);
+}
+/* An 18 check box in a 40 target, as M3 draws it. */
+.cb-target {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 40px; height: 40px; border-radius: var(--r-full); cursor: pointer;
+}
+.cb-target input { margin: 0; width: 18px; height: 18px; }
+/* Keyboard hints mean nothing on a touch screen. */
+@media (hover: none) { .kbd-hint { display: none; } }
+@media (pointer: coarse) {
+  .icon-btn, .checklist-tool, .att-remove, .cb-target { width: 48px; height: 48px; }
+  .text-btn { height: 48px; }
+  .detail-props .mselect-trigger, .detail-props .date-trigger, .detail-props .prop-plain { min-height: 48px; }
+  .checklist-row { min-height: 48px !important; }
+  .checklist-row, .checklist-add { margin-left: -16px !important; }
+}
