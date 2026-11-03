@@ -1925,9 +1925,14 @@
     // without this each re-render while it plays would start it over, which
     // shows as a flicker. The fresh element picks up where the old one was.
     Object.keys(oneShot).forEach(function (key) {
-      var elapsed = Date.now() - (oneShotStart[key] || Date.now());
+      var els = root.getElementsByClassName(oneShot[key]);
+      if (!els.length) return;
+      // The clock starts the first time the element is actually painted (a
+      // click can wait on a fetch before its first render), not at the click.
+      if (!oneShotStart[key]) { oneShotStart[key] = Date.now(); return; }
+      var elapsed = Date.now() - oneShotStart[key];
       if (elapsed < 20) return;
-      Array.prototype.forEach.call(root.getElementsByClassName(oneShot[key]), function (el) {
+      Array.prototype.forEach.call(els, function (el) {
         el.style.setProperty('--shot-delay', '-' + elapsed + 'ms');
       });
     });
@@ -2218,12 +2223,16 @@
     var token = (oneShotTokens[key] || 0) + 1;
     oneShotTokens[key] = token;
     oneShot[key] = cls;
-    oneShotStart[key] = Date.now();
-    setTimeout(function () {
+    oneShotStart[key] = 0;
+    function finish() {
       if (oneShotTokens[key] !== token) return;
+      var left = oneShotStart[key] ? ms - (Date.now() - oneShotStart[key]) : ms;
+      if (left > -40) { setTimeout(finish, left + 60); return; }
       delete oneShot[key];
+      delete oneShotStart[key];
       render();
-    }, ms);
+    }
+    setTimeout(finish, ms);
   }
 
   function oneShotClass(key) { return oneShot[key] ? ' ' + oneShot[key] : ''; }
@@ -2297,7 +2306,7 @@
   function selectNode(id) {
     if (state.selectedNode === id) { closeMobileNav(); return; }
     nav.nodeTarget = id;
-    if (isWideScreen()) playOnce('node', 'anim-select', 420);
+    playOnce('node', 'anim-select', 420);
     reloadListSoftly({ selectedNode: id, page: 1 });
     // The drawer stays a moment so the pick is seen, then slides away.
     setTimeout(closeMobileNav, 180);
