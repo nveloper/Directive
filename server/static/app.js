@@ -3963,49 +3963,52 @@
     var dayCells = [];
     for (var i = 0; i < firstWeekday; i++) dayCells.push('<div></div>');
     for (var d = 1; d <= daysInMonth; d++) {
-      if (d === todayDate) {
-        dayCells.push('<div style="display:flex; align-items:center; justify-content:center;"><span style="display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:50%; background:' + c.primary + '; color:' + c.onPrimary + '; font-size:12px; font-weight:500;">' + d + '</span></div>');
-      } else {
-        dayCells.push('<div style="display:flex; align-items:center; justify-content:center; font-size:12px;">' + d + '</div>');
-      }
+      dayCells.push('<div style="display:flex; align-items:center; justify-content:center;"><span class="tnum t-body-s" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--r-full);' + (d === todayDate ? ' background:' + c.primary + '; color:' + c.onPrimary + '; font-weight:500;' : '') + '">' + d + '</span></div>');
     }
     var trailing = (7 - (dayCells.length % 7)) % 7;
     for (var j = 0; j < trailing; j++) dayCells.push('<div></div>');
-    return '<div><div style="font-size:13px; font-weight:500; margin-bottom:8px;">' + esc(new Date(year, month, 1).toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</div>'
-      + '<div style="display:grid; grid-template-columns:repeat(7,1fr); gap:4px; font-size:12px; color:' + c.onSurfaceVariant + '; text-align:center; margin-bottom:4px;">'
+    return '<div style="display:flex; flex-direction:column; gap:8px;">'
+      + '<div class="t-title-s">' + esc(new Date(year, month, 1).toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</div>'
+      + '<div class="t-label-m" style="display:grid; grid-template-columns:repeat(7,1fr); color:' + c.onSurfaceVariant + '; text-align:center;">'
       + (LANG === 'ko' ? ['일', '월', '화', '수', '목', '금', '토'] : ['S', 'M', 'T', 'W', 'T', 'F', 'S']).map(function (x) { return '<div>' + x + '</div>'; }).join('')
       + '</div>'
-      + '<div style="display:grid; grid-template-columns:repeat(7,1fr); grid-auto-rows:26px; gap:4px; text-align:center;">' + dayCells.join('') + '</div>'
+      + '<div style="display:grid; grid-template-columns:repeat(7,1fr); grid-auto-rows:32px; row-gap:4px;">' + dayCells.join('') + '</div>'
       + '</div>';
   }
 
+  // The schedule side sheet: this month, what is due today, and the
+  // department calendar feeds. M3 filled cards on a surface-container-low
+  // sheet, no outlines.
   function rightPanel(c) {
+    var count = function (n) { return '<span class="tnum t-label-m" style="display:inline-flex; align-items:center; height:20px; padding:0 8px; border-radius:var(--r-full); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">' + n + '</span>'; };
+    var card = function (inner) { return '<div style="background:' + c.surface + '; border-radius:var(--r-md); padding:16px; display:flex; flex-direction:column; gap:8px;">' + inner + '</div>'; };
     // Due today: unfinished work due today or already late, from the tasks
     // themselves. Ticking the box completes the task; the title opens it.
     var todayHtml = state.todayTasks.map(function (t) {
       var done = t.status === 'done';
-      var boxBg = done ? c.secondary : 'transparent';
-      var boxBorder = done ? c.secondary : (t.overdue ? c.error : c.outline);
+      var boxBg = done ? c.primary : 'transparent';
+      var boxBorder = done ? c.primary : (t.overdue ? c.error : c.onSurfaceVariant);
       var textColor = done ? c.onSurfaceVariant : c.onSurface;
-      var check = done ? '<svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="' + c.onSecondary + '" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10l3.5 3.5L15 6.5"></path></svg>' : '';
+      var check = done ? '<svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="' + c.onPrimary + '" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10l3.5 3.5L15 6.5"></path></svg>' : '';
       var tickable = canWriteDept(t.deptId);
+      var box = '<span style="width:18px; height:18px; box-sizing:border-box; border-radius:2px; background:' + boxBg + '; border:2px solid ' + (tickable ? boxBorder : c.outlineVariant) + '; display:flex; align-items:center; justify-content:center;' + (tickable ? '' : ' opacity:.5;') + '">' + check + '</span>';
       var when = t.overdue
-        ? '<span style="font-size:12px; font-weight:500; color:' + c.error + ';">' + T('Overdue') + ' &middot; ' + esc(formatDue(t.dueDate)) + '</span>'
-        : '<span style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Today') + '</span>';
-      return '<div class="' + oneShotClass('todayLeave:' + t.id).trim() + '" style="display:flex; align-items:flex-start; gap:9px; border-radius:var(--r-sm);">'
+        ? '<span class="t-label-m" style="color:' + c.error + ';">' + T('Overdue') + ' &middot; ' + esc(formatDue(t.dueDate)) + '</span>'
+        : '<span class="t-label-m" style="color:' + c.onSurfaceVariant + ';">' + T('Today') + '</span>';
+      return '<div class="' + oneShotClass('todayLeave:' + t.id).trim() + '" style="display:flex; align-items:center; gap:4px; min-height:56px; margin-left:-12px;">'
         +   (tickable
-              ? '<div class="interactive' + oneShotClass('today:' + t.id) + '" data-action="toggleTodayTask" data-id="' + t.id + '" title="' + T(done ? 'Mark not done' : 'Mark done') + '" style="width:16px; height:16px; margin-top:1px; border-radius:var(--r-xs); background:' + boxBg + '; border:1.6px solid ' + boxBorder + '; display:flex; align-items:center; justify-content:center; flex-shrink:0;">' + check + '</div>'
-              : '<div style="width:16px; height:16px; margin-top:1px; border-radius:var(--r-xs); border:1.6px solid ' + c.outlineVariant + '; flex-shrink:0; opacity:.5;"></div>')
-        +   '<div class="interactive" data-action="openTask" data-id="' + t.id + '" style="flex:1; min-width:0;">'
-        +     '<div style="display:flex; align-items:center; gap:5px; font-size:13px; color:' + textColor + '; text-decoration:' + (done ? 'line-through' : 'none') + ';">' + taskIconHtml(t, 14) + '<span>' + esc(t.title) + '</span></div>'
-        +     '<div style="display:flex; align-items:center; gap:6px; margin-top:3px; flex-wrap:wrap;">' + when
-        +       (t.deptId ? '<span style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + '; background:' + c.surfaceVariant + '; padding:1px 8px; border-radius:var(--r-sm);">' + esc(nodeLabel(t.deptId)) + '</span>' : '')
+              ? '<span class="interactive cb-target' + oneShotClass('today:' + t.id) + '" data-action="toggleTodayTask" data-id="' + t.id + '" role="checkbox" aria-checked="' + (done ? 'true' : 'false') + '" title="' + T(done ? 'Mark not done' : 'Mark done') + '">' + box + '</span>'
+              : '<span class="cb-target" style="cursor:default;">' + box + '</span>')
+        +   '<div class="interactive" data-action="openTask" data-id="' + t.id + '" style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; padding:8px 8px 8px 0; border-radius:var(--r-sm);">'
+        +     '<div class="t-body-m" style="display:flex; align-items:center; gap:8px; color:' + textColor + '; text-decoration:' + (done ? 'line-through' : 'none') + ';">' + taskIconHtml(t, 16) + '<span style="min-width:0; overflow-wrap:anywhere;">' + esc(t.title) + '</span></div>'
+        +     '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' + when
+        +       (t.deptId ? '<span class="t-label-m" style="color:' + c.onSurfaceVariant + '; background:' + c.surfaceVariant + '; padding:0 8px; border-radius:var(--r-sm);">' + esc(nodeLabel(t.deptId)) + '</span>' : '')
         +     '</div>'
         +   '</div>'
         + '</div>';
     }).join('');
     var todayEmpty = state.todayTasks.length === 0
-      ? '<div style="font-size:13px; color:' + c.onSurfaceVariant + ';">' + T('Nothing due today.') + '</div>' : '';
+      ? '<div class="t-body-m" style="color:' + c.onSurfaceVariant + ';">' + T('Nothing due today.') + '</div>' : '';
 
     var mappingDots = [c.primary, c.tertiary, c.secondary, c.error, c.outline];
     var flatOpts = flattenDeptOptions();
@@ -4015,42 +4018,35 @@
       var labelLine = (d.calendarList || d.tag)
         ? (esc(d.calendarList) + (d.tag ? ' · ' + esc(d.tag) : ''))
         : (isAdmin()
-            ? '<span class="interactive" data-action="openMapping" data-id="' + esc(d.id) + '" style="text-decoration:underline; cursor:pointer;">' + T('Add a label') + '</span>'
+            ? '<span class="interactive text-btn t-label-l" data-action="openMapping" data-id="' + esc(d.id) + '" style="margin-left:-12px; color:' + c.primary + ';">' + T('Add a label') + '</span>'
             : 'No label');
-      return '<div style="display:flex; align-items:flex-start; gap:9px;">'
-        + '<span style="width:9px; height:9px; margin-top:4px; border-radius:50%; background:' + mappingDots[i % mappingDots.length] + '; flex-shrink:0;"></span>'
-        + '<div style="flex:1; min-width:0;">'
-        +   '<div style="font-size:13px; font-weight:500;">' + esc(opt.label) + '</div>'
-        +   '<div style="font-size:12px; color:' + c.onSurfaceVariant + '; margin-top:1px;">' + labelLine + '</div>'
-        +   '<div style="display:flex; align-items:center; gap:5px; margin-top:3px;"><code style="font-size:12px; color:' + c.onSurfaceVariant + '; background:' + c.surfaceVariant + '; padding:2px 6px; border-radius:var(--r-sm); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px;">' + esc(url) + '</code>'
-        +     '<span class="interactive" data-action="copyFeedUrl" data-id="' + esc(d.feedToken) + '" title="' + T('Copy subscribe link') + '" style="display:flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:var(--r-sm); color:' + (state.copiedToken === d.feedToken ? c.secondary : c.onSurfaceVariant) + ';">' + (state.copiedToken === d.feedToken ? '<span class="anim-copied" style="display:flex;">' + ICON.check + '</span>' : ICON.copy) + '</span></div>'
+      return '<div style="display:flex; align-items:flex-start; gap:12px;">'
+        + '<span style="width:8px; height:8px; margin-top:8px; border-radius:50%; background:' + mappingDots[i % mappingDots.length] + '; flex-shrink:0;"></span>'
+        + '<div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;">'
+        +   '<div class="t-label-l">' + esc(opt.label) + '</div>'
+        +   '<div class="t-body-s" style="color:' + c.onSurfaceVariant + ';">' + labelLine + '</div>'
+        +   '<div style="display:flex; align-items:center; gap:4px;"><code class="t-body-s" style="flex:1; min-width:0; color:' + c.onSurfaceVariant + '; background:' + c.surfaceVariant + '; padding:4px 8px; border-radius:var(--r-xs); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(url) + '</code>'
+        +     '<span class="interactive icon-btn" data-action="copyFeedUrl" data-id="' + esc(d.feedToken) + '" title="' + T('Copy subscribe link') + '" aria-label="' + T('Copy subscribe link') + '" style="margin-right:-8px; color:' + (state.copiedToken === d.feedToken ? c.primary : c.onSurfaceVariant) + ';">' + (state.copiedToken === d.feedToken ? '<span class="anim-copied" style="display:flex;">' + ICON.check + '</span>' : ICON.copy) + '</span></div>'
         + '</div></div>';
     }).join('');
     var mappingEmpty = flatOpts.length === 0
-      ? '<div style="font-size:13px; color:' + c.onSurfaceVariant + ';">' + T('No departments yet — add one to get a subscribable calendar link.') + '</div>' : '';
+      ? '<div class="t-body-m" style="color:' + c.onSurfaceVariant + ';">' + T('No departments yet — add one to get a subscribable calendar link.') + '</div>' : '';
 
-    return '<div class="' + drawerClass('right-panel', state.mobileCalendarOpen, state.mobileCalendarAnim) + '" data-scroll-key="schedule" style="width:320px; flex-shrink:0; min-height:0; background:' + c.surfaceContainerLow + '; border-left:1px solid ' + c.outlineVariant + '; overflow-y:auto; padding:20px 16px; display:flex; flex-direction:column; gap:16px;">'
-      + '<div class="drawer-header-row" style="align-items:center; justify-content:space-between;">'
-      +   '<span style="font-size:16px; font-weight:500;">' + T('Schedule') + '</span>'
-      +   '<span class="interactive drawer-close-btn" data-action="closeMobileCalendar" title="' + T('Close') + '" style="align-items:center; justify-content:center; width:26px; height:26px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
+    return '<div class="' + drawerClass('right-panel', state.mobileCalendarOpen, state.mobileCalendarAnim) + '" data-scroll-key="schedule" style="width:360px; flex-shrink:0; min-height:0; background:' + c.surfaceContainerLow + '; overflow-y:auto; padding:8px 16px 24px; display:flex; flex-direction:column; gap:12px;">'
+      + '<div class="drawer-header-row" style="align-items:center; justify-content:space-between; min-height:56px; margin-right:-8px;">'
+      +   '<span class="t-title-l">' + T('Schedule') + '</span>'
+      +   '<span class="interactive drawer-close-btn icon-btn" data-action="closeMobileCalendar" title="' + T('Close') + '" aria-label="' + T('Close') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
       + '</div>'
-      + '<div style="background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); padding:16px; display:flex; flex-direction:column; gap:12px;">'
-      +   '<span style="font-size:14px; font-weight:500;">' + T('Calendar') + '</span>'
-      +   miniCalendar(c)
-      + '</div>'
-      + '<div style="background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); padding:16px; display:flex; flex-direction:column; gap:11px;">'
-      +   '<span style="font-size:14px; font-weight:500;">' + T('Due Today') + (state.todayTasks.length ? ' <span style="font-size:12px; font-weight:500; padding:1px 7px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">' + state.todayTasks.length + '</span>' : '') + '</span>' + todayHtml + todayEmpty
-      + '</div>'
-      + '<div style="background:' + c.surface + '; border:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); padding:16px; display:flex; flex-direction:column; gap:12px;">'
-      +   '<span class="interactive" data-action="toggleFeeds" role="button" aria-expanded="' + (state.feedsOpen ? 'true' : 'false') + '" aria-controls="feed-list" style="display:flex; align-items:center; gap:8px; font-size:14px; font-weight:500;">'
-      +     '<svg class="tree-chevron' + (state.feedsOpen ? ' expanded' : '') + oneShotClass('feeds') + '" width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 5l6 5-6 5"></path></svg>'
+      + card(miniCalendar(c))
+      + card('<div style="display:flex; align-items:center; gap:8px; min-height:24px;"><span class="t-title-s">' + T('Due Today') + '</span>' + (state.todayTasks.length ? count(state.todayTasks.length) : '') + '</div>' + todayHtml + todayEmpty)
+      + card('<span class="interactive t-title-s" data-action="toggleFeeds" role="button" aria-expanded="' + (state.feedsOpen ? 'true' : 'false') + '" aria-controls="feed-list" style="display:flex; align-items:center; gap:8px; min-height:48px; margin:-12px -8px; padding:0 8px; border-radius:var(--r-sm);">'
+      +     '<svg class="tree-chevron' + (state.feedsOpen ? ' expanded' : '') + oneShotClass('feeds') + '" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M7 5l5 5-5 5"></path></svg>'
       +     '<span style="flex:1;">' + T('Department Calendars') + '</span>'
-      +     (flatOpts.length ? '<span style="font-size:12px; font-weight:500; padding:1px 7px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">' + flatOpts.length + '</span>' : '')
+      +     (flatOpts.length ? count(flatOpts.length) : '')
       +   '</span>'
       +   '<div class="tree-children' + (state.feedsOpen ? ' expanded' : '') + oneShotClass('feeds') + '" id="feed-list">'
-      +     '<div class="tree-children-inner" style="gap:12px;">' + mappingRows + mappingEmpty + '</div>'
-      +   '</div>'
-      + '</div>'
+      +     '<div class="tree-children-inner" style="gap:16px; padding-top:16px;">' + mappingRows + mappingEmpty + '</div>'
+      +   '</div>')
       + '</div>';
   }
 

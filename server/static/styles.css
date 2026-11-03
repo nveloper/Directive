@@ -351,7 +351,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 }
 .left-nav.open, .left-nav.anim-open, .left-nav.anim-close { visibility: visible; box-shadow: var(--e3); }
 .left-nav.open { transform: translateX(0); }
-.left-nav.anim-open { animation: drawerSlideInLeft var(--m-slow) var(--ease) forwards; }
+.left-nav.anim-open { animation: drawerSlideInLeft var(--m-spatial) var(--ease) forwards; }
 .left-nav.anim-close { animation: drawerSlideOutLeft var(--m-base) ease forwards; }
 .left-nav .drawer-close-btn { display: flex; }
 /* A drawer slides over the page without darkening it. The layer stays so a
@@ -372,13 +372,14 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
   bottom: env(safe-area-inset-bottom, 0px);
   right: 0;
   z-index: 90;
-  width: min(86vw, 340px) !important;
+  width: min(88vw, 360px) !important;
+  border-radius: var(--r-l) 0 0 var(--r-l);
   transform: translateX(100%);
   visibility: hidden;
 }
 .right-panel.open, .right-panel.anim-open, .right-panel.anim-close { visibility: visible; box-shadow: var(--e3); }
 .right-panel.open { transform: translateX(0); }
-.right-panel.anim-open { animation: drawerSlideInRight var(--m-slow) var(--ease) forwards; }
+.right-panel.anim-open { animation: drawerSlideInRight var(--m-spatial) var(--ease) forwards; }
 .right-panel.anim-close { animation: drawerSlideOutRight var(--m-base) ease forwards; }
 
 /* Wide screens: the department list stops being a drawer. */
@@ -944,7 +945,7 @@ svg[fill="none"][stroke="currentColor"] { stroke-width: 1.6; }
 .icon-btn > svg, .icon-btn > span > svg, .nav-item > svg:not(.tree-chevron-btn), .fab-new-task > svg,
 .drawer-close-btn > svg, .detail-add-icon > svg { width: 24px; height: 24px; }
 .checklist-tool > svg, .cb-target > svg { width: 20px; height: 20px; }
-.mselect-label > svg, .right-panel .interactive > svg { width: 18px; height: 18px; }
+.mselect-label > svg { width: 18px; height: 18px; }
 [role="columnheader"] svg, .task-row .t-body-m svg, .task-row .t-label-m svg { width: 16px; height: 16px; }
 .filter-btn > svg, .new-task-inline > svg, .text-btn > svg, [data-action="openTaskModal"] > svg { width: 18px; height: 18px; }
 .mselect-trigger .mselect-chevron { width: 18px; height: 18px; }
