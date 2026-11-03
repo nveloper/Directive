@@ -143,6 +143,13 @@ input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:f
 }
 .interactive:active { background-image: linear-gradient(var(--state-press), var(--state-press)) !important; }
 svg.interactive:hover, svg.interactive:active { background-image: none !important; }
+/* A department row is one target with a chevron and a menu inside it: the
+   state layer covers the whole pill, never a smaller pill on the label. */
+.dept-label.interactive:hover, .dept-label.interactive:active { background-image: none !important; }
+@media (hover: hover) {
+  .dept-row:has(.dept-label:hover) { background-image: linear-gradient(var(--state-hover), var(--state-hover)) !important; }
+}
+.dept-row:has(.dept-label:active) { background-image: linear-gradient(var(--state-press), var(--state-press)) !important; }
 
 .content-out { animation: contentSlideOut 90ms ease forwards; }
 .content-in { animation: contentSlideIn 140ms ease forwards; }
@@ -882,7 +889,7 @@ body { line-height: 1.45; }
 [data-action="pickAvatar"]:active, [data-action="removeAvatar"]:active, [data-action="openUsers"]:active,
 [data-action="openPasswordModal"]:active, [data-action="openAppPasswords"]:active,
 [data-action="openReminders"]:active, [data-action="openBackups"]:active,
-.nav-item:active, .dept-row [data-action="selectNode"]:active { border-radius: var(--r-sm) !important; }
+.nav-item:active, .dept-row:has(.dept-label:active) { border-radius: var(--r-sm) !important; }
 .tree-chevron-btn:active { border-radius: var(--r-sm) !important; }
 /* The FAB grows rounder under the pointer and squarer when pressed; its plus
    turns a quarter as the dialog it opens comes up. */
