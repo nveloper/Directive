@@ -2298,6 +2298,8 @@
     // The old list dims while the new one loads, then the new one fades up
     // from there: a soft cross-fade instead of a swap or a blank.
     setState({ activeTab: id, page: 1, listFade: 'dim' });
+    // On a phone the page itself scrolls; a new tab starts at its top.
+    if (isNarrowScreen() && window.scrollY) { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); } }
     fetchTasks().then(function () {
       if (nav.tabToken !== token) return;
       setState({ listFade: 'in' });
@@ -3547,10 +3549,10 @@
     var drawerOpenOrClosing = state.mobileNavOpen || state.mobileCalendarOpen || drawerClosing;
     var scrimClass = 'mobile-scrim ' + ((state.mobileNavOpen || state.mobileCalendarOpen) ? 'open' : 'closing');
 
-    return '<div class="' + oneShotClass('palette').trim() + '" style="' + vars + 'position:relative; display:flex; flex-direction:column; width:100%; height:calc(100vh / var(--zoom, 1)); height:calc(100dvh / var(--zoom, 1)); background:' + c.surfaceContainer + '; color:' + c.onSurface + '; overflow:hidden;">'
+    return '<div class="app-shell' + oneShotClass('palette') + '" style="' + vars + 'position:relative; display:flex; flex-direction:column; width:100%; height:calc(100vh / var(--zoom, 1)); height:calc(100dvh / var(--zoom, 1)); background:' + c.surfaceContainer + '; color:' + c.onSurface + '; overflow:hidden;">'
       + '<a class="skip-link" href="#task-list">' + T('Skip to tasks') + '</a>'
       + topBar(c)
-      + '<div style="flex:1; min-height:0; display:flex; overflow:hidden; position:relative;">'
+      + '<div class="app-body" style="flex:1; min-height:0; display:flex; overflow:hidden; position:relative;">'
       +   leftNav(c)
       +   mainContent(c)
       +   rightPanel(c)
