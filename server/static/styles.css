@@ -1092,3 +1092,30 @@ svg[fill="none"][stroke="currentColor"] { stroke-width: 1.6; }
 .seg-label.anim-seg-icon { animation: segLabelIn 420ms var(--spring) var(--shot-delay, 0ms) both; }
 @keyframes segLabelIn { from { transform: scale(.88); } to { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .seg-pill.anim-seg-slide, .anim-seg-icon, .anim-seg-icon * { animation: none !important; } }
+
+/* ---- Page swaps (see softSwap in app.js) ----------------------------------
+   The page cross-fades. The calendar title slides the way the calendar
+   moves; its arrows hold still so they stay under the finger. */
+/* The root keeps the browser's own cross-fade, so the parts that did not
+   change stay perfectly still; changed blocks fade out, then in. */
+::view-transition-group(root) { animation-duration: 240ms; }
+::view-transition-old(cal-grid), ::view-transition-old(settings-body) { animation: swapOut 140ms var(--ease-exit) both; }
+::view-transition-new(cal-grid), ::view-transition-new(settings-body) { animation: swapIn 260ms var(--ease-enter) 60ms both; }
+::view-transition-group(cal-nav) { animation: none; }
+::view-transition-old(cal-nav) { display: none; }
+::view-transition-new(cal-nav) { animation: none; }
+::view-transition-group(root) *, ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 240ms; }
+::view-transition-group(cal-title) { animation-duration: 300ms; animation-timing-function: var(--ease-enter); }
+::view-transition-old(cal-title), ::view-transition-new(cal-title) { width: auto; height: 100%; object-fit: none; left: 0; right: auto; }
+::view-transition-old(cal-title) { animation: swapOut 140ms var(--ease-exit) both; }
+::view-transition-new(cal-title) { animation: swapIn 260ms var(--ease-enter) 60ms both; }
+html[data-swap=next]::view-transition-old(cal-title) { animation-name: swapOutLeft; }
+html[data-swap=next]::view-transition-new(cal-title) { animation-name: swapInRight; }
+html[data-swap=prev]::view-transition-old(cal-title) { animation-name: swapOutRight; }
+html[data-swap=prev]::view-transition-new(cal-title) { animation-name: swapInLeft; }
+@keyframes swapOut { to { opacity: 0; } }
+@keyframes swapIn { from { opacity: 0; } }
+@keyframes swapOutLeft { to { opacity: 0; transform: translateX(-16px); } }
+@keyframes swapOutRight { to { opacity: 0; transform: translateX(16px); } }
+@keyframes swapInRight { from { opacity: 0; transform: translateX(16px); } }
+@keyframes swapInLeft { from { opacity: 0; transform: translateX(-16px); } }

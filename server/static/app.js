@@ -2345,7 +2345,10 @@
     // board go back to paging through everything.
     var refetch = mode === 'calendar' || state.viewMode === 'calendar';
     try { localStorage.setItem('directive_view', mode); } catch (e) {}
-    if (refetch) { state.viewMode = mode; state.page = 1; state.tasksLoaded = false; render(); fetchTasks().then(render); return; }
+    if (refetch) {
+      softSwap('fade', function () { state.viewMode = mode; state.page = 1; render(); return fetchTasks().then(render); });
+      return;
+    }
     // A full re-render always mounts a fresh thumb node, so a CSS `transition`
     // on it never has a "before" state to animate from — it would just snap.
     // A CSS `animation` (keyframes) plays on mount regardless, so we drive
@@ -2353,7 +2356,7 @@
     // doesn't replay on a later, unrelated re-render.
     var anim = mode === 'grid' ? 'slide-right' : 'slide-left';
     state.viewToggleAnim = anim;
-    setState({ viewMode: mode });
+    softSwap('fade', function () { setState({ viewMode: mode }); });
     setTimeout(function () {
       if (state.viewToggleAnim === anim) setState({ viewToggleAnim: null });
     }, 300);
@@ -3394,6 +3397,24 @@
     var end = new Date(start); end.setDate(start.getDate() + 41);
     return { days: 42, first: first, start: start, from: isoOf(start), to: isoOf(end) };
   }
+  // Page changes (a month turned, a view switched, a settings section
+  // picked) cross-fade instead of snapping. The browser keeps a picture of
+  // the old page while run() re-renders and, briefly, waits for the data;
+  // named parts can move on their own (the calendar title slides in the
+  // direction of travel while its arrows stay put). Without the API, or with
+  // reduced motion, run() just happens.
+  function softSwap(dir, run) {
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!document.startViewTransition || reduce) { run(); return; }
+    var docEl = document.documentElement;
+    docEl.setAttribute('data-swap', dir || 'fade');
+    var vt = document.startViewTransition(function () {
+      var p = run();
+      return Promise.race([p || Promise.resolve(), new Promise(function (r) { setTimeout(r, 350); })]);
+    });
+    vt.finished.then(function () { docEl.removeAttribute('data-swap'); }, function () { docEl.removeAttribute('data-swap'); });
+  }
+
   function setCalendarSpan(span) {
     if (span === calendarSpan()) return;
     // Keep the reader in the same place: a week lands in the month it is
@@ -3404,24 +3425,33 @@
       var today = new Date();
       state.calWeekStart = isoOf(weekStartOf(isoOf(today).slice(0, 7) === calendarMonth() ? today : r.first));
     }
-    state.calSpan = span;
-    render();
-    fetchTasks().then(render);
+    softSwap('fade', function () {
+      state.calSpan = span;
+      render();
+      return fetchTasks().then(render);
+    });
   }
   function shiftCalendar(delta) {
+    var before = calendarRange().start.getTime();
+    softSwap('pending', function () {
+      shiftCalendarNow(delta);
+      var after = calendarRange().start.getTime();
+      document.documentElement.setAttribute('data-swap', after > before ? 'next' : after < before ? 'prev' : 'fade');
+      return fetchTasks().then(render);
+    });
+  }
+  function shiftCalendarNow(delta) {
     if (calendarSpan() === 'week') {
       var base = delta === 0 ? new Date() : calendarRange().start;
       var ws = weekStartOf(base); ws.setDate(ws.getDate() + 7 * delta);
       state.calWeekStart = isoOf(ws);
       render();
-      fetchTasks().then(render);
       return;
     }
     var m = calendarMonth();
     var d = delta === 0 ? new Date() : new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1 + delta, 1);
     state.calMonth = isoOf(d).slice(0, 7);
     render();
-    fetchTasks().then(render);
   }
   function calendarHtml(items, maps, c) {
     var r = calendarRange();
@@ -3455,12 +3485,12 @@
     var nav = function (delta, label, inner) { return '<span class="interactive ' + (delta === 0 ? 'text-btn t-label-l' : 'icon-btn') + '" data-action="shiftCalendar" data-id="' + delta + '" aria-label="' + T(label) + '" style="color:' + (delta === 0 ? c.primary : c.onSurfaceVariant) + ';">' + inner + '</span>'; };
     var undated = state.taskMeta.total >= 100 ? '<span class="t-body-s" style="color:' + c.onSurfaceVariant + ';">' + T('Showing the first 100 tasks due this month.') + '</span>' : '';
     return '<div style="display:flex; align-items:center; gap:4px; margin-bottom:8px; flex-wrap:wrap;">'
-      +   '<span class="t-title-l" style="margin-right:8px;">' + esc(r.first.toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</span>'
-      +   nav(-1, r.week ? 'Previous week' : 'Previous month', ICON.chevronLeft) + nav(0, 'Today', T('Today')) + nav(1, r.week ? 'Next week' : 'Next month', ICON.chevronRight)
+      +   '<span style="display:inline-flex; align-items:center; gap:4px; view-transition-name:cal-nav;">' + nav(-1, r.week ? 'Previous week' : 'Previous month', ICON.chevronLeft) + nav(0, 'Today', T('Today')) + nav(1, r.week ? 'Next week' : 'Next month', ICON.chevronRight) + '</span>'
+      +   '<span class="t-title-l" style="margin-left:8px; view-transition-name:cal-title;">' + esc(r.first.toLocaleDateString(LOCALE, { year: 'numeric', month: 'long' })) + '</span>'
       +   '<span style="flex:1;"></span>' + undated
       +   segmented('span', [['week', 'Week'], ['month', 'Month']], calendarSpan(), 'setCalendarSpan', c, { label: 'Calendar span', type: 't-label-l', style: 'width:200px;' })
       + '</div>'
-      + '<div role="grid" aria-label="' + T('Calendar') + '" style="display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); border-top:1px solid ' + c.outlineVariant + '; border-left:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); overflow:hidden;">'
+      + '<div role="grid" aria-label="' + T('Calendar') + '" style="view-transition-name:cal-grid; display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); border-top:1px solid ' + c.outlineVariant + '; border-left:1px solid ' + c.outlineVariant + '; border-radius:var(--r-md); overflow:hidden;">'
       +   head.replace(/<div style="/g, '<div style="border-right:1px solid ' + c.outlineVariant + '; border-bottom:1px solid ' + c.outlineVariant + '; background:' + c.surfaceContainerLow + '; ')
       +   cells
       + '</div>';
@@ -4988,7 +5018,7 @@
       +   '<div class="t-headline-s" style="padding:0 16px 16px;">' + T('Settings') + '</div>'
       +   sections.map(navItem).join('')
       + '</div>'
-      + '<div style="flex:1; min-width:0;">'
+      + '<div style="flex:1; min-width:0; view-transition-name:settings-body;">'
       +   '<div style="display:flex; align-items:center; justify-content:space-between; margin:-4px -12px 16px 0;"><h2 class="t-title-l" style="margin:0;">' + T(current[1]) + '</h2>'
       +     '<span class="interactive icon-btn" data-action="closeSettings" aria-label="' + T('Close') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span></div>'
       +   body
@@ -5214,7 +5244,7 @@
     sortByColumn: function (el) { var k = el.getAttribute('data-id'); setTaskSort(state.taskSort === k ? 'created' : k); },
     openSettings: function () { openSettings(); },
     closeSettings: function () { closeSettings(); },
-    setSettingsSection: function (el) { if (el.getAttribute('data-id') !== state.settingsSection) playOnce('settingsNav', 'anim-select', 420); setState({ settingsSection: el.getAttribute('data-id') }); },
+    setSettingsSection: function (el) { var id = el.getAttribute('data-id'); if (id === state.settingsSection) return; playOnce('settingsNav', 'anim-select', 420); softSwap('fade', function () { setState({ settingsSection: id }); }); },
     setThemeMode: function (el) { setThemeMode(el.getAttribute('data-id')); },
     toggleActivityMine: function () { setState({ activityIncludeMine: !state.activityIncludeMine }); },
     toggleDatePicker: function (el) { toggleDatePicker(el.getAttribute('data-id')); },
