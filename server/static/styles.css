@@ -205,7 +205,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
    the page's own one is noise. Keyboard and wheel scrolling are unaffected. */
 .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .no-scrollbar::-webkit-scrollbar { width: 0; height: 0; display: none; }
-.swatch { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color var(--m-fast) ease, transform var(--m-fast) ease; flex-shrink: 0; }
+.swatch { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color var(--m-fast) ease, transform var(--m-fast) ease; flex-shrink: 0; }
 .swatch:hover { transform: scale(1.08); }
 .swatch.active { border-color: var(--on-surface); }
 
@@ -723,8 +723,9 @@ input[type="checkbox"]:disabled, input[type="radio"]:disabled { opacity: .38; cu
 @media (hover: none) { .dept-more { opacity: 1; } }
 
 @media (max-width: 860px) {
-  .settings-layout { flex-direction: column; gap: 12px !important; min-height: 0 !important; }
-  .settings-nav { width: auto !important; flex-direction: row !important; overflow-x: auto; padding: 0 0 8px !important; border-right: none !important; border-bottom: 1px solid var(--outline-variant); }
+  .settings-layout { flex-direction: column; gap: 16px !important; min-height: 0 !important; }
+  .settings-nav { width: auto !important; flex-direction: row !important; overflow-x: auto; scrollbar-width: none; margin: 0 -24px !important; padding: 0 24px !important; gap: 8px !important; }
+  .settings-nav::-webkit-scrollbar { display: none; }
   .settings-nav > div:first-child { display: none; }
 }
 #commentDraftInput { resize: none !important; }

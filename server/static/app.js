@@ -163,7 +163,7 @@
   }
 
   function avatarHtml(bg, fg, sizePx) {
-    var fallback = '<div style="width:' + sizePx + 'px; height:' + sizePx + 'px; border-radius:50%; background:' + bg + '; color:' + fg + '; display:flex; align-items:center; justify-content:center; font-size:' + Math.round(sizePx * 0.38) + 'px; font-weight:600;">' + esc(computeInitials(state.user.displayName)) + '</div>';
+    var fallback = '<div style="width:' + sizePx + 'px; height:' + sizePx + 'px; border-radius:50%; background:' + bg + '; color:' + fg + '; display:flex; align-items:center; justify-content:center; font-size:' + Math.round(sizePx * 0.38) + 'px; line-height:1; font-weight:500;">' + esc(computeInitials(state.user.displayName)) + '</div>';
     return withImageFallback('/api/users/' + state.user.id + '/avatar?v=' + state.avatarVersion, fallback, sizePx, '50%');
   }
 
@@ -2544,7 +2544,7 @@
         return '<span class="swatch' + (state.accent === hex ? ' active' : '') + oneShotClass('swatch:' + hex) + '" data-action="setAccent" data-hex="' + hex + '" title="' + hex + '" style="background:' + hex + ';"></span>';
       }).join('')
       + '<input type="color" id="accentColorInput" class="swatch swatch-custom' + (isPresetAccent(state.accent) ? '' : ' active') + '" value="' + esc(state.accent) + '" title="' + T('Pick any colour') + '" aria-label="' + T('Pick any colour') + '">'
-      + '<input id="accentHexInput" value="' + esc(state.accent) + '" spellcheck="false" maxlength="7" aria-label="' + T('Accent colour hex') + '" style="width:78px; height:26px; padding:0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; background:' + c.surface + '; color:' + c.onSurface + '; font-size:12px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;">';
+      + '<input id="accentHexInput" value="' + esc(state.accent) + '" spellcheck="false" maxlength="7" aria-label="' + T('Accent colour hex') + '" style="width:104px; height:40px; padding:0 12px; border-radius:var(--r-xs); border:1px solid ' + c.outline + '; background:transparent; color:' + c.onSurface + '; font-size:14px; line-height:20px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;">';
   }
 
   var THEME_MODE_ORDER = ['light', 'dark', 'system'];
@@ -4829,7 +4829,7 @@
   function modalShell(name, phase, c, label, width, inner) {
     var mo = modalMotion(name, phase === 'closing');
     return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="' + BACKDROP_CLOSERS[name] + '" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:50;">'
-      + '<div role="dialog" data-scroll-key="' + name + '" aria-modal="true" aria-label="' + esc(T(label)) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:' + width + 'px; max-width:94vw; max-height:calc(88vh / var(--zoom, 1)); overflow-y:auto; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:12px; box-shadow:var(--e3);">'
+      + '<div role="dialog" data-scroll-key="' + name + '" aria-modal="true" aria-label="' + esc(T(label)) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:' + width + 'px; max-width:94vw; max-height:88vh; overflow-y:auto; background:' + c.surfaceContainerHigh + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:16px; box-shadow:var(--e3);">'
       + inner
       + '</div></div>';
   }
@@ -4837,10 +4837,10 @@
   // Light / Dark / System, as one segmented control.
   function themeSegmented(c) {
     var opts = [['light', 'Light', ICON.themeLight], ['dark', 'Dark', ICON.themeDark], ['system', 'System', ICON.themeSystem]];
-    return '<div role="radiogroup" aria-label="' + T('Theme') + '" style="display:flex; gap:2px; padding:3px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + ';">'
+    return '<div role="radiogroup" aria-label="' + T('Theme') + '" style="display:flex; height:40px; box-sizing:content-box; border:1px solid ' + c.outline + '; border-radius:var(--r-full); overflow:hidden;">'
       + opts.map(function (o) {
           var on = state.themeMode === o[0];
-          return '<span class="interactive" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setThemeMode" data-id="' + o[0] + '" style="flex:1; display:flex; align-items:center; justify-content:center; gap:6px; height:28px; border-radius:4px; font-size:12px; font-weight:' + (on ? 600 : 400) + '; color:' + (on ? c.onSurface : c.onSurfaceVariant) + '; background:' + (on ? c.surface : 'transparent') + ';' + (on ? ' box-shadow:var(--e1);' : '') + '">' + o[2] + T(o[1]) + '</span>';
+          return '<span class="interactive t-label-l" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setThemeMode" data-id="' + o[0] + '" style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; color:' + (on ? c.onSecondaryContainer : c.onSurface) + '; background:' + (on ? c.secondaryContainer : 'transparent') + ';' + (o[0] !== 'light' ? ' border-left:1px solid ' + c.outline + ';' : '') + '">' + o[2] + T(o[1]) + '</span>';
         }).join('')
       + '</div>';
   }
@@ -4874,38 +4874,38 @@
     if (isAdmin()) sections = sections.concat([['workspace', 'Workspace'], ['accounts', 'Accounts'], ['maintenance', 'Reminders and backups']]);
     var navItem = function (x) {
       var on = sec === x[0];
-      return '<span class="interactive" data-action="setSettingsSection" data-id="' + x[0] + '" style="display:flex; align-items:center; height:32px; padding:0 10px; border-radius:var(--r-sm); font-size:13px; white-space:nowrap; font-weight:' + (on ? 600 : 400) + '; color:' + (on ? c.onSurface : c.onSurfaceVariant) + '; background:' + (on ? c.surfaceContainerHigh : 'transparent') + ';">' + T(x[1]) + '</span>';
+      return '<span class="interactive t-label-l" data-action="setSettingsSection" data-id="' + x[0] + '" style="display:flex; align-items:center; flex-shrink:0; height:48px; padding:0 16px; border-radius:var(--r-full); white-space:nowrap; color:' + (on ? c.onSecondaryContainer : c.onSurfaceVariant) + '; background:' + (on ? c.secondaryContainer : 'transparent') + ';">' + T(x[1]) + '</span>';
     };
-    var label = function (t) { return '<div style="font-size:13px; font-weight:500; color:' + c.onSurface + '; margin-bottom:6px;">' + T(t) + '</div>'; };
-    var help = function (t) { return '<div style="font-size:13px; line-height:1.5; color:' + c.onSurfaceVariant + '; margin:-2px 0 10px;">' + T(t) + '</div>'; };
-    var field = 'flex:1; min-width:0; height:36px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';';
-    var btn = function (action, text, primary) { return '<span class="interactive" data-action="' + action + '" style="display:inline-flex; align-items:center; justify-content:center; height:36px; padding:0 14px; border-radius:var(--r-sm); font-size:13px; font-weight:500; white-space:nowrap;' + (primary ? ' background:' + c.primary + '; color:' + c.onPrimary + ';' : ' border:1px solid ' + c.outline + '; color:' + c.onSurface + ';') + '">' + T(text) + '</span>'; };
+    var label = function (t) { return '<div class="t-title-s" style="color:' + c.onSurface + '; margin-bottom:8px;">' + T(t) + '</div>'; };
+    var help = function (t) { return '<div class="t-body-m" style="color:' + c.onSurfaceVariant + '; margin:-4px 0 12px;">' + T(t) + '</div>'; };
+    var field = 'flex:1; min-width:0; height:40px; padding:0 16px; border-radius:var(--r-xs); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surfaceContainerHigh + '; color:' + c.onSurface + ';';
+    var btn = function (action, text, primary) { return '<span class="interactive t-label-l" data-action="' + action + '" style="display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; height:40px; padding:0 24px; border-radius:var(--r-full); white-space:nowrap;' + (primary ? ' background:' + c.primary + '; color:' + c.onPrimary + ';' : ' border:1px solid ' + c.outline + '; color:' + c.primary + ';') + '">' + T(text) + '</span>'; };
     var row = function (title, desc, control) {
-      return '<div style="display:flex; align-items:center; gap:16px; padding:14px 0; border-bottom:1px solid ' + c.outlineVariant + ';"><div style="flex:1; min-width:0;"><div style="font-size:14px; font-weight:500;">' + T(title) + '</div>' + (desc ? '<div style="font-size:13px; line-height:1.45; color:' + c.onSurfaceVariant + '; margin-top:2px;">' + T(desc) + '</div>' : '') + '</div>' + control + '</div>';
+      return '<div style="display:flex; align-items:center; gap:16px; min-height:72px; padding:8px 0;"><div style="flex:1; min-width:0;"><div class="t-body-l">' + T(title) + '</div>' + (desc ? '<div class="t-body-m" style="color:' + c.onSurfaceVariant + ';">' + T(desc) + '</div>' : '') + '</div>' + control + '</div>';
     };
     var body = '';
     if (sec === 'profile') {
       var col = avatarColors(state.user.displayName, c.dark);
-      body = '<div style="display:flex; align-items:center; gap:14px; margin-bottom:20px;">' + avatarHtml(col.bg, col.color, 56)
+      body = '<div style="display:flex; align-items:center; gap:16px; margin-bottom:24px;">' + avatarHtml(col.bg, col.color, 56)
         + '<div style="display:flex; gap:8px;">' + btn('pickAvatar', 'Change photo') + btn('removeAvatar', 'Remove') + '</div></div>'
         + label('Display name')
         + '<div style="display:flex; gap:8px;"><input id="displayNameInput" data-field="displayNameDraft" value="' + esc(state.displayNameDraft) + '" maxlength="60" style="' + field + '">' + btn('saveDisplayName', 'Save', true) + '</div>'
-        + '<div style="font-size:13px; color:' + c.onSurfaceVariant + '; margin-top:14px;">@' + esc(state.user.username) + ' · ' + esc(T(state.user.role)) + '</div>';
+        + '<div class="t-body-m" style="color:' + c.onSurfaceVariant + '; margin-top:16px;">@' + esc(state.user.username) + ' · ' + esc(T(state.user.role)) + '</div>';
     } else if (sec === 'appearance') {
-      body = label('Theme') + '<div style="max-width:360px; margin-bottom:22px;">' + themeSegmented(c) + '</div>'
+      body = label('Theme') + '<div style="max-width:360px; margin-bottom:24px;">' + themeSegmented(c) + '</div>'
         + label('Accent colour') + help('Used for the main button, the selected item and focus rings.')
-        + '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">' + accentControls(c) + '</div>';
+        + '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' + accentControls(c) + '</div>';
     } else if (sec === 'security') {
       body = row('Password', 'Change the password you sign in with.', btn('openPasswordModal', 'Change password'))
         + row('Phone sync', 'App passwords for Apple Reminders and other CalDAV clients.', btn('openAppPasswords', 'Manage'));
     } else if (sec === 'notifications') {
       body = row('Desktop alerts', typeof window.Notification === 'function' ? 'Alerts when this tab is in the background.' : 'This browser cannot show desktop alerts here (they need HTTPS).',
-        typeof window.Notification === 'function' ? '<label class="interactive" style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer;"><input type="checkbox" data-action="toggleDesktopAlerts"' + (state.desktopAlerts ? ' checked' : '') + '>' + T('On') + '</label>' : '');
+        typeof window.Notification === 'function' ? '<label class="interactive t-label-l" style="display:flex; align-items:center; gap:4px; min-height:40px; padding-right:12px; border-radius:var(--r-full); cursor:pointer;"><span class="cb-target"><input type="checkbox" data-action="toggleDesktopAlerts"' + (state.desktopAlerts ? ' checked' : '') + '></span>' + T('On') + '</label>' : '');
     } else if (sec === 'workspace') {
       body = label('App name')
-        + '<div style="display:flex; gap:8px; margin-bottom:22px;"><input id="appNameInput" data-field="appNameDraft" value="' + esc(state.appNameDraft) + '" maxlength="60" style="' + field + '">' + btn('saveAppName', 'Save', true) + '</div>'
+        + '<div style="display:flex; gap:8px; margin-bottom:24px;"><input id="appNameInput" data-field="appNameDraft" value="' + esc(state.appNameDraft) + '" maxlength="60" style="' + field + '">' + btn('saveAppName', 'Save', true) + '</div>'
         + label('App icon') + help('Also used as the browser tab icon.')
-        + '<div style="display:flex; align-items:center; gap:14px;">' + brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 48, false) + '<div style="display:flex; gap:8px;">' + btn('pickAppIcon', 'Upload image') + btn('removeAppIcon', 'Use the default icon') + '</div></div>';
+        + '<div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">' + brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 48, false) + '<div style="display:flex; gap:8px;">' + btn('pickAppIcon', 'Upload image') + btn('removeAppIcon', 'Use the default icon') + '</div></div>';
     } else if (sec === 'accounts') {
       var pending = pendingUserCount();
       body = row('Accounts', pending ? T('{n} waiting for approval', { n: pending }) : 'Approve sign-ups, change roles and departments, reset passwords.', btn('openUsers', 'Open'));
@@ -4915,22 +4915,22 @@
     }
     var current = sections.filter(function (x) { return x[0] === sec; })[0] || sections[0];
     return modalShell('settings', state.settingsPhase, c, 'Settings', 760,
-      '<div class="settings-layout" style="display:flex; gap:24px; min-height:420px;">'
-      + '<div class="settings-nav" style="width:180px; flex-shrink:0; display:flex; flex-direction:column; gap:2px; padding-right:16px; border-right:1px solid ' + c.outlineVariant + ';">'
-      +   '<div style="font-size:20px; font-weight:500; padding:2px 10px 12px;">' + T('Settings') + '</div>'
+      '<div class="settings-layout" style="display:flex; gap:24px; min-height:432px;">'
+      + '<div class="settings-nav" style="width:200px; flex-shrink:0; display:flex; flex-direction:column; gap:0; margin-left:-12px;">'
+      +   '<div class="t-headline-s" style="padding:0 16px 16px;">' + T('Settings') + '</div>'
       +   sections.map(navItem).join('')
       + '</div>'
       + '<div style="flex:1; min-width:0;">'
-      +   '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;"><h2 style="margin:0; font-size:20px; font-weight:500;">' + T(current[1]) + '</h2>'
-      +     '<span class="interactive" data-action="closeSettings" aria-label="' + T('Close') + '" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span></div>'
+      +   '<div style="display:flex; align-items:center; justify-content:space-between; margin:-4px -12px 16px 0;"><h2 class="t-title-l" style="margin:0;">' + T(current[1]) + '</h2>'
+      +     '<span class="interactive icon-btn" data-action="closeSettings" aria-label="' + T('Close') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span></div>'
       +   body
       + '</div></div>');
   }
 
   function pillButton(action, label, c, primary, extra) {
     label = T(label);
-    return '<div class="interactive" data-action="' + action + '"' + (extra || '') + ' style="display:flex; align-items:center; justify-content:center; height:38px; padding:0 18px; border-radius:var(--r-sm); font-size:13px; font-weight:500; flex-shrink:0; '
-      + (primary ? 'background:' + c.primary + '; color:' + c.onPrimary + ';' : 'color:' + c.onSurfaceVariant + ';') + '">' + label + '</div>';
+    return '<div class="interactive t-label-l" data-action="' + action + '"' + (extra || '') + ' style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 ' + (primary ? 24 : 12) + 'px; border-radius:var(--r-full); flex-shrink:0; '
+      + (primary ? 'background:' + c.primary + '; color:' + c.onPrimary + ';' : 'color:' + c.primary + ';') + '">' + label + '</div>';
   }
 
   function trashModal(c) {
