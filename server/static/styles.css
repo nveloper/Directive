@@ -1004,3 +1004,30 @@ svg[fill="none"][stroke="currentColor"] { stroke-width: 1.6; }
 @keyframes listUp { from { opacity: .35; } to { opacity: 1; } }
 .list-body.list-dim { animation: listDim 140ms ease forwards; }
 .list-body.list-in { animation: listUp 240ms ease both; }
+
+/* ---- Phone: the page scrolls, not a box inside it -------------------------
+   A column of fixed-height boxes, each scrolling on its own, depends on the
+   browser agreeing on the viewport height; mobile browsers with collapsing
+   toolbars and text zoom do not always, and the list then ends up taller
+   than the screen and cannot be scrolled. On a phone the document scrolls
+   instead, the top bar and the tabs stay pinned, and the browser's own
+   momentum and toolbar collapse work as they do on any page. */
+@media (max-width: 860px) {
+  /* Off-screen drawers must not widen the page (which would zoom it out);
+     clip, unlike hidden, does not turn the body into a scroll box. */
+  html, body { height: auto !important; overflow: visible !important; overflow-x: clip !important; overscroll-behavior-y: auto !important; }
+  .app-shell { overflow-x: clip !important; }
+  .app-shell { height: auto !important; min-height: 100dvh; overflow: visible !important; }
+  .app-body { flex: none !important; overflow: visible !important; }
+  /* .app-body is a row: flex here sets the width, so the list keeps the
+     screen's width and only its height is left to the content. */
+  main#task-list { flex: 1 1 auto !important; min-width: 0; overflow: visible !important; min-height: calc(100dvh - 64px); }
+  .list-body, .list-body > div { flex: none !important; overflow: visible !important; }
+  .top-bar { position: sticky; top: 0; z-index: 40; background: var(--surface-container) !important; }
+  #task-list > div:has(> [role="tablist"]) {
+    position: sticky; top: 64px; z-index: 30; background: var(--surface);
+    margin: -8px -16px 0; padding: 8px 16px 0;
+  }
+  /* Something open over the page holds the page still behind it. */
+  body:has(.modal-overlay, .detail-overlay, .left-nav.open, .right-panel.open) { overflow: hidden !important; }
+}
