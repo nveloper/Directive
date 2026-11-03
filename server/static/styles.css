@@ -22,11 +22,16 @@
   --e2: 0 0 0 1px rgb(0 0 0 / .05), 0 8px 24px rgb(0 0 0 / .10);
   --e3: 0 0 0 1px rgb(0 0 0 / .05), 0 24px 64px rgb(0 0 0 / .20);
 
-  /* motion: short, and never overshooting */
+  /* motion: effects (colour, opacity) stay short and flat; spatial changes
+     (shape, size, position) use M3 Expressive springs, which settle with a
+     small overshoot. */
   --m-fast: 100ms;
   --m-base: 160ms;
   --m-slow: 220ms;
   --ease: cubic-bezier(.2, 0, 0, 1);
+  --m-spatial: 420ms;
+  --spring: cubic-bezier(.34, 1.36, .64, 1);
+  --spring-fast: cubic-bezier(.3, 1.6, .5, 1);
 
   /* the state layer laid over anything that can be pressed */
   --state-hover: rgb(0 0 0 / .045);
@@ -69,14 +74,14 @@ input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:f
 
 @keyframes overlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes overlayFadeOut { from { opacity: 1; } to { opacity: 0; } }
-@keyframes modalPopIn { from { opacity: 0; transform: scale(.98) translateY(4px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes modalPopIn { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: scale(1) translateY(0); } }
 @keyframes modalPopOut { from { opacity: 1; transform: scale(1) translateY(0); } to { opacity: 0; transform: scale(.98) translateY(4px); } }
 @keyframes contentSlideOut { from { opacity: 1; } to { opacity: 0; } }
 @keyframes contentSlideIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes rowHighlight { from { background: var(--primary-container); } to { background: transparent; } }
 @keyframes dropdownIn {
-  from { opacity: 0; transform: translateY(-4px) scale(.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: scale(.88); }
+  to   { opacity: 1; transform: scale(1); }
 }
 @keyframes dropdownOut {
   from { opacity: 1; transform: translateY(0) scale(1); }
@@ -508,7 +513,6 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 /* A palette change repaints every surface at once; a short settle keeps that
    from reading as a flash. */
 .anim-palette { animation: paletteSettle var(--m-slow) ease; }
-.anim-select { animation: selectIn var(--m-base) var(--ease); }
 .anim-check { animation: checkPop var(--m-base) var(--ease); }
 .anim-item-in { animation: itemIn var(--m-base) ease both; }
 @keyframes itemOut { to { opacity: 0; transform: translateX(14px); } }
@@ -661,7 +665,7 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
 .mselect-item:not(.selected):hover, .mselect-item:not(.selected).active { background: var(--item-hover); }
 .mselect-item.selected.active { box-shadow: inset 0 0 0 2px var(--primary); }
 .mselect-check { display: flex; width: 18px; flex-shrink: 0; }
-@keyframes mselectIn { from { opacity: 0; transform: scaleY(.96) translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes mselectIn { from { opacity: 0; transform: scaleY(.7); } 40% { opacity: 1; } to { opacity: 1; transform: none; } }
 @keyframes mselectOut { from { opacity: 1; } to { opacity: 0; } }
 .mselect-in { animation: mselectIn var(--m-base) var(--ease) both; }
 .mselect-out { animation: mselectOut 120ms ease both; pointer-events: none; }
@@ -855,3 +859,96 @@ body { line-height: 1.45; }
 .drawer-close-btn.icon-btn { display: none; }
 .left-nav .drawer-close-btn.icon-btn, .right-panel .drawer-close-btn.icon-btn { display: flex; }
 @media (min-width: 1200px) { .left-nav .drawer-close-btn.icon-btn { display: none; } }
+
+/* ---- Morphs (M3 Expressive) ----------------------------------------------
+   :active and :hover never re-render, so these are transitions; anything a
+   click re-renders is a one-shot animation class instead. */
+.interactive {
+  transition: background-color var(--m-fast) ease, color var(--m-fast) ease, border-color var(--m-fast) ease,
+              border-radius var(--m-spatial) var(--spring-fast), transform var(--m-spatial) var(--spring-fast),
+              box-shadow var(--m-base) ease;
+}
+/* Pressing a round control squares it off, and it springs back on release. */
+.icon-btn:active, .text-btn:active, .filter-btn:active, .new-task-inline:active,
+[data-action="saveTask"]:active, [data-action="postComment"]:active, [data-action="saveDisplayName"]:active,
+[data-action="saveAppName"]:active, [data-action="closeTaskModal"]:active,
+.settings-layout [data-action="setSettingsSection"]:active,
+[data-action="pickAvatar"]:active, [data-action="removeAvatar"]:active, [data-action="openUsers"]:active,
+[data-action="openPasswordModal"]:active, [data-action="openAppPasswords"]:active,
+[data-action="openReminders"]:active, [data-action="openBackups"]:active,
+.nav-item:active, .dept-row [data-action="selectNode"]:active { border-radius: var(--r-sm) !important; }
+.tree-chevron-btn:active { border-radius: var(--r-sm) !important; }
+/* The FAB grows rounder under the pointer and squarer when pressed; its plus
+   turns a quarter as the dialog it opens comes up. */
+.fab-new-task { transition: border-radius var(--m-spatial) var(--spring-fast), transform var(--m-spatial) var(--spring-fast), box-shadow var(--m-base) ease; }
+.fab-new-task > svg { transition: transform var(--m-spatial) var(--spring); }
+@media (hover: hover) { .fab-new-task:hover { border-radius: 20px !important; box-shadow: var(--e3); } }
+.fab-new-task:active { border-radius: 12px !important; transform: scale(.94); }
+.fab-new-task:active > svg { transform: rotate(90deg); }
+/* Cards and rows lift a little under a mouse. */
+@media (hover: hover) {
+  .board-card:hover { transform: translateY(-2px); box-shadow: var(--e2); }
+}
+
+/* A newly selected pill (drawer item, settings section) grows its indicator
+   out from the middle instead of appearing. The inline background is held
+   back while the pseudo-element plays the morph. */
+@keyframes indicatorGrow { from { transform: scaleX(.3); opacity: .3; } to { transform: scaleX(1); opacity: 1; } }
+@keyframes holdBg { from, to { background-color: transparent; } }
+.anim-select { position: relative; isolation: isolate; animation: holdBg var(--m-spatial) steps(1, end); }
+.anim-select::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  background: var(--secondary-container);
+  animation: indicatorGrow var(--m-spatial) var(--spring) both;
+}
+/* Segmented buttons fill from the middle the same way. */
+.anim-seg { position: relative; isolation: isolate; animation: holdBg var(--m-spatial) steps(1, end); }
+.anim-seg::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  background: var(--secondary-container);
+  animation: indicatorGrow var(--m-spatial) var(--spring) both;
+}
+.view-toggle .anim-seg::before { background: var(--surface); box-shadow: var(--e1); }
+/* Tabs: the underline grows out from the middle of the new tab. */
+@keyframes holdBorder { from, to { border-bottom-color: transparent; } }
+@keyframes underlineGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.anim-tab { position: relative; animation: holdBorder var(--m-spatial) steps(1, end); }
+.anim-tab::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: -2px; height: 3px; border-radius: 3px 3px 0 0;
+  background: var(--primary);
+  animation: underlineGrow var(--m-spatial) var(--spring) both;
+}
+#task-list [role="tab"].anim-tab::after { bottom: -3px; }
+.bell-panel .anim-tab::after { height: 2px; bottom: -2px; }
+
+/* Rows arrive in a short cascade when the list changes. */
+@keyframes rowRise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.content-in .task-row, .content-in .board-card { animation: rowRise var(--m-spatial) var(--spring) both; }
+.content-in .task-row:nth-child(2), .content-in .board-card:nth-child(2) { animation-delay: 20ms; }
+.content-in .task-row:nth-child(3), .content-in .board-card:nth-child(3) { animation-delay: 40ms; }
+.content-in .task-row:nth-child(4), .content-in .board-card:nth-child(4) { animation-delay: 60ms; }
+.content-in .task-row:nth-child(5), .content-in .board-card:nth-child(5) { animation-delay: 80ms; }
+.content-in .task-row:nth-child(6), .content-in .board-card:nth-child(6) { animation-delay: 100ms; }
+.content-in .task-row:nth-child(7), .content-in .board-card:nth-child(7) { animation-delay: 120ms; }
+.content-in .task-row:nth-child(n+8), .content-in .board-card:nth-child(n+8) { animation-delay: 140ms; }
+
+/* Dialogs and menus land with the spatial spring. */
+.card-in { animation-timing-function: var(--spring) !important; animation-duration: var(--m-spatial) !important; }
+.dropdown-in { animation-timing-function: var(--spring) !important; animation-duration: 320ms !important; transform-origin: top right; }
+.mselect-in { animation-timing-function: var(--spring) !important; animation-duration: 320ms !important; }
+
+/* ---- Icons ----------------------------------------------------------------
+   One line weight and three sizes: 24 in icon buttons and the drawer, 18 in
+   labelled buttons and chips, 16 inline with small text. */
+svg[fill="none"][stroke="currentColor"] { stroke-width: 1.6; }
+.icon-btn > svg, .icon-btn > span > svg, .nav-item > svg:not(.tree-chevron-btn), .fab-new-task > svg,
+.drawer-close-btn > svg, .detail-add-icon > svg { width: 24px; height: 24px; }
+.checklist-tool > svg, .cb-target > svg { width: 20px; height: 20px; }
+.mselect-label > svg, .right-panel .interactive > svg { width: 18px; height: 18px; }
+[role="columnheader"] svg, .task-row .t-body-m svg, .task-row .t-label-m svg { width: 16px; height: 16px; }
+.filter-btn > svg, .new-task-inline > svg, .text-btn > svg, [data-action="openTaskModal"] > svg { width: 18px; height: 18px; }
+.mselect-trigger .mselect-chevron { width: 18px; height: 18px; }
+.date-trigger svg { width: 18px; height: 18px; }
+.view-toggle svg { width: 20px; height: 20px; }
+.t-label-m > svg, .t-body-s > svg, .t-label-m svg, .task-row .t-label-m svg { width: 16px; height: 16px; }
+.fab-new-task > svg { width: 24px !important; height: 24px !important; }

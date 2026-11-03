@@ -338,7 +338,7 @@
   // Dates are written the reader's way: "Sep 24" or "9월 24일".
   var LOCALE = LANG === 'ko' ? 'ko-KR' : 'en-US';
   function shortDate(d) { return d.toLocaleDateString(LOCALE, { month: 'short', day: 'numeric' }); }
-  var CONTENT_OUT_MS = 90, CONTENT_IN_MS = 140, MODAL_CLOSE_MS = 160;
+  var CONTENT_OUT_MS = 90, CONTENT_IN_MS = 560, MODAL_CLOSE_MS = 160;
   var ACCENT_PRESETS = ['#6750A4', '#006A6A', '#3A5BA9', '#8B5000', '#984061'];
   var ICON = {
     listView: '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 6h12M4 10h12M4 14h12"></path></svg>',
@@ -2259,7 +2259,7 @@
     setState({ contentAnim: 'out' });
     setTimeout(function () {
       if (nav.nodeToken !== token) return;
-      playOnce('node', 'anim-select', 330);
+      playOnce('node', 'anim-select', 420);
       setState({ selectedNode: id, contentAnim: 'in', page: 1 });
       fetchTasks().then(render);
       // Closing the drawer here (rather than as soon as the tap lands) means
@@ -2277,7 +2277,7 @@
     setState({ contentAnim: 'out' });
     setTimeout(function () {
       if (nav.tabToken !== token) return;
-      playOnce('tab', 'anim-select', 330);
+      playOnce('tab', 'anim-tab', 420);
       setState({ activeTab: id, contentAnim: 'in', page: 1 });
       fetchTasks().then(render);
       setTimeout(function () { if (nav.tabToken === token) setState({ contentAnim: 'settled' }); }, CONTENT_IN_MS);
@@ -3414,7 +3414,7 @@
       +   '<div role="group" aria-label="' + T('Calendar span') + '" style="display:inline-flex; height:40px; box-sizing:content-box; border:1px solid ' + c.outline + '; border-radius:var(--r-full); overflow:hidden;">'
       +     [['week', 'Week'], ['month', 'Month']].map(function (p) {
               var on = calendarSpan() === p[0];
-              return '<span class="interactive t-label-l" data-action="setCalendarSpan" data-id="' + p[0] + '" aria-pressed="' + on + '" style="display:inline-flex; align-items:center; padding:0 16px; background:' + (on ? c.secondaryContainer : 'transparent') + '; color:' + (on ? c.onSecondaryContainer : c.onSurface) + ';' + (p[0] === 'month' ? ' border-left:1px solid ' + c.outline + ';' : '') + '">' + T(p[1]) + '</span>';
+              return '<span class="interactive t-label-l' + (on ? oneShotClass('seg') : '') + '" data-action="setCalendarSpan" data-id="' + p[0] + '" aria-pressed="' + on + '" style="display:inline-flex; align-items:center; padding:0 16px; background:' + (on ? c.secondaryContainer : 'transparent') + '; color:' + (on ? c.onSecondaryContainer : c.onSurface) + ';' + (p[0] === 'month' ? ' border-left:1px solid ' + c.outline + ';' : '') + '">' + T(p[1]) + '</span>';
             }).join('')
       +   '</div>'
       + '</div>'
@@ -3604,7 +3604,7 @@
     var mineTab = state.bellTab === 'mine';
     var bellTabBtn = function (id, label, count) {
       var on = state.bellTab === id;
-      return '<span class="interactive t-title-s" role="tab" aria-selected="' + (on ? 'true' : 'false') + '" data-action="setBellTab" data-id="' + id + '" style="display:inline-flex; align-items:center; justify-content:center; gap:4px; flex:1; height:48px; box-sizing:border-box; margin-bottom:-1px; color:' + (on ? c.primary : c.onSurfaceVariant) + '; border-bottom:2px solid ' + (on ? c.primary : 'transparent') + ';">' + label
+      return '<span class="interactive t-title-s' + (on ? oneShotClass('bellTab') : '') + '" role="tab" aria-selected="' + (on ? 'true' : 'false') + '" data-action="setBellTab" data-id="' + id + '" style="display:inline-flex; align-items:center; justify-content:center; gap:4px; flex:1; height:48px; box-sizing:border-box; margin-bottom:-1px; color:' + (on ? c.primary : c.onSurfaceVariant) + '; border-bottom:2px solid ' + (on ? c.primary : 'transparent') + ';">' + label
         + (count > 0 ? '<span class="tnum t-label-s" style="min-width:16px; height:16px; padding:0 4px; box-sizing:border-box; border-radius:var(--r-full); text-align:center; background:' + c.error + '; color:#fff;">' + count + '</span>' : '') + '</span>';
     };
     // Lists are grouped under Today, Yesterday and Earlier.
@@ -3932,7 +3932,7 @@
       +     '<div class="view-toggle" role="radiogroup" aria-label="' + T('View') + '" style="display:flex; align-items:center; gap:4px; height:40px; box-sizing:border-box; padding:4px; border-radius:var(--r-full); background:' + c.surfaceContainerHigh + ';">'
       +       [['list', 'List', ICON.listView], ['grid', 'Board', ICON.gridView], ['calendar', 'Calendar', ICON.calendarView.replace('width="19" height="19"', 'width="16" height="16"')]].map(function (v) {
                 var on = state.viewMode === v[0];
-                return '<div class="interactive" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setViewMode" data-id="' + v[0] + '" title="' + T(v[1]) + '" aria-label="' + T(v[1]) + '" style="width:40px; height:32px; border-radius:var(--r-full); display:flex; align-items:center; justify-content:center; color:' + (on ? c.onSurface : c.onSurfaceVariant) + '; background:' + (on ? c.surface : 'transparent') + ';' + (on ? ' box-shadow:var(--e1);' : '') + '">' + v[2] + '</div>';
+                return '<div class="interactive' + (on ? oneShotClass('seg') : '') + '" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setViewMode" data-id="' + v[0] + '" title="' + T(v[1]) + '" aria-label="' + T(v[1]) + '" style="width:40px; height:32px; border-radius:var(--r-full); display:flex; align-items:center; justify-content:center; color:' + (on ? c.onSurface : c.onSurfaceVariant) + '; background:' + (on ? c.surface : 'transparent') + ';' + (on ? ' box-shadow:var(--e1);' : '') + '">' + v[2] + '</div>';
               }).join('')
       +     '</div>'
       +     (narrow ? '' : filterHtml)
@@ -4839,12 +4839,13 @@
     return '<div role="radiogroup" aria-label="' + T('Theme') + '" style="display:flex; height:40px; box-sizing:content-box; border:1px solid ' + c.outline + '; border-radius:var(--r-full); overflow:hidden;">'
       + opts.map(function (o) {
           var on = state.themeMode === o[0];
-          return '<span class="interactive t-label-l" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setThemeMode" data-id="' + o[0] + '" style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; color:' + (on ? c.onSecondaryContainer : c.onSurface) + '; background:' + (on ? c.secondaryContainer : 'transparent') + ';' + (o[0] !== 'light' ? ' border-left:1px solid ' + c.outline + ';' : '') + '">' + o[2] + T(o[1]) + '</span>';
+          return '<span class="interactive t-label-l' + (on ? oneShotClass('seg') : '') + '" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setThemeMode" data-id="' + o[0] + '" style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; color:' + (on ? c.onSecondaryContainer : c.onSurface) + '; background:' + (on ? c.secondaryContainer : 'transparent') + ';' + (o[0] !== 'light' ? ' border-left:1px solid ' + c.outline + ';' : '') + '">' + o[2] + T(o[1]) + '</span>';
         }).join('')
       + '</div>';
   }
   function setThemeMode(mode) {
     if (THEME_MODE_ORDER.indexOf(mode) < 0 || mode === state.themeMode) return;
+    playOnce('seg', 'anim-seg', 420);
     try { localStorage.setItem('directive_theme_mode', mode); } catch (e) {}
     if (isDarkActive() !== computeDark(mode)) playOnce('palette', 'anim-palette', 420);
     setState({ themeMode: mode });
@@ -4873,7 +4874,7 @@
     if (isAdmin()) sections = sections.concat([['workspace', 'Workspace'], ['accounts', 'Accounts'], ['maintenance', 'Reminders and backups']]);
     var navItem = function (x) {
       var on = sec === x[0];
-      return '<span class="interactive t-label-l" data-action="setSettingsSection" data-id="' + x[0] + '" style="display:flex; align-items:center; flex-shrink:0; height:48px; padding:0 16px; border-radius:var(--r-full); white-space:nowrap; color:' + (on ? c.onSecondaryContainer : c.onSurfaceVariant) + '; background:' + (on ? c.secondaryContainer : 'transparent') + ';">' + T(x[1]) + '</span>';
+      return '<span class="interactive t-label-l' + (on ? oneShotClass('settingsNav') : '') + '" data-action="setSettingsSection" data-id="' + x[0] + '" style="display:flex; align-items:center; flex-shrink:0; height:48px; padding:0 16px; border-radius:var(--r-full); white-space:nowrap; color:' + (on ? c.onSecondaryContainer : c.onSurfaceVariant) + '; background:' + (on ? c.secondaryContainer : 'transparent') + ';">' + T(x[1]) + '</span>';
     };
     var label = function (t) { return '<div class="t-title-s" style="color:' + c.onSurface + '; margin-bottom:8px;">' + T(t) + '</div>'; };
     var help = function (t) { return '<div class="t-body-m" style="color:' + c.onSurfaceVariant + '; margin:-4px 0 12px;">' + T(t) + '</div>'; };
@@ -5139,13 +5140,13 @@
     bulkDelete: function () { bulkDelete(); },
     openPalette: function () { openPalette(); },
     runPaletteItem: function (el) { runPaletteItem(Number(el.getAttribute('data-id'))); },
-    setCalendarSpan: function (el) { setCalendarSpan(el.getAttribute('data-id')); },
+    setCalendarSpan: function (el) { if (el.getAttribute('data-id') !== calendarSpan()) playOnce('seg', 'anim-seg', 420); setCalendarSpan(el.getAttribute('data-id')); },
     shiftCalendar: function (el) { shiftCalendar(Number(el.getAttribute('data-id'))); },
     setMappingColor: function (el) { setState({ mappingForm: Object.assign({}, state.mappingForm, { color: el.getAttribute('data-id') }) }); },
     sortByColumn: function (el) { var k = el.getAttribute('data-id'); setTaskSort(state.taskSort === k ? 'created' : k); },
     openSettings: function () { openSettings(); },
     closeSettings: function () { closeSettings(); },
-    setSettingsSection: function (el) { setState({ settingsSection: el.getAttribute('data-id') }); },
+    setSettingsSection: function (el) { if (el.getAttribute('data-id') !== state.settingsSection) playOnce('settingsNav', 'anim-select', 420); setState({ settingsSection: el.getAttribute('data-id') }); },
     setThemeMode: function (el) { setThemeMode(el.getAttribute('data-id')); },
     toggleActivityMine: function () { setState({ activityIncludeMine: !state.activityIncludeMine }); },
     toggleDatePicker: function (el) { toggleDatePicker(el.getAttribute('data-id')); },
@@ -5163,7 +5164,7 @@
     setTab: function (el) { setTab(el.getAttribute('data-id')); },
     toggleTodayTask: function (el) { toggleTodayTask(Number(el.getAttribute('data-id'))); },
     clearSearch: function () { clearSearch(); },
-    setViewMode: function (el) { setViewMode(el.getAttribute('data-id')); },
+    setViewMode: function (el) { if (el.getAttribute('data-id') !== state.viewMode) playOnce('seg', 'anim-seg', 420); setViewMode(el.getAttribute('data-id')); },
     prevPage: function () { prevPage(); },
     nextPage: function () { nextPage(); },
     clearFilters: function () { clearFilters(); },
@@ -5235,7 +5236,7 @@
     setUserStatus: function (el) { setUserStatus(Number(el.getAttribute('data-id')), el.getAttribute('data-value')); },
     setUserRole: function (el) { setUserRole(Number(el.getAttribute('data-id')), el.getAttribute('data-value')); },
 
-    setBellTab: function (el) { setBellTab(el.getAttribute('data-id')); },
+    setBellTab: function (el) { if (el.getAttribute('data-id') !== state.bellTab) playOnce('bellTab', 'anim-tab', 420); setBellTab(el.getAttribute('data-id')); },
     openNotification: function (el) { openNotification(Number(el.getAttribute('data-id'))); },
     toggleDesktopAlerts: function () { toggleDesktopAlerts(); },
     pickMention: function (el) { pickMention(Number(el.getAttribute('data-id'))); },
