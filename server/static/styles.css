@@ -304,9 +304,9 @@ svg.interactive:hover, svg.interactive:active { background-image: none !importan
   background: var(--guide-code-bg);
   word-break: break-all;
 }
-.guide-table { border-collapse: collapse; margin: 4px 0 10px 0; width: 100%; }
-.guide-table th, .guide-table td { text-align: left; font-size: 13px; padding: 7px 8px; border-bottom: 1px solid var(--guide-rule); vertical-align: top; }
-.guide-table th { font-weight: 600; white-space: nowrap; width: 1%; }
+.guide-table { border-collapse: collapse; margin: 4px 0 12px 0; width: 100%; }
+.guide-table th, .guide-table td { text-align: left; font-size: 14px; line-height: 20px; padding: 8px; border-bottom: 1px solid var(--guide-rule); vertical-align: top; }
+.guide-table th { font-weight: 500; white-space: nowrap; width: 1%; }
 
 /* Rendered always, shown only where the header has no room for it. */
 .fab-new-task { display: none; }

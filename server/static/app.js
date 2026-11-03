@@ -4269,12 +4269,12 @@
   function resetResultBox(c) {
     var r = state.resetResult;
     if (!r) return '';
-    return '<div class="' + oneShotClass('resetResult').trim() + '" style="display:flex; flex-direction:column; gap:7px; padding:13px; border-radius:var(--r-md); background:' + c.primaryContainer + '; color:' + c.onPrimaryContainer + ';">'
-      + '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:13px; font-weight:500; flex:1;">' + esc(T('Temporary password for {name}', { name: r.name })) + '</span>'
+    return '<div class="' + oneShotClass('resetResult').trim() + '" style="display:flex; flex-direction:column; gap:8px; padding:12px; border-radius:var(--r-md); background:' + c.primaryContainer + '; color:' + c.onPrimaryContainer + ';">'
+      + '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:14px; line-height:20px; font-weight:500; flex:1;">' + esc(T('Temporary password for {name}', { name: r.name })) + '</span>'
       +   '<span class="interactive" data-action="dismissResetResult" title="' + T('Done') + '" style="display:flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%;">' + ICON.close + '</span></div>'
-      + '<div style="display:flex; align-items:center; gap:8px;"><code style="flex:1; font-size:18px; letter-spacing:.06em; font-weight:600; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;">' + esc(r.temp) + '</code>'
-      +   '<span class="interactive" data-action="copyResetPassword" title="' + T('Copy') + '" style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:var(--r-sm);">' + (state.copiedToken === 'reset-pw' ? '<span class="anim-copied" style="display:flex;">' + ICON.check + '</span>' : ICON.copy) + '</span></div>'
-      + '<div style="font-size:12px; line-height:1.45;">' + T('Give it to them in person or over a trusted channel. It is shown only now. They sign in with it and are asked for a password of their own straight away; it does not work for phone sync.') + '</div>'
+      + '<div style="display:flex; align-items:center; gap:8px;"><code style="flex:1; font-size:22px; line-height:28px; letter-spacing:.06em; font-weight:500; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;">' + esc(r.temp) + '</code>'
+      +   '<span class="interactive" data-action="copyResetPassword" title="' + T('Copy') + '" style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:var(--r-sm);">' + (state.copiedToken === 'reset-pw' ? '<span class="anim-copied" style="display:flex;">' + ICON.check + '</span>' : ICON.copy) + '</span></div>'
+      + '<div style="font-size:12px; line-height:16px;">' + T('Give it to them in person or over a trusted channel. It is shown only now. They sign in with it and are asked for a password of their own straight away; it does not work for phone sync.') + '</div>'
       + '</div>';
   }
 
@@ -4292,7 +4292,7 @@
       var badgeFg = pending ? c.onErrorContainer : (disabled ? c.onSurfaceVariant : c.onSecondaryContainer);
       var badgeText = pending ? T('Waiting') : (disabled ? T('Disabled') : T('Active'));
 
-      var deptSelect = mSelectFrom('<select data-user-dept="' + u.id + '" style="height:30px; padding:0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:12px; background:' + c.surface + '; color:' + c.onSurface + ';">'
+      var deptSelect = mSelectFrom('<select data-user-dept="' + u.id + '" style="height:40px; padding:0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:12px; line-height:16px; background:' + c.surface + '; color:' + c.onSurface + ';">'
         + '<option value="">' + T('- No department -') + '</option>'
         + deptOpts.map(function (o) {
             return '<option value="' + esc(o.id) + '"' + (o.id === u.deptId ? ' selected' : '') + '>' + esc(o.label) + '</option>';
@@ -4300,27 +4300,27 @@
         + '</select>', c);
 
       var roleControl = isSelf
-        ? '<span style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + esc(T(u.role === 'admin' ? 'admin (you)' : 'member (you)')) + '</span>'
-        : '<span class="interactive" data-action="setUserRole" data-id="' + u.id + '" data-value="' + (u.role === 'admin' ? 'member' : 'admin') + '" style="font-size:12px; font-weight:500; color:' + c.primary + ';">'
+        ? '<span style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + ';">' + esc(T(u.role === 'admin' ? 'admin (you)' : 'member (you)')) + '</span>'
+        : '<span class="interactive text-btn t-label-l" data-action="setUserRole" data-id="' + u.id + '" data-value="' + (u.role === 'admin' ? 'member' : 'admin') + '" style="color:' + c.primary + ';">'
           + (u.role === 'admin' ? T('Make member') : T('Make admin')) + '</span>';
 
       var resetControl = isSelf ? ''
-        : '<span class="interactive" data-action="resetUserPassword" data-id="' + u.id + '" style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Reset password') + '</span>';
+        : '<span class="interactive text-btn t-label-l" data-action="resetUserPassword" data-id="' + u.id + '" style="color:' + c.onSurfaceVariant + ';">' + T('Reset password') + '</span>';
 
       var statusControl = pending
-        ? '<span class="interactive" data-action="approveUser" data-id="' + u.id + '" style="font-size:12px; font-weight:500; color:' + c.primary + ';">' + T('Approve') + '</span>'
+        ? '<span class="interactive text-btn t-label-l" data-action="approveUser" data-id="' + u.id + '" style="color:' + c.primary + ';">' + T('Approve') + '</span>'
         : (isSelf ? ''
-          : '<span class="interactive" data-action="setUserStatus" data-id="' + u.id + '" data-value="' + (disabled ? 'active' : 'disabled') + '" style="font-size:12px; font-weight:500; color:' + (disabled ? c.primary : c.error) + ';">'
+          : '<span class="interactive text-btn t-label-l" data-action="setUserStatus" data-id="' + u.id + '" data-value="' + (disabled ? 'active' : 'disabled') + '" style="color:' + (disabled ? c.primary : c.error) + ';">'
             + (disabled ? T('Re-enable') : T('Disable')) + '</span>');
 
-      return '<div style="display:flex; flex-direction:column; gap:7px; padding:12px 0; border-bottom:1px solid ' + c.outlineVariant + ';">'
+      return '<div style="display:flex; flex-direction:column; gap:8px; padding:12px 0; ">'
         + '<div style="display:flex; align-items:center; gap:8px;">'
-        +   '<span style="font-size:13px; font-weight:500;">' + esc(u.displayName) + '</span>'
-        +   '<span style="font-size:12px; color:' + c.onSurfaceVariant + ';">@' + esc(u.username) + '</span>'
-        +   (u.mustChangePassword ? '<span style="margin-left:auto; font-size:12px; font-weight:500; padding:2px 8px; border-radius:var(--r-sm); background:' + c.tertiaryContainer + '; color:' + c.onTertiaryContainer + ';">' + T('Needs new password') + '</span>' : '')
-        +   '<span style="' + (u.mustChangePassword ? '' : 'margin-left:auto; ') + 'font-size:12px; font-weight:500; padding:2px 8px; border-radius:var(--r-sm); background:' + badgeBg + '; color:' + badgeFg + ';">' + badgeText + '</span>'
+        +   '<span style="font-size:14px; line-height:20px; font-weight:500;">' + esc(u.displayName) + '</span>'
+        +   '<span style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + ';">@' + esc(u.username) + '</span>'
+        +   (u.mustChangePassword ? '<span style="margin-left:auto; font-size:12px; line-height:16px; font-weight:500; padding:4px 8px; border-radius:var(--r-sm); background:' + c.tertiaryContainer + '; color:' + c.onTertiaryContainer + ';">' + T('Needs new password') + '</span>' : '')
+        +   '<span style="' + (u.mustChangePassword ? '' : 'margin-left:auto; ') + 'font-size:12px; line-height:16px; font-weight:500; padding:4px 8px; border-radius:var(--r-sm); background:' + badgeBg + '; color:' + badgeFg + ';">' + badgeText + '</span>'
         + '</div>'
-        + '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">'
+        + '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">'
         +   deptSelect
         +   '<span style="display:flex; align-items:center; gap:12px; margin-left:auto; flex-wrap:wrap; justify-content:flex-end;">' + roleControl + resetControl + statusControl + '</span>'
         + '</div>'
@@ -4329,16 +4329,16 @@
 
     var waiting = pendingUserCount();
     return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="closeUsers" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:50;">'
-      + '<div role="dialog" data-scroll-key="accounts" aria-modal="true" aria-label="' + esc(T('Accounts')) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:520px; max-width:94vw; max-height:calc(88vh / var(--zoom, 1)); overflow-y:auto; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:10px; box-shadow:var(--e3);">'
-      +   '<span style="font-size:20px; font-weight:500;">' + T('Accounts') + '</span>'
-      +   '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">'
+      + '<div role="dialog" data-scroll-key="accounts" aria-modal="true" aria-label="' + esc(T('Accounts')) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:520px; max-width:94vw; max-height:calc(88vh / var(--zoom, 1)); overflow-y:auto; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:8px; box-shadow:var(--e3);">'
+      +   '<span style="font-size:24px; line-height:32px; font-weight:400;">' + T('Accounts') + '</span>'
+      +   '<div style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + ';">'
       +     (waiting > 0 ? T(waiting === 1 ? '{n} account waiting for approval.' : '{n} accounts waiting for approval.', { n: waiting }) + ' ' : '')
       +     T('A member can only add or change work in their own department, so give each person a department before approving them.')
       +   '</div>'
       +   resetResultBox(c)
-      +   (state.users.length === 0 ? '<div style="font-size:13px; color:' + c.onSurfaceVariant + '; padding:12px 0;">' + T('No accounts yet.') + '</div>' : rows)
+      +   (state.users.length === 0 ? '<div style="font-size:14px; line-height:20px; color:' + c.onSurfaceVariant + '; padding:12px 0;">' + T('No accounts yet.') + '</div>' : rows)
       +   '<div style="display:flex; justify-content:flex-end; margin-top:8px;">'
-      +     '<div class="interactive" data-action="closeUsers" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 20px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; font-weight:500;">' + T('Done') + '</div>'
+      +     '<div class="interactive" data-action="closeUsers" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 20px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; line-height:20px; font-weight:500;">' + T('Done') + '</div>'
       +   '</div>'
       + '</div></div>';
   }
@@ -4788,20 +4788,20 @@
     var f = state.pwForm;
     var field = function (id, key, label, value, auto) {
       label = T(label);
-      return '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + label + '</label>'
-        + '<input id="' + id + '" type="password" data-form="pwForm" data-field="' + key + '" value="' + esc(value) + '" autocomplete="' + auto + '" style="height:40px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>';
+      return '<div style="display:flex; flex-direction:column; gap:4px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + label + '</label>'
+        + '<input id="' + id + '" type="password" data-form="pwForm" data-field="' + key + '" value="' + esc(value) + '" autocomplete="' + auto + '" style="height:40px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>';
     };
     return field('pwCurrentInput', 'current', forced ? 'Temporary password' : 'Current password', f.current, 'current-password')
       + field('pwNewInput', 'next', 'New password (at least 8 characters)', f.next, 'new-password')
       + field('pwConfirmInput', 'confirm', 'New password again', f.confirm, 'new-password')
-      + (state.pwError ? '<div role="alert" style="font-size:13px; color:' + c.error + ';">' + esc(state.pwError) + '</div>' : '');
+      + (state.pwError ? '<div role="alert" style="font-size:14px; line-height:20px; color:' + c.error + ';">' + esc(state.pwError) + '</div>' : '');
   }
 
   function passwordModal(c) {
     if (state.passwordModalPhase === 'closed') return '';
     return modalShell('password', state.passwordModalPhase, c, 'Change password', 400,
-      '<span style="font-size:20px; font-weight:500;">' + T('Change password') + '</span>'
-      + '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('Your other sign-ins - other browsers and phones using this password - are signed out. App passwords for phone sync keep working.') + '</div>'
+      '<span style="font-size:24px; line-height:32px; font-weight:400;">' + T('Change password') + '</span>'
+      + '<div style="font-size:14px; line-height:20px; color:' + c.onSurfaceVariant + ';">' + T('Your other sign-ins - other browsers and phones using this password - are signed out. App passwords for phone sync keep working.') + '</div>'
       + passwordFields(c, false)
       + '<div style="display:flex; justify-content:flex-end; gap:8px; margin-top:4px;">' + pillButton('closePasswordModal', 'Cancel', c, false) + pillButton('submitPasswordChange', 'Change password', c, true) + '</div>');
   }
@@ -4935,80 +4935,80 @@
   function trashModal(c) {
     if (state.trashModalPhase === 'closed') return '';
     var rows = state.trash.map(function (t) {
-      return '<div class="' + oneShotClass('trashLeave:' + t.id).trim() + '" style="display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid ' + c.outlineVariant + ';">'
+      return '<div class="' + oneShotClass('trashLeave:' + t.id).trim() + '" style="display:flex; align-items:center; gap:12px; padding:12px 0; ">'
         + '<div style="flex:1; min-width:0;">'
-        +   '<div style="font-size:14px; font-weight:500; overflow-wrap:anywhere;">' + esc(t.title) + '</div>'
-        +   '<div style="font-size:12px; color:' + c.onSurfaceVariant + '; margin-top:2px;">'
+        +   '<div style="font-size:14px; line-height:20px; font-weight:500; overflow-wrap:anywhere;">' + esc(t.title) + '</div>'
+        +   '<div style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + '; margin-top:4px;">'
         +     esc(t.deptId ? nodeLabel(t.deptId) : T('No department')) + ' &middot; ' + esc(t.deletedByName ? T('deleted {when} by {name}', { when: formatStamp(t.deletedAt), name: t.deletedByName }) : T('deleted {when}', { when: formatStamp(t.deletedAt) }))
         +     ' &middot; <span style="color:' + c.tertiary + '; font-weight:500;">' + esc(daysLeft(t.purgeAt)) + '</span>'
         +   '</div>'
         + '</div>'
         + (t.canRestore
-          ? '<span class="interactive" data-action="restoreTrashed" data-id="' + t.id + '" style="font-size:13px; font-weight:500; color:' + c.primary + '; padding:6px;">' + T('Restore') + '</span>'
-            + '<span class="interactive" data-action="purgeTrashed" data-id="' + t.id + '" title="' + T('Delete for good') + '" style="font-size:13px; font-weight:500; color:' + c.error + '; padding:6px;">' + T('Delete') + '</span>'
-          : '<span style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T('Another department') + '</span>')
+          ? '<span class="interactive text-btn t-label-l" data-action="restoreTrashed" data-id="' + t.id + '" style="color:' + c.primary + ';">' + T('Restore') + '</span>'
+            + '<span class="interactive text-btn t-label-l" data-action="purgeTrashed" data-id="' + t.id + '" title="' + T('Delete for good') + '" style="color:' + c.error + ';">' + T('Delete') + '</span>'
+          : '<span style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + ';">' + T('Another department') + '</span>')
         + '</div>';
     }).join('');
     var anyRestorable = state.trash.some(function (t) { return t.canRestore; });
     return modalShell('trash', state.trashModalPhase, c, 'Trash', 520,
-      '<span style="font-size:20px; font-weight:500;">' + T('Trash') + '</span>'
-      + '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('Deleted tasks wait here for 10 days, with their comments and checklist, and are then removed for good. Restoring one puts it back where it was.') + '</div>'
-      + (state.trash.length ? rows : '<div style="font-size:13px; color:' + c.onSurfaceVariant + '; padding:18px 0;">' + T('The trash is empty.') + '</div>')
-      + '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px;">'
-      +   (anyRestorable ? '<span class="interactive" data-action="emptyTrash" style="font-size:13px; font-weight:500; color:' + c.error + '; padding:8px 6px;">' + T('Empty trash') + '</span>' : '<span></span>')
+      '<span style="font-size:24px; line-height:32px; font-weight:400;">' + T('Trash') + '</span>'
+      + '<div style="font-size:14px; line-height:20px; color:' + c.onSurfaceVariant + ';">' + T('Deleted tasks wait here for 10 days, with their comments and checklist, and are then removed for good. Restoring one puts it back where it was.') + '</div>'
+      + (state.trash.length ? rows : '<div style="font-size:14px; line-height:20px; color:' + c.onSurfaceVariant + '; padding:16px 0;">' + T('The trash is empty.') + '</div>')
+      + '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px;">'
+      +   (anyRestorable ? '<span class="interactive text-btn t-label-l" data-action="emptyTrash" style="color:' + c.error + ';">' + T('Empty trash') + '</span>' : '<span></span>')
       +   pillButton('closeTrash', 'Done', c, true)
       + '</div>');
   }
 
   function appPasswordsModal(c) {
     if (state.appPwModalPhase === 'closed') return '';
-    var code = function (v) { return '<code style="font-size:12px; padding:2px 7px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurface + ';">' + esc(v) + '</code>'; };
+    var code = function (v) { return '<code style="font-size:12px; line-height:16px; padding:4px 8px; border-radius:var(--r-sm); background:' + c.surfaceContainerHigh + '; color:' + c.onSurface + ';">' + esc(v) + '</code>'; };
     var created = state.appPwCreated;
     var createdBox = created
-      ? '<div class="' + oneShotClass('appPwNew').trim() + '" style="display:flex; flex-direction:column; gap:8px; padding:14px; border-radius:var(--r-md); background:' + c.primaryContainer + '; color:' + c.onPrimaryContainer + ';">'
-        + '<div style="font-size:13px; font-weight:500;">App password for ' + esc(created.name) + '</div>'
-        + '<div style="display:flex; align-items:center; gap:8px;"><code style="flex:1; font-size:18px; letter-spacing:.06em; font-weight:600; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap:anywhere;">' + esc(created.token) + '</code>'
-        +   '<span class="interactive" data-action="copyAppPassword" title="' + T('Copy') + '" style="display:flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:var(--r-sm);">' + (state.copiedToken === 'app-pw' ? '<span class="anim-copied" style="display:flex;">' + ICON.check + '</span>' : ICON.copy) + '</span></div>'
-        + '<div style="font-size:12px; line-height:1.45;">' + T('Enter it as the password on the device now. It is shown only this once - if you lose it, revoke it and make another.') + '</div>'
+      ? '<div class="' + oneShotClass('appPwNew').trim() + '" style="display:flex; flex-direction:column; gap:8px; padding:16px; border-radius:var(--r-md); background:' + c.primaryContainer + '; color:' + c.onPrimaryContainer + ';">'
+        + '<div style="font-size:14px; line-height:20px; font-weight:500;">App password for ' + esc(created.name) + '</div>'
+        + '<div style="display:flex; align-items:center; gap:8px;"><code style="flex:1; font-size:22px; line-height:28px; letter-spacing:.06em; font-weight:500; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap:anywhere;">' + esc(created.token) + '</code>'
+        +   '<span class="interactive" data-action="copyAppPassword" title="' + T('Copy') + '" style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:var(--r-sm);">' + (state.copiedToken === 'app-pw' ? '<span class="anim-copied" style="display:flex;">' + ICON.check + '</span>' : ICON.copy) + '</span></div>'
+        + '<div style="font-size:12px; line-height:16px;">' + T('Enter it as the password on the device now. It is shown only this once - if you lose it, revoke it and make another.') + '</div>'
         + '</div>'
       : '';
     var rows = state.appPasswords.map(function (p) {
-      return '<div style="display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid ' + c.outlineVariant + ';">'
-        + '<div style="flex:1; min-width:0;"><div style="font-size:13px; font-weight:500;">' + esc(p.name) + '</div>'
-        + '<div style="font-size:12px; color:' + c.onSurfaceVariant + '; margin-top:2px;">' + esc(T('Created {when}', { when: formatStamp(p.createdAt) })) + ' &middot; ' + esc(p.lastUsedAt ? T('last synced {when}', { when: formatStamp(p.lastUsedAt) }) : T('never used yet')) + '</div></div>'
-        + '<span class="interactive" data-action="revokeAppPassword" data-id="' + p.id + '" style="font-size:13px; font-weight:500; color:' + c.error + '; padding:6px;">' + T('Revoke') + '</span>'
+      return '<div style="display:flex; align-items:center; gap:8px; padding:8px 0; ">'
+        + '<div style="flex:1; min-width:0;"><div style="font-size:14px; line-height:20px; font-weight:500;">' + esc(p.name) + '</div>'
+        + '<div style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + '; margin-top:4px;">' + esc(T('Created {when}', { when: formatStamp(p.createdAt) })) + ' &middot; ' + esc(p.lastUsedAt ? T('last synced {when}', { when: formatStamp(p.lastUsedAt) }) : T('never used yet')) + '</div></div>'
+        + '<span class="interactive text-btn t-label-l" data-action="revokeAppPassword" data-id="' + p.id + '" style="color:' + c.error + ';">' + T('Revoke') + '</span>'
         + '</div>';
     }).join('');
     return modalShell('appPasswords', state.appPwModalPhase, c, 'Phone sync', 480,
-      '<span style="font-size:20px; font-weight:500;">' + T('Phone sync') + '</span>'
-      + '<div style="font-size:12px; line-height:1.55; color:' + c.onSurfaceVariant + ';">' + T('A phone’s reminders app signs in with a CalDAV account. Give each device its own {term} instead of your real one: if a phone is lost, revoke its line here and nothing else changes.', { term: '<b>' + T('app password') + '</b>' }) + '</div>'
-      + '<table class="guide-table" style="font-size:13px;">'
+      '<span style="font-size:24px; line-height:32px; font-weight:400;">' + T('Phone sync') + '</span>'
+      + '<div style="font-size:14px; line-height:20px; color:' + c.onSurfaceVariant + ';">' + T('A phone’s reminders app signs in with a CalDAV account. Give each device its own {term} instead of your real one: if a phone is lost, revoke its line here and nothing else changes.', { term: '<b>' + T('app password') + '</b>' }) + '</div>'
+      + '<table class="guide-table" style="font-size:14px; line-height:20px;">'
       +   '<tr><th style="color:' + c.onSurfaceVariant + ';">' + T('Server') + '</th><td>' + code(location.origin + '/caldav/') + '</td></tr>'
       +   '<tr><th style="color:' + c.onSurfaceVariant + ';">' + T('User name') + '</th><td>' + code(state.user.username) + '</td></tr>'
       +   '<tr><th style="color:' + c.onSurfaceVariant + ';">' + T('Password') + '</th><td>' + T('an app password from below') + '</td></tr>'
       + '</table>'
       + createdBox
       + '<div style="display:flex; gap:8px; align-items:center;">'
-      +   '<input id="appPwNameInput" data-field="appPwName" value="' + esc(state.appPwName) + '" maxlength="60" placeholder="' + T('Device name, e.g. iPhone') + '" style="flex:1; min-width:0; height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:13px; background:' + c.surface + '; color:' + c.onSurface + ';"></input>'
+      +   '<input id="appPwNameInput" data-field="appPwName" value="' + esc(state.appPwName) + '" maxlength="60" placeholder="' + T('Device name, e.g. iPhone') + '" style="flex:1; min-width:0; height:40px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';"></input>'
       +   pillButton('createAppPassword', 'Create', c, true)
       + '</div>'
-      + '<div style="font-size:13px; font-weight:500; margin-top:6px;">' + T('Your devices') + '</div>'
-      + (state.appPasswords.length ? rows : '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T('No app passwords yet.') + '</div>')
-      + '<div style="display:flex; justify-content:flex-end; margin-top:6px;">' + pillButton('closeAppPasswords', 'Done', c, true) + '</div>');
+      + '<div style="font-size:14px; line-height:20px; font-weight:500; margin-top:8px;">' + T('Your devices') + '</div>'
+      + (state.appPasswords.length ? rows : '<div style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + ';">' + T('No app passwords yet.') + '</div>')
+      + '<div style="display:flex; justify-content:flex-end; margin-top:8px;">' + pillButton('closeAppPasswords', 'Done', c, true) + '</div>');
   }
 
   function remindersModal(c) {
     if (state.reminderModalPhase === 'closed') return '';
     var r = state.reminders;
     var f = state.reminderForm;
-    var field = 'height:36px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:13px; background:' + c.surface + '; color:' + c.onSurface + ';';
+    var field = 'height:40px; padding:0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';';
     return modalShell('reminders', state.reminderModalPhase, c, 'Due-date reminders', 460,
-      '<span style="font-size:20px; font-weight:500;">' + T('Due-date reminders') + '</span>'
-      + '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('Once a day the server tells each person, in their notifications, which of their unfinished tasks are due today and which are due tomorrow. Tasks with nobody assigned are left out.') + '</div>'
-      + '<label class="interactive" style="display:flex; align-items:center; gap:9px; font-size:14px; font-weight:500; cursor:pointer;"><input type="checkbox" id="reminderEnabledInput"' + (f.enabled ? ' checked' : '') + '></input>' + T('Send due-date reminders every day') + '</label>'
-      + '<div style="display:flex; flex-direction:column; gap:4px; opacity:' + (f.enabled ? '1' : '.5') + ';"><span style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Time') + '</span>'
+      '<span style="font-size:24px; line-height:32px; font-weight:400;">' + T('Due-date reminders') + '</span>'
+      + '<div style="font-size:14px; line-height:20px; color:' + c.onSurfaceVariant + ';">' + T('Once a day the server tells each person, in their notifications, which of their unfinished tasks are due today and which are due tomorrow. Tasks with nobody assigned are left out.') + '</div>'
+      + '<label class="interactive" style="display:flex; align-items:center; gap:8px; font-size:14px; line-height:20px; font-weight:500; cursor:pointer;"><input type="checkbox" id="reminderEnabledInput"' + (f.enabled ? ' checked' : '') + '></input>' + T('Send due-date reminders every day') + '</label>'
+      + '<div style="display:flex; flex-direction:column; gap:4px; opacity:' + (f.enabled ? '1' : '.5') + ';"><span style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Time') + '</span>'
       +   '<input id="reminderTimeInput" type="time" value="' + esc(f.time) + '" style="width:140px; ' + field + '"></input></div>'
-      + (r ? '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + esc(T('The server’s clock reads {time} ({zone}) right now. If the server was off at the set time, that day’s reminders go out as soon as it starts.', { time: r.serverTime, zone: r.serverZone }))
+      + (r ? '<div style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + ';">' + esc(T('The server’s clock reads {time} ({zone}) right now. If the server was off at the set time, that day’s reminders go out as soon as it starts.', { time: r.serverTime, zone: r.serverZone }))
           + (r.enabled && r.nextAt ? '<br>' + esc(T('Next reminders {when}', { when: formatStamp(r.nextAt) })) : '') + '</div>' : '')
       + '<div style="display:flex; gap:8px; justify-content:flex-end; margin-top:4px;">' + pillButton('closeReminders', 'Cancel', c, false) + pillButton('saveReminderSettings', 'Save', c, true) + '</div>');
   }
@@ -5017,7 +5017,7 @@
     if (state.backupModalPhase === 'closed') return '';
     var b = state.backups;
     var f = state.backupForm;
-    var field = 'height:36px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:13px; background:' + c.surface + '; color:' + c.onSurface + ';';
+    var field = 'height:40px; padding:0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';';
     var status = '';
     if (b) {
       var lines = [];
@@ -5025,35 +5025,35 @@
       else lines.push('No backup has been made yet.');
       if (b.lastError) lines.push('<span style="color:' + c.error + ';">' + esc(b.lastErrorAt ? T('Last attempt failed {when}', { when: formatStamp(b.lastErrorAt) }) : T('Last attempt failed')) + ': ' + esc(b.lastError) + '</span>');
       if (b.enabled && b.nextAt) lines.push(esc(T('Next backup {when}', { when: formatStamp(b.nextAt) })));
-      status = '<div style="display:flex; flex-direction:column; gap:4px; font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + '; padding:10px 12px; border-radius:var(--r-sm); background:' + c.surfaceContainerLow + ';">' + lines.map(function (l) { return '<div>' + l + '</div>'; }).join('') + '</div>';
+      status = '<div style="display:flex; flex-direction:column; gap:4px; font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + '; padding:8px 12px; border-radius:var(--r-sm); background:' + c.surfaceContainerLow + ';">' + lines.map(function (l) { return '<div>' + l + '</div>'; }).join('') + '</div>';
     }
     var files = b && b.files && b.files.length
       ? b.files.map(function (fl) {
-          return '<div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid ' + c.outlineVariant + '; font-size:13px;">'
-            + '<code style="flex:1; min-width:0; overflow-wrap:anywhere; font-size:12px;">' + esc(fl.name) + '</code>'
-            + '<span style="color:' + c.onSurfaceVariant + '; font-size:12px; white-space:nowrap;">' + formatBytes(fl.size) + '</span>'
-            + '<a href="/api/backups/' + encodeURIComponent(fl.name) + '" download style="font-size:12px; font-weight:500; color:' + c.primary + '; text-decoration:none;">' + T('Download') + '</a>'
+          return '<div style="display:flex; align-items:center; gap:8px; padding:8px 0;  font-size:14px; line-height:20px;">'
+            + '<code style="flex:1; min-width:0; overflow-wrap:anywhere; font-size:12px; line-height:16px;">' + esc(fl.name) + '</code>'
+            + '<span style="color:' + c.onSurfaceVariant + '; font-size:12px; line-height:16px; white-space:nowrap;">' + formatBytes(fl.size) + '</span>'
+            + '<a href="/api/backups/' + encodeURIComponent(fl.name) + '" download style="font-size:12px; line-height:16px; font-weight:500; color:' + c.primary + '; text-decoration:none;">' + T('Download') + '</a>'
             + '</div>';
         }).join('')
-      : '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T('No backups in the folder yet.') + '</div>';
+      : '<div style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + ';">' + T('No backups in the folder yet.') + '</div>';
     return modalShell('backups', state.backupModalPhase, c, 'Backups', 520,
-      '<span style="font-size:20px; font-weight:500;">' + T('Backups') + '</span>'
-      + '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('A consistent copy of the whole database, taken while the server keeps running. Backups go to {dir} on the server (set with {flag}). Download one now and then so a copy lives off that machine too.', { dir: b ? '<code style="overflow-wrap:anywhere;">' + esc(b.dir) + '</code>' : T('the backups folder'), flag: '<code>-backup-dir</code>' }) + '</div>'
-      + (b && b.attachmentsCount ? '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T(b.attachmentsCount === 1 ? 'Task attachments take {size} ({n} file), kept as files in {dir}. Backups keep one copy of each file, shared between them, and a download is a zip of the database with its files.' : 'Task attachments take {size} ({n} files), kept as files in {dir}. Backups keep one copy of each file, shared between them, and a download is a zip of the database with its files.', { size: formatBytes(b.attachmentsBytes), n: b.attachmentsCount, dir: '<code style="overflow-wrap:anywhere;">' + esc(b.attachmentsDir || 'attachments') + '</code>' }) + '</div>' : '')
-      + '<label class="interactive" style="display:flex; align-items:center; gap:9px; font-size:14px; font-weight:500; cursor:pointer;"><input type="checkbox" id="backupEnabledInput"' + (f.enabled ? ' checked' : '') + '></input>' + T('Back up automatically every day') + '</label>'
+      '<span style="font-size:24px; line-height:32px; font-weight:400;">' + T('Backups') + '</span>'
+      + '<div style="font-size:14px; line-height:20px; color:' + c.onSurfaceVariant + ';">' + T('A consistent copy of the whole database, taken while the server keeps running. Backups go to {dir} on the server (set with {flag}). Download one now and then so a copy lives off that machine too.', { dir: b ? '<code style="overflow-wrap:anywhere;">' + esc(b.dir) + '</code>' : T('the backups folder'), flag: '<code>-backup-dir</code>' }) + '</div>'
+      + (b && b.attachmentsCount ? '<div style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + ';">' + T(b.attachmentsCount === 1 ? 'Task attachments take {size} ({n} file), kept as files in {dir}. Backups keep one copy of each file, shared between them, and a download is a zip of the database with its files.' : 'Task attachments take {size} ({n} files), kept as files in {dir}. Backups keep one copy of each file, shared between them, and a download is a zip of the database with its files.', { size: formatBytes(b.attachmentsBytes), n: b.attachmentsCount, dir: '<code style="overflow-wrap:anywhere;">' + esc(b.attachmentsDir || 'attachments') + '</code>' }) + '</div>' : '')
+      + '<label class="interactive" style="display:flex; align-items:center; gap:8px; font-size:14px; line-height:20px; font-weight:500; cursor:pointer;"><input type="checkbox" id="backupEnabledInput"' + (f.enabled ? ' checked' : '') + '></input>' + T('Back up automatically every day') + '</label>'
       + '<div style="display:flex; gap:12px; flex-wrap:wrap; opacity:' + (f.enabled ? '1' : '.55') + ';">'
-      +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Time (server clock)') + '</label>'
+      +   '<div style="display:flex; flex-direction:column; gap:4px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Time (server clock)') + '</label>'
       +     '<input id="backupTimeInput" type="time" value="' + esc(f.time) + '" style="' + field + '"></input></div>'
-      +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Keep the newest') + '</label>'
-      +     '<div style="display:flex; align-items:center; gap:6px;"><input id="backupKeepInput" type="number" min="1" max="365" value="' + esc(f.keep) + '" style="width:76px; ' + field + '"></input><span style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + T('backups') + '</span></div></div>'
+      +   '<div style="display:flex; flex-direction:column; gap:4px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Keep the newest') + '</label>'
+      +     '<div style="display:flex; align-items:center; gap:8px;"><input id="backupKeepInput" type="number" min="1" max="365" value="' + esc(f.keep) + '" style="width:76px; ' + field + '"></input><span style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + ';">' + T('backups') + '</span></div></div>'
       + '</div>'
-      + (b ? '<div style="font-size:12px; color:' + c.onSurfaceVariant + '; margin-top:-4px;">' + esc(T('The server’s clock reads {time} ({zone}) right now. If the server was off at the set time, that day’s backup runs as soon as it starts.', { time: b.serverTime, zone: b.serverZone })) + '</div>' : '')
+      + (b ? '<div style="font-size:12px; line-height:16px; color:' + c.onSurfaceVariant + '; margin-top:-4px;">' + esc(T('The server’s clock reads {time} ({zone}) right now. If the server was off at the set time, that day’s backup runs as soon as it starts.', { time: b.serverTime, zone: b.serverZone })) + '</div>' : '')
       + '<div style="display:flex; gap:8px; justify-content:flex-end;">' + pillButton('saveBackupSettings', 'Save schedule', c, true) + '</div>'
       + status
-      + '<div style="display:flex; align-items:center; justify-content:space-between; margin-top:4px;"><span style="font-size:13px; font-weight:500;">' + T('Backup files') + '</span>'
-      +   '<span class="interactive" data-action="runBackup" style="font-size:13px; font-weight:500; color:' + c.primary + '; opacity:' + (state.backupBusy ? '.5' : '1') + ';">' + (state.backupBusy ? T('Backing up…') : T('Back up now')) + '</span></div>'
+      + '<div style="display:flex; align-items:center; justify-content:space-between; margin-top:4px;"><span style="font-size:14px; line-height:20px; font-weight:500;">' + T('Backup files') + '</span>'
+      +   '<span class="interactive text-btn t-label-l" data-action="runBackup" style="color:' + c.primary + '; opacity:' + (state.backupBusy ? '.5' : '1') + ';">' + (state.backupBusy ? T('Backing up…') : T('Back up now')) + '</span></div>'
       + '<div data-scroll-key="backup-files" style="max-height:220px; overflow-y:auto;">' + files + '</div>'
-      + '<div style="display:flex; justify-content:flex-end; margin-top:6px;">' + pillButton('closeBackups', 'Done', c, false) + '</div>');
+      + '<div style="display:flex; justify-content:flex-end; margin-top:8px;">' + pillButton('closeBackups', 'Done', c, false) + '</div>');
   }
 
   function snackbar(c) {
@@ -5077,17 +5077,17 @@
     }).join('');
 
     return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="closeAddDept" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:50;">'
-      + '<div role="dialog" aria-modal="true" aria-label="' + esc(T('Add Department')) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:380px; max-width:92vw; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:14px; box-shadow:var(--e3);">'
-      +   '<span style="font-size:20px; font-weight:500;">' + T('Add Department') + '</span>'
-      +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Name') + '</label>'
-      +     '<input id="newDeptNameInput" data-form="newDeptForm" data-field="name" value="' + esc(f.name) + '" placeholder="' + T('e.g. Data Team') + '" style="height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>'
-      +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Parent Department') + '</label>'
-      +     mSelectFrom('<select id="newDeptParentSelect" data-form="newDeptForm" data-field="parentId" style="height:38px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';">'
+      + '<div role="dialog" aria-modal="true" aria-label="' + esc(T('Add Department')) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:380px; max-width:92vw; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:16px; box-shadow:var(--e3);">'
+      +   '<span style="font-size:24px; line-height:32px; font-weight:400;">' + T('Add Department') + '</span>'
+      +   '<div style="display:flex; flex-direction:column; gap:4px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Name') + '</label>'
+      +     '<input id="newDeptNameInput" data-form="newDeptForm" data-field="name" value="' + esc(f.name) + '" placeholder="' + T('e.g. Data Team') + '" style="height:40px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>'
+      +   '<div style="display:flex; flex-direction:column; gap:4px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Parent Department') + '</label>'
+      +     mSelectFrom('<select id="newDeptParentSelect" data-form="newDeptForm" data-field="parentId" style="height:40px; padding:0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';">'
       +       '<option value=""' + (f.parentId === '' ? ' selected' : '') + '>&mdash; ' + T('Top level') + ' &mdash;</option>' + parentOptions
       +     '</select>', c) + '</div>'
-      +   '<div style="display:flex; justify-content:flex-end; gap:10px; margin-top:6px;">'
-      +     '<div class="interactive" data-action="closeAddDept" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 18px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + '; font-size:14px; font-weight:500;">' + T('Cancel') + '</div>'
-      +     '<div class="interactive" data-action="createDept" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 20px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; font-weight:500;">' + T('Create') + '</div>'
+      +   '<div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">'
+      +     '<div class="interactive" data-action="closeAddDept" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 16px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + '; font-size:14px; line-height:20px; font-weight:500;">' + T('Cancel') + '</div>'
+      +     '<div class="interactive" data-action="createDept" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 20px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; line-height:20px; font-weight:500;">' + T('Create') + '</div>'
       +   '</div>'
       + '</div></div>';
   }
@@ -5102,29 +5102,29 @@
     }).join('');
 
     return '<div class="modal-overlay ' + mo.dim + '" data-backdrop="closeMapping" style="' + mo.dimStyle + 'position:fixed; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:50;">'
-      + '<div role="dialog" aria-modal="true" aria-label="' + esc(T('Department settings')) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:380px; max-width:92vw; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:14px; box-shadow:var(--e3);">'
-      +   '<span style="font-size:20px; font-weight:500;">' + T('Department') + '</span>'
-      +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Department') + '</label>'
-      +     mSelectFrom('<select id="mappingDeptSelect" data-form="mappingForm" data-field="deptId" style="height:38px; padding:0 10px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"><option value="">' + T('— Select —') + '</option>' + opts + '</select>', c) + '</div>'
-      +   (f.deptId ? '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Name') + '</label>'
-      +     '<input id="mappingNameInput" data-form="mappingForm" data-field="name" value="' + esc(f.name) + '" maxlength="60" style="height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>' : '')
-      +   '<div style="font-size:12px; line-height:1.5; color:' + c.onSurfaceVariant + ';">' + T('The calendar label below is only for your own reference in the sidebar — the subscribe link works either way.') + '</div>'
-      +   (f.deptId ? '<div style="display:flex; flex-direction:column; gap:6px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Colour') + '</label>'
+      + '<div role="dialog" aria-modal="true" aria-label="' + esc(T('Department settings')) + '" tabindex="-1" class="' + mo.card + '" style="' + mo.cardStyle + 'width:380px; max-width:92vw; background:' + c.surface + '; border-radius:var(--r-lg); padding:24px; display:flex; flex-direction:column; gap:16px; box-shadow:var(--e3);">'
+      +   '<span style="font-size:24px; line-height:32px; font-weight:400;">' + T('Department') + '</span>'
+      +   '<div style="display:flex; flex-direction:column; gap:4px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Department') + '</label>'
+      +     mSelectFrom('<select id="mappingDeptSelect" data-form="mappingForm" data-field="deptId" style="height:40px; padding:0 8px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';"><option value="">' + T('— Select —') + '</option>' + opts + '</select>', c) + '</div>'
+      +   (f.deptId ? '<div style="display:flex; flex-direction:column; gap:4px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Name') + '</label>'
+      +     '<input id="mappingNameInput" data-form="mappingForm" data-field="name" value="' + esc(f.name) + '" maxlength="60" style="height:40px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>' : '')
+      +   '<div style="font-size:14px; line-height:20px; color:' + c.onSurfaceVariant + ';">' + T('The calendar label below is only for your own reference in the sidebar — the subscribe link works either way.') + '</div>'
+      +   (f.deptId ? '<div style="display:flex; flex-direction:column; gap:8px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Colour') + '</label>'
       +     '<div role="radiogroup" aria-label="' + T('Colour') + '" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">'
       +       [''].concat(DEPT_COLORS).map(function (col) {
                 var on = (f.color || '').toUpperCase() === col;
-                return '<span class="interactive" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setMappingColor" data-id="' + col + '" title="' + (col ? col : T('No colour')) + '" style="display:flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; ' + (col ? 'background:' + col + ';' : 'border:1.5px dashed ' + c.outline + ';') + ' box-shadow:' + (on ? '0 0 0 2px ' + c.surface + ', 0 0 0 4px ' + c.onSurface : 'none') + ';"></span>';
+                return '<span class="interactive" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setMappingColor" data-id="' + col + '" title="' + (col ? col : T('No colour')) + '" style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; box-sizing:border-box; border-radius:50%; ' + (col ? 'background:' + col + ';' : 'border:1.5px dashed ' + c.outline + ';') + ' box-shadow:' + (on ? '0 0 0 2px ' + c.surface + ', 0 0 0 4px ' + c.onSurface : 'none') + ';"></span>';
               }).join('')
       +     '</div></div>' : '')
-      +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Calendar List Name') + '</label>'
-      +     '<input id="mappingListInput" data-form="mappingForm" data-field="calendarList" value="' + esc(f.calendarList) + '" placeholder="' + T('e.g. Work / Dev-Backend') + '" style="height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>'
-      +   '<div style="display:flex; flex-direction:column; gap:5px;"><label style="font-size:12px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Tag') + '</label>'
-      +     '<input id="mappingTagInput" data-form="mappingForm" data-field="tag" value="' + esc(f.tag) + '" placeholder="' + T('e.g. #engineering:backend') + '" style="height:38px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>'
-      +   '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:6px;">'
-      +     (f.deptId ? '<div class="interactive" data-action="deleteDept" style="font-size:14px; font-weight:500; color:' + c.error + '; padding:8px 6px;">' + T('Delete') + '</div>' : '<span></span>')
-      +     '<div style="display:flex; gap:10px;">'
-      +       '<div class="interactive" data-action="closeMapping" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 18px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + '; font-size:14px; font-weight:500;">' + T('Cancel') + '</div>'
-      +       '<div class="interactive" data-action="saveMapping" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 20px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; font-weight:500;">' + T('Save') + '</div>'
+      +   '<div style="display:flex; flex-direction:column; gap:4px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Calendar List Name') + '</label>'
+      +     '<input id="mappingListInput" data-form="mappingForm" data-field="calendarList" value="' + esc(f.calendarList) + '" placeholder="' + T('e.g. Work / Dev-Backend') + '" style="height:40px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>'
+      +   '<div style="display:flex; flex-direction:column; gap:4px;"><label style="font-size:12px; line-height:16px; font-weight:500; color:' + c.onSurfaceVariant + ';">' + T('Tag') + '</label>'
+      +     '<input id="mappingTagInput" data-form="mappingForm" data-field="tag" value="' + esc(f.tag) + '" placeholder="' + T('e.g. #engineering:backend') + '" style="height:40px; padding:0 12px; border-radius:var(--r-sm); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';"></input></div>'
+      +   '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:8px;">'
+      +     (f.deptId ? '<div class="interactive text-btn t-label-l" data-action="deleteDept" style="margin-left:-12px; color:' + c.error + ';">' + T('Delete') + '</div>' : '<span></span>')
+      +     '<div style="display:flex; gap:8px;">'
+      +       '<div class="interactive" data-action="closeMapping" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 16px; border-radius:var(--r-sm); color:' + c.onSurfaceVariant + '; font-size:14px; line-height:20px; font-weight:500;">' + T('Cancel') + '</div>'
+      +       '<div class="interactive" data-action="saveMapping" style="display:flex; align-items:center; justify-content:center; height:40px; padding:0 20px; border-radius:var(--r-sm); background:' + c.primary + '; color:' + c.onPrimary + '; font-size:14px; line-height:20px; font-weight:500;">' + T('Save') + '</div>'
       +     '</div>'
       +   '</div>'
       + '</div></div>';
