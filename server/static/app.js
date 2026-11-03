@@ -4889,16 +4889,24 @@
   // Light / Dark / System, as one segmented control.
   function themeSegmented(c) {
     var opts = [['light', 'Light', ICON.themeLight], ['dark', 'Dark', ICON.themeDark], ['system', 'System', ICON.themeSystem]];
-    return '<div role="radiogroup" aria-label="' + T('Theme') + '" style="display:flex; height:40px; box-sizing:content-box; border:1px solid ' + c.outline + '; border-radius:var(--r-full); overflow:hidden;">'
+    var idx = Math.max(0, THEME_MODE_ORDER.indexOf(state.themeMode));
+    var from = nav.themeSegFrom == null ? idx : nav.themeSegFrom;
+    // One pill under three equal cells; on a change it slides from the old
+    // cell to the new one, and the new cell's icon turns into place.
+    return '<div role="radiogroup" aria-label="' + T('Theme') + '" class="theme-seg" style="--seg-i:' + idx + '; --seg-from:' + from + '; border:1px solid ' + c.outline + ';">'
+      + '<span class="theme-seg-pill' + oneShotClass('seg') + '" aria-hidden="true" style="background:' + c.secondaryContainer + ';"></span>'
       + opts.map(function (o) {
           var on = state.themeMode === o[0];
-          return '<span class="interactive t-label-l' + (on ? oneShotClass('seg') : '') + '" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setThemeMode" data-id="' + o[0] + '" style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px; color:' + (on ? c.onSecondaryContainer : c.onSurface) + '; background:' + (on ? c.secondaryContainer : 'transparent') + ';' + (o[0] !== 'light' ? ' border-left:1px solid ' + c.outline + ';' : '') + '">' + o[2] + T(o[1]) + '</span>';
+          return '<span class="interactive t-label-m theme-seg-cell" role="radio" aria-checked="' + (on ? 'true' : 'false') + '" data-action="setThemeMode" data-id="' + o[0] + '" style="color:' + (on ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
+            + '<span class="theme-seg-icon' + (on ? oneShotClass('segIcon') : '') + '">' + o[2] + '</span><span class="theme-seg-label">' + T(o[1]) + '</span></span>';
         }).join('')
       + '</div>';
   }
   function setThemeMode(mode) {
     if (THEME_MODE_ORDER.indexOf(mode) < 0 || mode === state.themeMode) return;
-    playOnce('seg', 'anim-seg', 420);
+    nav.themeSegFrom = Math.max(0, THEME_MODE_ORDER.indexOf(state.themeMode));
+    playOnce('seg', 'anim-seg-slide', 420);
+    playOnce('segIcon', 'anim-seg-icon', 520);
     try { localStorage.setItem('directive_theme_mode', mode); } catch (e) {}
     if (isDarkActive() !== computeDark(mode)) playOnce('palette', 'anim-palette', 420);
     setState({ themeMode: mode });
