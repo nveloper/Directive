@@ -3601,7 +3601,7 @@
         ? motion('search:out', true, 'mobile-search-bar-close', SEARCH_OUT_MS, true)
         : motion('search:in', true, 'mobile-search-bar-open', 300);
       if (state.mobileSearchClosing) motion('search:in', false); else motion('search:out', false);
-      return '<div class="top-bar ' + sm.cls + '" style="' + sm.style + 'flex-shrink:0; display:flex; align-items:center; gap:10px; background:' + c.surface + '; border-bottom:1px solid ' + c.outlineVariant + ';">'
+      return '<div class="top-bar ' + sm.cls + '" style="' + sm.style + 'flex-shrink:0; display:flex; align-items:center; gap:8px; background:transparent;">'
         + '<span class="interactive icon-btn" data-action="closeMobileSearch" title="' + T('Back') + '" aria-label="' + T('Back') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.chevronLeft + '</span>'
         + '<div style="flex:1; display:flex; align-items:center; gap:12px; height:48px; padding:0 16px; border-radius:var(--r-full); background:' + c.surfaceContainerHigh + '; color:' + c.onSurfaceVariant + ';">'
         +   ICON.search
@@ -3787,7 +3787,7 @@
       var childrenHtml = d.children.map(function (child) {
         var childSelected = state.selectedNode === child.id;
         var childCount = state.summary.byDept[child.id] || 0;
-        return '<div class="interactive nav-item t-label-l' + (childSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="' + esc(child.id) + '"' + (childSelected ? ' aria-current="true"' : '') + ' style="display:flex; align-items:center; gap:12px; padding:0 24px 0 16px; border-radius:var(--r-full); background:' + (childSelected ? c.secondaryContainer : 'transparent') + '; color:' + (childSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
+        return '<div class="interactive nav-item nav-plain t-label-l' + (childSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="' + esc(child.id) + '"' + (childSelected ? ' aria-current="true"' : '') + ' style="display:flex; align-items:center; gap:12px; padding:0 24px 0 16px; border-radius:var(--r-full); background:' + (childSelected ? c.secondaryContainer : 'transparent') + '; color:' + (childSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
           + (child.color ? '<span style="display:flex;">' + deptDot(child.id, 8) + '</span>' : '') + '<span style="flex:1;">' + esc(child.name) + '</span>'
           + '<span class="tnum t-label-m" style="color:' + c.onSurfaceVariant + ';">' + childCount + '</span>'
           + '</div>';
@@ -3795,7 +3795,7 @@
 
       return '<div class="dept-row nav-item' + (selected ? oneShotClass('node') : '') + '" style="display:flex; align-items:center; gap:0; padding:0 4px; border-radius:var(--r-full); background:' + (selected ? c.secondaryContainer : 'transparent') + '; color:' + (selected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
         + '<svg class="interactive tree-chevron tree-chevron-btn' + (expanded ? ' expanded' : '') + (anim ? ' ' + anim : '') + '" data-action="toggleExpand" data-id="' + esc(d.id) + '" role="button" aria-expanded="' + (expanded ? 'true' : 'false') + '" aria-controls="subtree-' + esc(d.id) + '" aria-label="' + (expanded ? 'Collapse ' : 'Expand ') + esc(d.name) + '" width="40" height="40" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 5l6 5-6 5"></path></svg>'
-        + '<span class="interactive t-label-l" data-action="selectNode" data-id="' + esc(d.id) + '" style="display:flex; align-items:center; gap:8px; flex:1; min-width:0; align-self:stretch; padding-left:4px; border-radius:var(--r-full);">'
+        + '<span class="interactive t-label-l dept-label" data-action="selectNode" data-id="' + esc(d.id) + '" style="display:flex; align-items:center; gap:8px; flex:1; min-width:0; align-self:stretch; padding-left:4px; border-radius:var(--r-full);">'
         +   deptDot(d.id, 8) + '<span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(d.name) + '</span>'
         +   '<span class="tnum t-label-m" style="color:' + c.onSurfaceVariant + ';' + (isAdmin() ? '' : ' padding-right:20px;') + '">' + deptCount + '</span>'
         + '</span>'
@@ -3809,25 +3809,25 @@
     // Closed, the drawer is off screen and out of the reading order; it is
     // still rendered so it can slide in and out.
     var hidden = !isWideScreen() && !state.mobileNavOpen && state.mobileNavAnim !== 'anim-close';
-    return '<nav class="no-scrollbar ' + drawerClass('left-nav', state.mobileNavOpen, state.mobileNavAnim) + '" aria-label="' + T('Departments') + '" aria-hidden="' + (hidden ? 'true' : 'false') + '"' + (hidden ? ' inert' : '') + ' data-scroll-key="sidebar" style="min-height:0; background:' + c.surfaceContainer + '; overflow-y:auto; overflow-x:hidden; padding:12px; display:flex; flex-direction:column; gap:0;">'
+    return '<nav class="no-scrollbar ' + (isAdmin() ? 'is-admin ' : '') + drawerClass('left-nav', state.mobileNavOpen, state.mobileNavAnim) + '" aria-label="' + T('Departments') + '" aria-hidden="' + (hidden ? 'true' : 'false') + '"' + (hidden ? ' inert' : '') + ' data-scroll-key="sidebar" style="min-height:0; background:' + c.surfaceContainer + '; overflow-y:auto; overflow-x:hidden; padding:12px; display:flex; flex-direction:column; gap:0;">'
       + '<div style="display:flex; align-items:center; gap:0; min-height:48px; padding:0 4px 0 16px;">'
       +   '<span class="t-title-s" style="flex:1; color:' + c.onSurfaceVariant + ';">' + T('Departments') + '</span>'
       +   (isAdmin() ? '<span class="interactive icon-btn" data-action="openAddDept" title="' + T('Add Department') + '" aria-label="' + T('Add Department') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.plus + '</span>' : '')
       +   '<span class="interactive drawer-close-btn icon-btn" data-action="closeMobileNav" title="' + T('Close') + '" aria-label="' + T('Close') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
       + '</div>'
-      + '<div class="interactive nav-item t-label-l' + (allSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="all" style="display:flex; align-items:center; gap:12px; padding:0 24px 0 16px; border-radius:var(--r-full); background:' + (allSelected ? c.secondaryContainer : 'transparent') + '; color:' + (allSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
+      + '<div class="interactive nav-item nav-plain t-label-l' + (allSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="all" style="display:flex; align-items:center; gap:12px; padding:0 24px 0 16px; border-radius:var(--r-full); background:' + (allSelected ? c.secondaryContainer : 'transparent') + '; color:' + (allSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
       +   '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l1-4h10l1 4"></path><path d="M3 8h14v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8Z"></path><path d="M8 11h4"></path></svg>'
       +   '<span style="flex:1;">' + T('All Tasks') + '</span>'
       +   '<span class="tnum t-label-m" style="color:' + c.onSurfaceVariant + ';">' + allCount + '</span>'
       + '</div>'
-      + '<div class="interactive nav-item t-label-l' + (mineSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="mine" style="display:flex; align-items:center; gap:12px; padding:0 24px 0 16px; border-radius:var(--r-full); background:' + (mineSelected ? c.secondaryContainer : 'transparent') + '; color:' + (mineSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
+      + '<div class="interactive nav-item nav-plain t-label-l' + (mineSelected ? oneShotClass('node') : '') + '" data-action="selectNode" data-id="mine" style="display:flex; align-items:center; gap:12px; padding:0 24px 0 16px; border-radius:var(--r-full); background:' + (mineSelected ? c.secondaryContainer : 'transparent') + '; color:' + (mineSelected ? c.onSecondaryContainer : c.onSurfaceVariant) + ';">'
       +   '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="3"></circle><path d="M4 16a6 6 0 0 1 12 0"></path></svg>'
       +   '<span style="flex:1;">' + T('My Tasks') + '</span>'
       +   '<span class="tnum t-label-m" style="color:' + c.onSurfaceVariant + ';">' + state.summary.mine + '</span>'
       + '</div>'
       + deptsHtml
       + '<div style="flex:1;"></div>'
-      + '<div class="interactive nav-item t-label-l" data-action="openTrash" style="display:flex; align-items:center; gap:12px; padding:0 24px 0 16px; margin-top:8px; border-radius:var(--r-full); color:' + c.onSurfaceVariant + ';">'
+      + '<div class="interactive nav-item nav-plain t-label-l" data-action="openTrash" style="display:flex; align-items:center; gap:12px; padding:0 24px 0 16px; margin-top:8px; border-radius:var(--r-full); color:' + c.onSurfaceVariant + ';">'
       +   ICON.trash
       +   '<span style="flex:1;">' + T('Trash') + '</span>'
       +   (state.summary.trash ? '<span class="tnum t-label-m" style="color:' + c.onSurfaceVariant + ';">' + state.summary.trash + '</span>' : '')
@@ -3870,26 +3870,26 @@
 
     var filterField = 'height:40px; padding:0 12px; border-radius:var(--r-xs); border:1px solid ' + c.outline + '; font-size:14px; line-height:20px; background:' + c.surface + '; color:' + c.onSurface + ';';
     var filterPanel = (state.filterOpen || state.dropdownClosing === 'filter')
-      ? '<div class="' + dropdownClass('filter') + '" style="' + dropdownStyle('filter') + 'position:absolute; top:48px; right:0; width:256px; background:' + c.surfaceContainer + '; border-radius:var(--r-md); box-shadow:var(--e2); padding:16px; z-index:60; display:flex; flex-direction:column; gap:16px;">'
-        + '<div><div class="t-title-s" style="color:' + c.onSurfaceVariant + '; margin-bottom:8px;">' + T('SORT BY') + '</div>'
+      ? '<div class="' + dropdownClass('filter') + '" style="' + dropdownStyle('filter') + 'position:absolute; top:48px; right:0; width:280px; max-height:calc(100dvh - 200px); overflow-y:auto; background:' + c.surfaceContainer + '; border-radius:var(--r-l); box-shadow:var(--e2); padding:16px 24px; z-index:60; display:flex; flex-direction:column; gap:16px;">'
+        + '<div><div class="t-title-s" style="color:' + c.onSurfaceVariant + '; margin-bottom:8px;">' + T('Sort by') + '</div>'
         +   mSelectFrom('<select id="filterSortSelect" aria-label="' + T('Sort by') + '" style="' + filterField + '">'
               + TASK_SORTS.map(function (o) { return '<option value="' + o[0] + '"' + (state.taskSort === o[0] ? ' selected' : '') + '>' + T(o[1]) + '</option>'; }).join('')
               + '</select>', c)
         + '</div>'
-        + '<div><div class="t-title-s" style="color:' + c.onSurfaceVariant + '; margin-bottom:8px;">' + T('ASSIGNEE') + '</div>'
+        + '<div><div class="t-title-s" style="color:' + c.onSurfaceVariant + '; margin-bottom:8px;">' + T('Assignee') + '</div>'
         +   mSelectFrom('<select id="filterAssigneeSelect" aria-label="' + T('Assignee') + '" style="' + filterField + '">'
               + [['', T('Anyone')], ['none', T('Unassigned')]].concat(state.members.map(function (m) { return [String(m.id), esc(m.displayName)]; }))
                   .map(function (o) { return '<option value="' + o[0] + '"' + (state.filterAssignee === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('')
               + '</select>', c)
         + '</div>'
-        + '<div><div class="t-title-s" style="color:' + c.onSurfaceVariant + '; margin-bottom:8px;">' + T('PRIORITY') + '</div>'
+        + '<div><div class="t-title-s" style="color:' + c.onSurfaceVariant + '; margin-bottom:8px;">' + T('Priority') + '</div>'
         + ['High', 'Medium', 'Low'].map(function (p) {
-            return '<label class="interactive t-body-m" style="display:flex; align-items:center; gap:12px; min-height:40px; padding:0 8px; border-radius:var(--r-sm); cursor:pointer;"><input type="checkbox" data-action="toggleFilterPriority" data-id="' + p + '" ' + (state.filterPriority[p] ? 'checked' : '') + '></input>' + T(p) + '</label>';
+            return '<label class="interactive t-body-m filter-option" style="display:flex; align-items:center; gap:12px; min-height:40px; margin:0 -12px; padding:0 12px; border-radius:var(--r-full); cursor:pointer;"><input type="checkbox" data-action="toggleFilterPriority" data-id="' + p + '" ' + (state.filterPriority[p] ? 'checked' : '') + '></input>' + T(p) + '</label>';
           }).join('')
         + '</div>'
-        + '<div><div class="t-title-s" style="color:' + c.onSurfaceVariant + '; margin-bottom:8px;">' + T('CALENDAR') + '</div>'
+        + '<div><div class="t-title-s" style="color:' + c.onSurfaceVariant + '; margin-bottom:8px;">' + T('Calendar') + '</div>'
         + [['all', 'All'], ['shown', 'In calendar'], ['hidden', 'Not in calendar']].map(function (pair) {
-            return '<label class="interactive t-body-m" style="display:flex; align-items:center; gap:12px; min-height:40px; padding:0 8px; border-radius:var(--r-sm); cursor:pointer;"><input type="radio" name="filterCalendar" data-action="setFilterCalendar" data-id="' + pair[0] + '" ' + (state.filterCalendar === pair[0] ? 'checked' : '') + '></input>' + T(pair[1]) + '</label>';
+            return '<label class="interactive t-body-m filter-option" style="display:flex; align-items:center; gap:12px; min-height:40px; margin:0 -12px; padding:0 12px; border-radius:var(--r-full); cursor:pointer;"><input type="radio" name="filterCalendar" data-action="setFilterCalendar" data-id="' + pair[0] + '" ' + (state.filterCalendar === pair[0] ? 'checked' : '') + '></input>' + T(pair[1]) + '</label>';
           }).join('')
         + '</div>'
         + (filtersActive() ? '<span class="interactive t-label-l" data-action="clearFilters" style="align-self:flex-end; display:inline-flex; align-items:center; height:40px; padding:0 12px; border-radius:var(--r-full); color:' + c.primary + ';">' + T('Clear filters') + '</span>' : '')
