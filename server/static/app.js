@@ -2270,18 +2270,31 @@
     }, CONTENT_OUT_MS);
   }
 
+  // Where the underline should slide in from: the offset and width of the
+  // tab that is selected now, relative to the one being picked. Measured
+  // before the render that replaces both.
+  function tabSlideFrom(listSel, id) {
+    var list = document.querySelector(listSel);
+    if (!list) return null;
+    var prev = list.querySelector('[role="tab"][aria-selected="true"]');
+    var next = list.querySelector('[role="tab"][data-id="' + id + '"]');
+    if (!prev || !next || !next.offsetWidth) return null;
+    return { dx: prev.offsetLeft - next.offsetLeft, sx: prev.offsetWidth / next.offsetWidth, at: Date.now() };
+  }
+  function tabSlideStyle(slide) {
+    // A render that lands mid-slide (the list arriving) resumes the move
+    // where it was instead of starting it over.
+    return slide ? ' --tab-dx:' + Math.round(slide.dx) + 'px; --tab-sx:' + slide.sx.toFixed(3) + '; --tab-delay:-' + Math.min(420, Date.now() - slide.at) + 'ms;' : '';
+  }
+  // Switching tabs keeps the page in place: the list changes under it and
+  // the underline slides across, with no fade.
   function setTab(id) {
-    if (nav.tabTarget === id) return;
+    if (state.activeTab === id) return;
     nav.tabTarget = id;
-    var token = ++nav.tabToken;
-    setState({ contentAnim: 'out' });
-    setTimeout(function () {
-      if (nav.tabToken !== token) return;
-      playOnce('tab', 'anim-tab', 420);
-      setState({ activeTab: id, contentAnim: 'in', page: 1 });
-      fetchTasks().then(render);
-      setTimeout(function () { if (nav.tabToken === token) setState({ contentAnim: 'settled' }); }, CONTENT_IN_MS);
-    }, CONTENT_OUT_MS);
+    state.tabSlide = tabSlideFrom('#task-list [role="tablist"]', id);
+    playOnce('tab', 'anim-tab-slide', 420);
+    setState({ activeTab: id, page: 1 });
+    fetchTasks().then(render);
   }
 
   function clearSearch() { setState({ searchQuery: '', page: 1 }); fetchTasks().then(render); }
@@ -3604,7 +3617,7 @@
     var mineTab = state.bellTab === 'mine';
     var bellTabBtn = function (id, label, count) {
       var on = state.bellTab === id;
-      return '<span class="interactive t-title-s' + (on ? oneShotClass('bellTab') : '') + '" role="tab" aria-selected="' + (on ? 'true' : 'false') + '" data-action="setBellTab" data-id="' + id + '" style="display:inline-flex; align-items:center; justify-content:center; gap:4px; flex:1; height:48px; box-sizing:border-box; margin-bottom:-1px; color:' + (on ? c.primary : c.onSurfaceVariant) + '; border-bottom:2px solid ' + (on ? c.primary : 'transparent') + ';">' + label
+      return '<span class="interactive t-title-s' + (on ? oneShotClass('bellTab') : '') + '" role="tab" aria-selected="' + (on ? 'true' : 'false') + '" data-action="setBellTab" data-id="' + id + '" style="' + (on ? tabSlideStyle(state.bellSlide) : '') + 'display:inline-flex; align-items:center; justify-content:center; gap:4px; flex:1; height:48px; box-sizing:border-box; margin-bottom:-1px; color:' + (on ? c.primary : c.onSurfaceVariant) + '; border-bottom:2px solid ' + (on ? c.primary : 'transparent') + ';">' + label
         + (count > 0 ? '<span class="tnum t-label-s" style="min-width:16px; height:16px; padding:0 4px; box-sizing:border-box; border-radius:var(--r-full); text-align:center; background:' + c.error + '; color:#fff;">' + count + '</span>' : '') + '</span>';
     };
     // Lists are grouped under Today, Yesterday and Earlier.
@@ -3846,7 +3859,7 @@
       var bg = 'transparent';
       var color = active ? c.primary : (id === 'overdue' && count ? c.error : c.onSurfaceVariant);
       var underline = active ? c.primary : 'transparent';
-      return '<div class="interactive t-title-s' + (active ? oneShotClass('tab') : '') + '" data-action="setTab" data-id="' + id + '" role="tab" aria-selected="' + (active ? 'true' : 'false') + '" aria-label="' + TAB_LABELS[id] + ', ' + T(count === 1 ? '{n} task' : '{n} tasks', { n: count }) + '" style="display:flex; align-items:center; gap:4px; height:48px; padding:0 4px; margin-bottom:-1px; border-radius:0; background:' + bg + '; color:' + color + '; border-bottom:3px solid ' + underline + '; box-sizing:border-box;">'
+      return '<div class="interactive t-title-s' + (active ? oneShotClass('tab') : '') + '" data-action="setTab" data-id="' + id + '" role="tab" aria-selected="' + (active ? 'true' : 'false') + '" aria-label="' + TAB_LABELS[id] + ', ' + T(count === 1 ? '{n} task' : '{n} tasks', { n: count }) + '" style="' + (active ? tabSlideStyle(state.tabSlide) : '') + 'display:flex; align-items:center; gap:4px; height:48px; padding:0 4px; margin-bottom:-1px; border-radius:0; background:' + bg + '; color:' + color + '; border-bottom:3px solid ' + underline + '; box-sizing:border-box;">'
         + '<span>' + TAB_LABELS[id] + '</span><span class="tnum" style="color:' + (active ? c.onSurfaceVariant : c.textMuted) + ';">' + count + '</span></div>';
     }).join('');
 
@@ -5232,7 +5245,13 @@
     setUserStatus: function (el) { setUserStatus(Number(el.getAttribute('data-id')), el.getAttribute('data-value')); },
     setUserRole: function (el) { setUserRole(Number(el.getAttribute('data-id')), el.getAttribute('data-value')); },
 
-    setBellTab: function (el) { if (el.getAttribute('data-id') !== state.bellTab) playOnce('bellTab', 'anim-tab', 420); setBellTab(el.getAttribute('data-id')); },
+    setBellTab: function (el) {
+      var id = el.getAttribute('data-id');
+      if (id === state.bellTab) return;
+      state.bellSlide = tabSlideFrom('.bell-panel [role="tablist"]', id);
+      playOnce('bellTab', 'anim-tab-slide', 420);
+      setBellTab(id);
+    },
     openNotification: function (el) { openNotification(Number(el.getAttribute('data-id'))); },
     toggleDesktopAlerts: function () { toggleDesktopAlerts(); },
     pickMention: function (el) { pickMention(Number(el.getAttribute('data-id'))); },
