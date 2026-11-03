@@ -2872,6 +2872,27 @@
   }
 
 
+  // The status icon in a list row is a button: it marks the task done, or
+  // opens it again if it already was.
+  function toggleRowDone(id) {
+    var t = findLoadedTask(id);
+    if (!t || !canWriteDept(t.deptId)) return;
+    var next = t.status === 'done' ? 'todo' : 'done';
+    state.tasks.concat(state.todayTasks || []).forEach(function (x) {
+      if (x.id !== id) return;
+      x.status = next;
+      if (next === 'done') x.overdue = false;
+    });
+    render();
+    api('PUT', '/api/tasks/' + id + '/status', { status: next })
+      .then(function (res) {
+        if (res && res.nextId) showSnackbar(T('Done. The next one is scheduled.'));
+        return refreshTasks();
+      })
+      .then(render)
+      .catch(function (e) { window.alert(TE(e.message)); refreshTasks().then(render); });
+  }
+
   // ---- accounts (administrator) ----
   function openUsers() {
     focusDialogOnNextRender();
@@ -3143,9 +3164,11 @@
     // subgrid, so the whole row lights up under the pointer and takes a single
     // stop in the tab order, instead of six cells each reacting on their own.
     return '<div class="interactive task-row' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + (state.selected[t.id] ? ' is-selected' : '') + '" data-action="openTask" data-id="' + t.id + '" style="grid-column:1 / -1; display:grid; grid-template-columns:subgrid;' + (state.selected[t.id] ? ' background:' + c.primaryContainer + ';' : '') + '">'
-      + '<div title="' + esc(v.statusLabel) + '" style="' + cell + ' justify-content:center; padding:0 0 0 8px;">'
+      + '<div title="' + esc(v.statusLabel) + '" style="' + cell + ' justify-content:flex-end; gap:4px; padding:0;">'
       +   (canWriteDept(t.deptId) ? '<span class="sel-box' + (state.selected[t.id] ? ' on' : '') + '" data-action="toggleSelect" data-id="' + t.id + '" role="checkbox" aria-checked="' + (state.selected[t.id] ? 'true' : 'false') + '" aria-label="' + esc(T('Select {task}', { task: t.title })) + '"></span>' : '')
-      +   '<span class="status-ring' + statusMorph(t, 'row') + '">' + statusIconHtml(t.status, dot) + '</span><span style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0);">' + esc((STATUS_META[shown] || STATUS_META.todo).label) + '</span></div>'
+      +   (canWriteDept(t.deptId)
+            ? '<span class="interactive status-ring status-btn' + statusMorph(t, 'row') + '" data-action="toggleRowDone" data-id="' + t.id + '" role="checkbox" aria-checked="' + (done ? 'true' : 'false') + '" title="' + T(done ? 'Mark not done' : 'Mark done') + '">' + statusIconHtml(t.status, dot) + '</span>'
+            : '<span class="status-ring' + statusMorph(t, 'row') + '">' + statusIconHtml(t.status, dot) + '</span>') + '<span style="position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0);">' + esc((STATUS_META[shown] || STATUS_META.todo).label) + '</span></div>'
       + '<div style="' + cell + ' gap:8px;">'
       +   taskIconHtml(t, 16)
       +   '<span class="t-body-l" style="flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:' + (done ? c.textMuted : c.onSurface) + ';">' + esc(t.title) + '</span>'
@@ -3208,7 +3231,9 @@
     if (hasAssignee(t)) bits.push(esc(t.assignee));
     var due = t.dueDate ? '<span class="tnum ' + (t.overdue ? 't-label-l' : 't-body-m') + '" style="flex-shrink:0; color:' + (t.overdue ? c.error : c.onSurfaceVariant) + ';">' + esc(relativeDue(t.dueDate, t.overdue)) + '</span>' : '';
     return '<div class="interactive task-row' + (t.id === state.justAddedTaskId ? ' row-highlight' : '') + '" data-action="openTask" data-id="' + t.id + '" style="display:flex; align-items:center; gap:16px; min-height:72px; padding:8px 16px; border-radius:var(--r-l);">'
-      + '<span class="' + statusMorph(t, 'mrow').trim() + '" style="flex-shrink:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">' + statusIconHtml(t.status, dot, 20) + '</span>'
+      + (canWriteDept(t.deptId)
+          ? '<span class="interactive status-btn status-btn-m' + statusMorph(t, 'mrow') + '" data-action="toggleRowDone" data-id="' + t.id + '" role="checkbox" aria-checked="' + (done ? 'true' : 'false') + '" aria-label="' + T(done ? 'Mark not done' : 'Mark done') + '">' + statusIconHtml(t.status, dot, 20) + '</span>'
+          : '<span class="' + statusMorph(t, 'mrow').trim() + '" style="flex-shrink:0; width:24px; height:24px; display:flex; align-items:center; justify-content:center;">' + statusIconHtml(t.status, dot, 20) + '</span>')
       + '<div style="flex:1; min-width:0; display:flex; flex-direction:column;">'
       +   '<div style="display:flex; align-items:center; gap:8px; min-width:0;">' + taskIconHtml(t, 16) + '<span class="t-body-l" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:' + (done ? c.textMuted : c.onSurface) + ';">' + esc(t.title) + '</span>' + due + '</div>'
       +   '<div class="t-body-m" style="display:flex; align-items:center; gap:8px; color:' + c.onSurfaceVariant + '; min-width:0;"><span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + bits.join(' · ') + '</span>' + taskBadges(t, c) + '<span style="flex:1;"></span>' + priorityIconHtml(t.priority, maps.priorityColor[t.priority], c.outlineVariant) + '</div>'
@@ -3984,7 +4009,7 @@
       var rowsHtml = pageItems.map(function (t) { return taskRow(t, maps, c); }).join('');
       var emptyHtml = loadingNow ? skeletonRows(c, 8) : (pageItems.length === 0 ? emptyStateHtml(c) : '');
       bodyHtml = '<div data-scroll-key="' + esc(listScrollKey()) + '" class="' + (selectedIds().length ? 'selecting' : '') + '" style="flex:1; min-height:0; overflow:auto;">'
-        + '<div role="table" style="display:grid; grid-template-columns:40px minmax(240px,1fr) 144px 176px 120px 56px; min-width:776px;">'
+        + '<div role="table" style="display:grid; grid-template-columns:72px minmax(240px,1fr) 144px 176px 120px 56px; min-width:808px;">'
         +   [['', T('Status')], [T('Task'), '', 'title'], [T('Department')], [T('Assignee')], [T('Due Date'), '', 'due'], ['', T('Priority'), 'priority']].map(function (h, i) {
               // Columns the server can sort by sort when their heading is
               // clicked; clicking the active one goes back to the default order.
@@ -5243,6 +5268,7 @@
   // ---- event delegation ----
   var ACTIONS = {
     closePalette: function () { closePalette(); },
+    toggleRowDone: function (el) { toggleRowDone(Number(el.getAttribute('data-id'))); },
     toggleSelect: function (el) { toggleSelect(Number(el.getAttribute('data-id'))); },
     clearSelection: function () { clearSelection(); },
     selectAllShown: function () { selectAllShown(); },
