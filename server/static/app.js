@@ -3474,10 +3474,11 @@
     if (id === state.settingsSection) return;
     var token = ++settingsSwapToken;
     playOnce('settingsNav', 'anim-select', 420);
-    var body = document.querySelector('.settings-body');
+    var parts = document.querySelectorAll('.settings-body');
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!body || reduce) { setState({ settingsSection: id }); return; }
-    body.classList.add('settings-body-out');
+    if (!parts.length || reduce) { setState({ settingsSection: id }); return; }
+    // The title and the content fade; the close button stays put.
+    Array.prototype.forEach.call(parts, function (el) { el.classList.add('settings-body-out'); });
     setTimeout(function () {
       if (token !== settingsSwapToken) return;
       playOnce('settingsBody', 'settings-body-in', 280);
@@ -5111,10 +5112,10 @@
       +   '<div class="t-headline-s" style="padding:0 16px 16px;">' + T('Settings') + '</div>'
       +   sections.map(navItem).join('')
       + '</div>'
-      + '<div class="settings-body' + oneShotClass('settingsBody') + '" style="flex:1; min-width:0;">'
-      +   '<div style="display:flex; align-items:center; justify-content:space-between; margin:-4px -12px 16px 0;"><h2 class="t-title-l" style="margin:0;">' + T(current[1]) + '</h2>'
+      + '<div style="flex:1; min-width:0;">'
+      +   '<div style="display:flex; align-items:center; justify-content:space-between; margin:-4px -12px 16px 0;"><h2 class="t-title-l settings-body' + oneShotClass('settingsBody') + '" style="margin:0;">' + T(current[1]) + '</h2>'
       +     '<span class="interactive icon-btn" data-action="closeSettings" aria-label="' + T('Close') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span></div>'
-      +   body
+      +   '<div class="settings-body' + oneShotClass('settingsBody') + '">' + body + '</div>'
       + '</div></div>');
   }
 
