@@ -3464,18 +3464,18 @@
   function softSwap(dir, run) {
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!document.startViewTransition || reduce) { run(); return; }
+    // With a drawer, dialog or menu open, a transition would freeze it in the
+    // old picture while the live one moves (the drawer closing), and the two
+    // show through each other. The change happens under it instead; the
+    // drawer's own slide is the motion.
+    if (document.querySelector('.left-nav.open, .left-nav.anim-open, .left-nav.anim-close, .right-panel.open, .right-panel.anim-open, .right-panel.anim-close, .modal-overlay, .mobile-scrim, .dropdown-panel, .bell-panel')) { run(); return; }
     var docEl = document.documentElement;
     docEl.setAttribute('data-swap', dir || 'fade');
-    // Named parts are lifted above everything else while they animate, so
-    // with a drawer or dialog open they would show through it. Then the
-    // page cross-fades as one picture instead.
-    if (document.querySelector('.left-nav.open, .left-nav.anim-open, .left-nav.anim-close, .right-panel.open, .right-panel.anim-open, .right-panel.anim-close, .modal-overlay, .mobile-scrim, .dropdown-panel, .bell-panel')) docEl.setAttribute('data-swap-flat', '');
-    else docEl.removeAttribute('data-swap-flat');
     var vt = document.startViewTransition(function () {
       var p = run();
       return Promise.race([p || Promise.resolve(), new Promise(function (r) { setTimeout(r, 350); })]);
     });
-    var done = function () { docEl.removeAttribute('data-swap'); docEl.removeAttribute('data-swap-flat'); };
+    var done = function () { docEl.removeAttribute('data-swap'); };
     vt.finished.then(done, done);
   }
 
@@ -3540,7 +3540,9 @@
             var col = deptColor(t.deptId) || c.outline;
             var done = t.status === 'done';
             return '<div data-action="openTask" data-id="' + t.id + '" title="' + esc(t.title) + '" class="interactive cal-chip ' + (r.week ? 't-body-m' : 't-body-s') + '" style="display:flex; align-items:center; gap:4px; min-width:0; ' + (r.week ? 'min-height:32px; padding:4px 8px; box-sizing:border-box; align-items:center;' : 'height:24px; padding:0 8px;') + ' border-radius:var(--r-xs); background:' + c.surfaceContainer + '; box-shadow:inset 3px 0 0 ' + col + '; color:' + (done ? c.textMuted : (t.overdue ? c.error : c.onSurface)) + ';">'
-              + '<span style="display:flex; flex-shrink:0; height:' + (r.week ? 20 : 16) + 'px; align-items:center;">' + statusIconHtml(t.status, (maps.statusStyle[t.status] || maps.statusStyle.todo).dot, 12) + '</span>'
+              + (canWriteDept(t.deptId)
+                  ? '<span class="interactive status-btn status-btn-cal' + statusMorph(t, 'cal') + '" data-action="toggleRowDone" data-id="' + t.id + '" role="checkbox" aria-checked="' + (done ? 'true' : 'false') + '" title="' + T(done ? 'Mark not done' : 'Mark done') + '">' + statusIconHtml(t.status, (maps.statusStyle[t.status] || maps.statusStyle.todo).dot, r.week ? 16 : 12) + '</span>'
+                  : '<span style="display:flex; flex-shrink:0; height:' + (r.week ? 20 : 16) + 'px; align-items:center;">' + statusIconHtml(t.status, (maps.statusStyle[t.status] || maps.statusStyle.todo).dot, 12) + '</span>')
               + '<span style="overflow:hidden; text-overflow:ellipsis; ' + (r.week ? 'overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;' : 'white-space:nowrap;') + (done ? ' text-decoration:line-through;' : '') + '">' + esc(t.title) + '</span></div>';
           }).join('')
         + (list.length > shown.length ? '<span title="' + esc(list.slice(shown.length).map(function (t) { return t.title; }).join('\n')) + '" class="t-label-m" style="color:' + c.onSurfaceVariant + '; padding-left:8px;">' + T('+{n} more', { n: list.length - shown.length }) + '</span>' : '')

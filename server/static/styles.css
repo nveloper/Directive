@@ -1140,5 +1140,5 @@ html[data-swap=prev]::view-transition-new(cal-title) { animation-name: swapInLef
 @keyframes statusPop { from { transform: scale(.55); } to { transform: none; } }
 @keyframes statusTick { from { stroke-dashoffset: 12; } to { stroke-dashoffset: 0; } }
 @media (prefers-reduced-motion: reduce) { .anim-status svg, .anim-status svg path { animation: none !important; } }
-html[data-swap-flat] [style*="view-transition-name"] { view-transition-name: none !important; }
 .status-btn-card { width: 32px; height: 32px; margin: -5px -4px -5px -8px; }
+.status-btn-cal { width: 24px; height: 24px; margin: -4px -2px -4px -6px; }
