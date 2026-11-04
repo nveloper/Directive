@@ -3467,6 +3467,23 @@
   // named parts can move on their own (the calendar title slides in the
   // direction of travel while its arrows stay put). Without the API, or with
   // reduced motion, run() just happens.
+  // Settings sections: the open one fades out, then the next fades in, one
+  // after the other, so the two never show at once.
+  var settingsSwapToken = 0;
+  function setSettingsSection(id) {
+    if (id === state.settingsSection) return;
+    var token = ++settingsSwapToken;
+    playOnce('settingsNav', 'anim-select', 420);
+    var body = document.querySelector('.settings-body');
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!body || reduce) { setState({ settingsSection: id }); return; }
+    body.classList.add('settings-body-out');
+    setTimeout(function () {
+      if (token !== settingsSwapToken) return;
+      playOnce('settingsBody', 'settings-body-in', 280);
+      setState({ settingsSection: id });
+    }, 120);
+  }
   function softSwap(dir, run, inDialog) {
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!document.startViewTransition || reduce) { run(); return; }
@@ -5094,7 +5111,7 @@
       +   '<div class="t-headline-s" style="padding:0 16px 16px;">' + T('Settings') + '</div>'
       +   sections.map(navItem).join('')
       + '</div>'
-      + '<div style="flex:1; min-width:0; view-transition-name:settings-body;">'
+      + '<div class="settings-body' + oneShotClass('settingsBody') + '" style="flex:1; min-width:0;">'
       +   '<div style="display:flex; align-items:center; justify-content:space-between; margin:-4px -12px 16px 0;"><h2 class="t-title-l" style="margin:0;">' + T(current[1]) + '</h2>'
       +     '<span class="interactive icon-btn" data-action="closeSettings" aria-label="' + T('Close') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span></div>'
       +   body
@@ -5321,7 +5338,7 @@
     sortByColumn: function (el) { var k = el.getAttribute('data-id'); setTaskSort(state.taskSort === k ? 'created' : k); },
     openSettings: function () { openSettings(); },
     closeSettings: function () { closeSettings(); },
-    setSettingsSection: function (el) { var id = el.getAttribute('data-id'); if (id === state.settingsSection) return; playOnce('settingsNav', 'anim-select', 420); softSwap('fade', function () { setState({ settingsSection: id }); }, true); },
+    setSettingsSection: function (el) { setSettingsSection(el.getAttribute('data-id')); },
     setThemeMode: function (el) { setThemeMode(el.getAttribute('data-id')); },
     toggleActivityMine: function () { setState({ activityIncludeMine: !state.activityIncludeMine }); },
     toggleDatePicker: function (el) { toggleDatePicker(el.getAttribute('data-id')); },
