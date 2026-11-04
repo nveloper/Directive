@@ -1107,8 +1107,8 @@ svg[fill="none"][stroke="currentColor"] { stroke-width: 1.6; }
 /* The root keeps the browser's own cross-fade, so the parts that did not
    change stay perfectly still; changed blocks fade out, then in. */
 ::view-transition-group(root) { animation-duration: 240ms; }
-::view-transition-old(cal-grid), ::view-transition-old(settings-body), ::view-transition-old(list-body) { animation: swapOut 140ms var(--ease-exit) both; }
-::view-transition-new(cal-grid), ::view-transition-new(settings-body), ::view-transition-new(list-body) { animation: swapIn 260ms var(--ease-enter) 60ms both; }
+::view-transition-old(cal-grid), ::view-transition-old(list-body) { animation: swapOut 140ms var(--ease-exit) both; }
+::view-transition-new(cal-grid), ::view-transition-new(list-body) { animation: swapIn 260ms var(--ease-enter) 60ms both; }
 ::view-transition-group(cal-nav) { animation: none; }
 ::view-transition-old(cal-nav) { display: none; }
 ::view-transition-new(cal-nav) { animation: none; }
@@ -1157,3 +1157,6 @@ html[data-swap=prev]::view-transition-new(cal-title) { animation-name: swapInLef
 @keyframes switchThumbOff { from { left: 22px; width: 24px; height: 24px; margin-top: -12px; } }
 @keyframes switchTrack { from { opacity: .85; } }
 @media (prefers-reduced-motion: reduce) { .m3-switch.anim-switch, .m3-switch.anim-switch .m3-switch-thumb { animation: none; } }
+.settings-body-out { opacity: 0; transition: opacity 120ms var(--ease-exit); }
+.settings-body-in { animation: settingsIn 280ms var(--ease-enter) var(--shot-delay, 0ms) both; }
+@keyframes settingsIn { from { opacity: 0; transform: translateY(6px); } }
