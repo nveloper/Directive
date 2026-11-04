@@ -3467,14 +3467,14 @@
   // named parts can move on their own (the calendar title slides in the
   // direction of travel while its arrows stay put). Without the API, or with
   // reduced motion, run() just happens.
-  function softSwap(dir, run) {
+  function softSwap(dir, run, inDialog) {
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!document.startViewTransition || reduce) { run(); return; }
     // With a drawer, dialog or menu open, a transition would freeze it in the
     // old picture while the live one moves (the drawer closing), and the two
     // show through each other. The change happens under it instead; the
     // drawer's own slide is the motion.
-    if (document.querySelector('.left-nav.open, .left-nav.anim-open, .left-nav.anim-close, .right-panel.open, .right-panel.anim-open, .right-panel.anim-close, .modal-overlay, .mobile-scrim, .dropdown-panel, .bell-panel')) { run(); return; }
+    if (!inDialog && document.querySelector('.left-nav.open, .left-nav.anim-open, .left-nav.anim-close, .right-panel.open, .right-panel.anim-open, .right-panel.anim-close, .modal-overlay, .mobile-scrim, .dropdown-panel, .bell-panel')) { run(); return; }
     var docEl = document.documentElement;
     docEl.setAttribute('data-swap', dir || 'fade');
     var vt = document.startViewTransition(function () {
@@ -5321,7 +5321,7 @@
     sortByColumn: function (el) { var k = el.getAttribute('data-id'); setTaskSort(state.taskSort === k ? 'created' : k); },
     openSettings: function () { openSettings(); },
     closeSettings: function () { closeSettings(); },
-    setSettingsSection: function (el) { var id = el.getAttribute('data-id'); if (id === state.settingsSection) return; playOnce('settingsNav', 'anim-select', 420); softSwap('fade', function () { setState({ settingsSection: id }); }); },
+    setSettingsSection: function (el) { var id = el.getAttribute('data-id'); if (id === state.settingsSection) return; playOnce('settingsNav', 'anim-select', 420); softSwap('fade', function () { setState({ settingsSection: id }); }, true); },
     setThemeMode: function (el) { setThemeMode(el.getAttribute('data-id')); },
     toggleActivityMine: function () { setState({ activityIncludeMine: !state.activityIncludeMine }); },
     toggleDatePicker: function (el) { toggleDatePicker(el.getAttribute('data-id')); },
