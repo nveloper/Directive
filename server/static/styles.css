@@ -1142,3 +1142,18 @@ html[data-swap=prev]::view-transition-new(cal-title) { animation-name: swapInLef
 @media (prefers-reduced-motion: reduce) { .anim-status svg, .anim-status svg path { animation: none !important; } }
 .status-btn-card { width: 32px; height: 32px; margin: -5px -4px -5px -8px; }
 .status-btn-cal { width: 24px; height: 24px; margin: -4px -2px -4px -6px; }
+
+/* ---- M3 switch ------------------------------------------------------------ */
+.m3-switch { position: relative; flex-shrink: 0; width: 52px; height: 32px; box-sizing: border-box; border-radius: var(--r-full); border: 2px solid var(--outline); background: var(--surface-container-high); cursor: pointer; transition: none; }
+.m3-switch.on { border-color: var(--primary); background: var(--primary); }
+.m3-switch-thumb { position: absolute; top: 50%; left: 6px; width: 16px; height: 16px; margin-top: -8px; border-radius: 50%; background: var(--outline); }
+.m3-switch.on .m3-switch-thumb { left: 22px; width: 24px; height: 24px; margin-top: -12px; background: var(--on-primary); }
+.m3-switch:active .m3-switch-thumb { width: 28px; height: 28px; margin-top: -14px; }
+.m3-switch.on:active .m3-switch-thumb { left: 20px; }
+.m3-switch.anim-switch { animation: switchTrack 320ms var(--ease) var(--shot-delay, 0ms) both; }
+.m3-switch.anim-switch .m3-switch-thumb { animation: switchThumbOff 320ms var(--spring) var(--shot-delay, 0ms) both; }
+.m3-switch.on.anim-switch .m3-switch-thumb { animation-name: switchThumbOn; }
+@keyframes switchThumbOn { from { left: 6px; width: 16px; height: 16px; margin-top: -8px; } }
+@keyframes switchThumbOff { from { left: 22px; width: 24px; height: 24px; margin-top: -12px; } }
+@keyframes switchTrack { from { opacity: .85; } }
+@media (prefers-reduced-motion: reduce) { .m3-switch.anim-switch, .m3-switch.anim-switch .m3-switch-thumb { animation: none; } }

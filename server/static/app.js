@@ -631,7 +631,13 @@
     } catch (e) {}
   }
 
+  // An M3 switch. Flipping it slides the handle across and grows it (or
+  // shrinks it back), with the track colour following.
+  function switchHtml(on, action, label) {
+    return '<span class="interactive m3-switch' + (on ? ' on' : '') + oneShotClass('switch:' + action) + '" data-action="' + action + '" role="switch" aria-checked="' + (on ? 'true' : 'false') + '" aria-label="' + esc(label) + '" title="' + esc(label) + '"><span class="m3-switch-thumb"></span></span>';
+  }
   function toggleDesktopAlerts() {
+    playOnce('switch:toggleDesktopAlerts', 'anim-switch', 320);
     if (state.desktopAlerts) {
       try { localStorage.setItem(DESKTOP_ALERTS_KEY, '0'); } catch (e) {}
       setState({ desktopAlerts: false });
@@ -3584,7 +3590,7 @@
     return '<div class="' + cls + '"' + (writable ? ' draggable="true"' : '') + ' data-action="openTask" data-id="' + t.id + '" style="background:' + c.surface + '; border-radius:var(--r-md); padding:16px; min-width:0; display:flex; flex-direction:column; gap:12px;">'
       + '<div class="t-body-l" style="display:flex; align-items:flex-start; gap:8px; color:' + (t.status === 'done' ? c.textMuted : c.onSurface) + ';">'
       +   (writable
-            ? '<span class="interactive status-btn status-btn-card' + statusMorph({ id: t.id, status: boardPending[t.id] || t.status }, 'card') + '" data-action="toggleRowDone" data-id="' + t.id + '" role="checkbox" aria-checked="' + (t.status === 'done' ? 'true' : 'false') + '" title="' + T(t.status === 'done' ? 'Mark not done' : 'Mark done') + '" draggable="false">' + statusIconHtml(boardPending[t.id] || t.status, (maps.statusStyle[boardPending[t.id] || t.status] || maps.statusStyle.todo).dot, 18) + '</span>'
+            ? '<span class="interactive status-btn status-btn-card' + statusMorph({ id: t.id, status: boardPending[t.id] || t.status }, 'card') + '" data-action="toggleRowDone" data-id="' + t.id + '" role="checkbox" aria-checked="' + (t.status === 'done' ? 'true' : 'false') + '" title="' + T(t.status === 'done' ? 'Mark not done' : 'Mark done') + '" draggable="false">' + statusIconHtml(boardPending[t.id] || t.status, (maps.statusStyle[boardPending[t.id] || t.status] || maps.statusStyle.todo).dot, 16) + '</span>'
             : '')
       +   taskIconHtml(t, 16) + '<span style="min-width:0; overflow-wrap:anywhere;">' + esc(t.title) + '</span></div>'
       + '<div class="t-label-m" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; color:' + c.onSurfaceVariant + ';">' + (t.deptId ? '<span style="display:inline-flex; align-items:center; gap:4px; padding:4px 8px; border-radius:var(--r-sm); background:' + c.surfaceVariant + '; color:' + c.onSurfaceVariant + ';">' + esc(nodeLabel(t.deptId).split(' · ').pop()) + '</span>' : '') + taskBadges(t, c) + '</div>'
@@ -3817,7 +3823,7 @@
         + (mineTab && alertsSupported
           ? '<div class="t-body-m" style="display:flex; align-items:center; gap:16px; min-height:56px; padding:8px 16px 8px 24px; box-sizing:border-box; border-top:1px solid ' + c.outlineVariant + '; color:' + c.onSurfaceVariant + ';">'
             + '<span style="flex:1;">' + T('Desktop alerts when this tab is in the background') + '</span>'
-            + '<span class="interactive" data-action="toggleDesktopAlerts" role="switch" aria-checked="' + (state.desktopAlerts ? 'true' : 'false') + '" title="' + T('Desktop alerts') + '" style="position:relative; width:52px; height:32px; box-sizing:border-box; border-radius:var(--r-full); flex-shrink:0; background:' + (state.desktopAlerts ? c.primary : c.surfaceContainerHigh) + '; border:2px solid ' + (state.desktopAlerts ? c.primary : c.outline) + ';"><span style="position:absolute; top:50%; left:' + (state.desktopAlerts ? 22 : 6) + 'px; width:' + (state.desktopAlerts ? 24 : 16) + 'px; height:' + (state.desktopAlerts ? 24 : 16) + 'px; transform:translateY(-50%); border-radius:50%; background:' + (state.desktopAlerts ? c.onPrimary : c.outline) + '; transition:left .2s, width .2s, height .2s;"></span></span>'
+            + switchHtml(!!state.desktopAlerts, 'toggleDesktopAlerts', T('Desktop alerts'))
             + '</div>'
           : '')
         + '</div>'
@@ -4745,7 +4751,7 @@
       +     brandIconHtml(c.primaryContainer, c.onPrimaryContainer, 32, 'none')
       +     '<div style="flex:1; min-width:0;"><div style="font-size:20px; font-weight:500;">' + esc(T('How to use {app}', { app: state.appName })) + '</div>'
       +       '<div style="font-size:12px; color:' + c.onSurfaceVariant + ';">' + esc(state.user ? state.user.displayName : '') + ' · ' + esc(guideLang() === 'ko' ? (state.user && state.user.role === 'admin' ? '관리자' : '멤버') : (state.user && state.user.role === 'admin' ? 'administrator' : 'member')) + '</div></div>'
-      +     '<span class="interactive" data-action="closeGuide" title="' + T('Close') + '" style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:50%; color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
+      +     '<span class="interactive icon-btn" data-action="closeGuide" title="' + T('Close') + '" aria-label="' + T('Close') + '" style="color:' + c.onSurfaceVariant + ';">' + ICON.close + '</span>'
       +   '</div>'
       +   '<nav class="guide-index" aria-label="' + T('Guide sections') + '" data-scroll-key="guide-index">' + index + '</nav>'
       +   '<div class="guide-body" data-scroll-key="guide">' + body + '</div>'
@@ -5042,7 +5048,7 @@
     if (isAdmin()) sections = sections.concat([['workspace', 'Workspace'], ['accounts', 'Accounts'], ['maintenance', 'Reminders and backups']]);
     var navItem = function (x) {
       var on = sec === x[0];
-      return '<span class="interactive t-label-l' + (on ? oneShotClass('settingsNav') : '') + '" data-action="setSettingsSection" data-id="' + x[0] + '" style="display:flex; align-items:center; flex-shrink:0; height:48px; padding:0 16px; border-radius:var(--r-full); white-space:nowrap; color:' + (on ? c.onSecondaryContainer : c.onSurfaceVariant) + '; background:' + (on ? c.secondaryContainer : 'transparent') + ';">' + T(x[1]) + '</span>';
+      return '<span class="interactive t-label-l' + (on ? oneShotClass('settingsNav') : '') + '" data-action="setSettingsSection" data-id="' + x[0] + '" style="display:flex; align-items:center; flex-shrink:0; height:48px; padding:0 16px; border-radius:var(--r-md); white-space:nowrap; color:' + (on ? c.onSecondaryContainer : c.onSurfaceVariant) + '; background:' + (on ? c.secondaryContainer : 'transparent') + ';">' + T(x[1]) + '</span>';
     };
     var label = function (t) { return '<div class="t-title-s" style="color:' + c.onSurface + '; margin-bottom:8px;">' + T(t) + '</div>'; };
     var help = function (t) { return '<div class="t-body-m" style="color:' + c.onSurfaceVariant + '; margin:-4px 0 12px;">' + T(t) + '</div>'; };
@@ -5068,7 +5074,7 @@
         + row('Phone sync', 'App passwords for Apple Reminders and other CalDAV clients.', btn('openAppPasswords', 'Manage'));
     } else if (sec === 'notifications') {
       body = row('Desktop alerts', typeof window.Notification === 'function' ? 'Alerts when this tab is in the background.' : 'This browser cannot show desktop alerts here (they need HTTPS).',
-        typeof window.Notification === 'function' ? '<label class="interactive t-label-l" style="display:flex; align-items:center; gap:4px; min-height:40px; padding-right:12px; border-radius:var(--r-full); cursor:pointer;"><span class="cb-target"><input type="checkbox" data-action="toggleDesktopAlerts"' + (state.desktopAlerts ? ' checked' : '') + '></span>' + T('On') + '</label>' : '');
+        typeof window.Notification === 'function' ? switchHtml(!!state.desktopAlerts, 'toggleDesktopAlerts', T('Desktop alerts')) : '');
     } else if (sec === 'workspace') {
       body = label('App name')
         + '<div style="display:flex; gap:8px; margin-bottom:24px;"><input id="appNameInput" data-field="appNameDraft" value="' + esc(state.appNameDraft) + '" maxlength="60" style="' + field + '">' + btn('saveAppName', 'Save', true) + '</div>'
